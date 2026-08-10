@@ -12,8 +12,10 @@ from .forms import (
     MetricValueForm,
     PeriodForm,
     ProgressForm,
+    ProgressRowFormSet,
 )
 from .models import Competency, LearningPath, LearningUnit, Period, ProgressRecord
+from .services import build_tracking_grid, ensure_progress_records, tracked_records
 
 
 @login_required
@@ -29,6 +31,28 @@ def path_detail(request, pk):
         pk=pk,
     )
     return render(request, "formations/detail.html", {"path": path})
+
+
+@login_required
+def path_tracking(request, pk):
+    """Grille de suivi : toutes les compétences du parcours, éditables en place."""
+    path = get_object_or_404(LearningPath, owner=request.user, pk=pk)
+    ensure_progress_records(request.user, path)
+    formset = ProgressRowFormSet(request.POST or None, queryset=tracked_records(request.user, path))
+    if request.method == "POST" and formset.is_valid():
+        formset.save()
+        messages.success(request, "Suivi enregistré.")
+        return redirect("formations:tracking", pk=path.pk)
+    return render(
+        request,
+        "formations/tracking.html",
+        {
+            "path": path,
+            "formset": formset,
+            "periods": build_tracking_grid(path, formset),
+            "levels": ProgressRecord.Mastery.choices,
+        },
+    )
 
 
 @login_required

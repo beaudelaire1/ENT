@@ -272,6 +272,10 @@ class Command(BaseCommand):
         }
         current_units = {}
         unit_count = competency_count = 0
+        # L'ordre du document porte du sens : il est conservé plutôt que de laisser le
+        # tri alphabétique décider de l'affichage.
+        unit_order = dict.fromkeys(periods, 0)
+        competency_order = {}
         for row in parser.rows:
             cells = row["cells"]
             if not cells:
@@ -280,7 +284,11 @@ class Command(BaseCommand):
                 title = clean_label(cells[0]["text"])
                 if not title:
                     continue
-                unit, _ = LearningUnit.objects.get_or_create(period=periods[row["period"]], title=title)
+                unit_order[row["period"]] += 1
+                unit, _ = LearningUnit.objects.update_or_create(
+                    period=periods[row["period"]], title=title, defaults={"order": unit_order[row["period"]]}
+                )
+                competency_order[unit.pk] = 0
                 current_units[row["period"]] = unit
                 unit_count += 1
                 for index, key in enumerate(("coefficient", "ects", "cm", "td", "tp"), start=1):
@@ -295,7 +303,10 @@ class Command(BaseCommand):
             if unit is None or "competence" not in cells[0]["class"]:
                 continue
             title = clean_label(cells[0]["text"])
-            competency, _ = Competency.objects.get_or_create(unit=unit, title=title)
+            competency_order[unit.pk] = competency_order.get(unit.pk, 0) + 1
+            competency, _ = Competency.objects.update_or_create(
+                unit=unit, title=title, defaults={"order": competency_order[unit.pk]}
+            )
             actual = next((number_input(cell) for cell in cells if number_input(cell, "") != ""), "0")
             mastery = next((cell["select"] for cell in cells if cell["select"] is not None), "0")
             ProgressRecord.objects.update_or_create(

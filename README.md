@@ -9,6 +9,7 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 - bibliothèque de liens, fichiers privés et notes riches assainies ;
 - recherche globale indexée : une entrée par objet dans `core.SearchEntry`, tenue à jour par signaux, interrogée en plein texte PostgreSQL (configuration `french`, titre pondéré au-dessus du corps, syntaxe `websearch`) avec repli `icontains` sous SQLite ;
 - formations génériques : parcours, périodes, unités, compétences et métriques libres ;
+- grille de suivi de compétences : une ligne par matière avec ses métriques, une ligne par compétence avec niveau de maîtrise, heures estimées et réelles, commentaires ; totaux par matière et par période calculés, enregistrement en une fois ;
 - Sablier web avec quatre visualisations, quatre ambiances, trois niveaux de concentration, plein écran et reprise exacte après actualisation ;
 - bibliothèque audio privée et playlists indépendantes du minuteur ;
 - notifications internes, emails, invitations à usage unique et préférences d’apparence.

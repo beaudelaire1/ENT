@@ -7,6 +7,7 @@ urlpatterns = [
     path("", views.path_list, name="list"),
     path("new/", views.path_edit, name="new"),
     path("<int:pk>/", views.path_detail, name="detail"),
+    path("<int:pk>/suivi/", views.path_tracking, name="tracking"),
     path("<int:pk>/edit/", views.path_edit, name="edit"),
     path("<int:path_pk>/periods/new/", views.period_new, name="period_new"),
     path("<int:path_pk>/metrics/new/", views.metric_definition_new, name="metric_new"),

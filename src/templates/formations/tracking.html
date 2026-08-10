@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Suivi · {{ path.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">SUIVI DE COMPÉTENCES</p>
+    <h1>{{ path.title }}</h1>
+    {% if path.level_label %}<p class="muted">{{ path.level_label }}{% if path.training_type %} · {{ path.training_type }}{% endif %}</p>{% endif %}
+  </div>
+  <div class="actions"><a class="button" href="{% url 'formations:detail' path.pk %}">Structure</a></div>
+</header>
+
+<section class="panel legend-panel">
+  <h2>Légende des niveaux de maîtrise</h2>
+  <div class="legend">
+    {% for value, label in levels %}<span class="legend-item level-{{ value }}">{{ value }} - {{ label }}</span>{% endfor %}
+  </div>
+</section>
+
+<form method="post" class="tracking-form">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<div class="message">{{ formset.non_form_errors }}</div>{% endif %}
+
+  {% for period in periods %}
+    <section class="tracking-period">
+      <h2 class="period-banner">{{ period.period.title }}</h2>
+      <div class="table-scroll">
+        <table class="tracking-table">
+          <thead>
+            <tr>
+              <th class="col-label">Matière / Compétence</th>
+              <th>Coef.</th>
+              <th>ECTS</th>
+              <th>CM (h)</th>
+              <th>TD (h)</th>
+              <th>TP (h)</th>
+              <th>Travail personnel estimé (h)</th>
+              <th>Temps réel (h)</th>
+              <th>Niveau de maîtrise</th>
+              <th class="col-progress">Progression</th>
+              <th class="col-notes">Commentaires</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for unit in period.units %}
+              <tr class="unit-row">
+                <th scope="rowgroup" class="col-label"><a href="{% url 'formations:unit' unit.unit.pk %}">{{ unit.unit.title }}</a></th>
+                <td>{{ unit.metrics.coefficient|default_if_none:"—"|floatformat }}</td>
+                <td>{{ unit.metrics.ects|default_if_none:"—"|floatformat }}</td>
+                <td>{{ unit.metrics.cm|default_if_none:"—"|floatformat }}</td>
+                <td>{{ unit.metrics.td|default_if_none:"—"|floatformat }}</td>
+                <td>{{ unit.metrics.tp|default_if_none:"—"|floatformat }}</td>
+                <td class="total">{{ unit.totals.planned|floatformat }}</td>
+                <td class="total">{{ unit.totals.actual|floatformat }}</td>
+                <td class="muted">{{ unit.totals.percent }} %</td>
+                <td class="col-progress">
+                  <div class="progress-bar"><div class="progress-fill" style="width:{{ unit.totals.percent }}%"></div></div>
+                </td>
+                <td class="col-notes"></td>
+              </tr>
+              {% for row in unit.rows %}
+                <tr class="competency-row">
+                  <td class="col-label competency">{{ row.competency.title }}</td>
+                  <td colspan="5" class="spacer"></td>
+                  <td>{{ row.form.id }}{{ row.form.planned_hours }}</td>
+                  <td>{{ row.form.actual_hours }}</td>
+                  <td>{{ row.form.mastery_level }}</td>
+                  <td class="col-progress">
+                    <div class="progress-bar" data-progress-for="{{ row.form.mastery_level.id_for_label }}">
+                      <div class="progress-fill level-{{ row.form.instance.mastery_level }}" style="width:{{ row.form.instance.percent }}%"></div>
+                    </div>
+                  </td>
+                  <td class="col-notes">{{ row.form.notes }}</td>
+                </tr>
+                {% if row.form.errors %}<tr class="row-errors"><td colspan="11">{{ row.form.errors }}</td></tr>{% endif %}
+              {% empty %}
+                <tr class="competency-row">
+                  <td class="col-label competency muted" colspan="11">
+                    Aucune compétence. <a href="{% url 'formations:competency_new' unit.unit.pk %}">En ajouter une</a>.
+                  </td>
+                </tr>
+              {% endfor %}
+            {% empty %}
+              <tr><td colspan="11" class="empty">Aucune matière dans cette période. <a href="{% url 'formations:unit_new' period.period.pk %}">En ajouter une</a>.</td></tr>
+            {% endfor %}
+          </tbody>
+          {% if period.units %}
+            <tfoot>
+              <tr>
+                <th class="col-label" colspan="6">Total {{ period.period.title }}</th>
+                <td class="total">{{ period.totals.planned|floatformat }}</td>
+                <td class="total">{{ period.totals.actual|floatformat }}</td>
+                <td>{{ period.totals.percent }} %</td>
+                <td class="col-progress">
+                  <div class="progress-bar"><div class="progress-fill" style="width:{{ period.totals.percent }}%"></div></div>
+                </td>
+                <td class="col-notes"></td>
+              </tr>
+            </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </section>
+  {% empty %}
+    <section class="panel"><p class="empty">Cette formation n’a pas encore de période. <a href="{% url 'formations:period_new' path.pk %}">En créer une</a>.</p></section>
+  {% endfor %}
+
+  {% if periods %}
+    <div class="tracking-actions">
+      <button class="button primary" type="submit">Enregistrer le suivi</button>
+      <span class="muted" data-dirty-hint hidden>Modifications non enregistrées.</span>
+    </div>
+  {% endif %}
+</form>
+{% endblock %}
+{% block scripts %}<script src="{% static 'formations/tracking.js' %}" defer></script>{% endblock %}

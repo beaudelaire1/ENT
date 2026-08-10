@@ -101,15 +101,29 @@ class MetricValue(models.Model):
 
 
 class ProgressRecord(TimeStampedModel):
+    class Mastery(models.IntegerChoices):
+        NOT_STARTED = 0, "Non abordé"
+        DISCOVERED = 1, "Découvert"
+        IN_PROGRESS = 2, "En cours"
+        ACQUIRED = 3, "Acquis"
+        MASTERED = 4, "Maîtrisé"
+
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="progress_records")
     competency = models.ForeignKey(Competency, on_delete=models.CASCADE, related_name="progress_records")
-    mastery_level = models.PositiveSmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(4)])
+    mastery_level = models.PositiveSmallIntegerField(
+        choices=Mastery.choices, default=Mastery.NOT_STARTED, validators=[MinValueValidator(0), MaxValueValidator(4)]
+    )
     planned_hours = models.DecimalField(max_digits=7, decimal_places=2, default=0)
     actual_hours = models.DecimalField(max_digits=7, decimal_places=2, default=0)
     notes = models.TextField(blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["owner", "competency"], name="unique_progress_per_competency")]
+
+    @property
+    def percent(self) -> int:
+        """Progression affichée : le niveau de maîtrise rapporté à son maximum."""
+        return round(self.mastery_level * 100 / 4)
 
     def clean(self):
         if self.competency.unit.period.path.owner_id != self.owner_id:

@@ -62,3 +62,29 @@ class ProgressForm(ScopedModelForm):
         model = ProgressRecord
         fields = ["mastery_level", "planned_hours", "actual_hours", "notes"]
         widgets = {"notes": forms.Textarea(attrs={"rows": 3})}
+
+
+class ProgressRowForm(forms.ModelForm):
+    """Une ligne de la grille de suivi : édition en place, sans quitter le tableau."""
+
+    class Meta:
+        model = ProgressRecord
+        fields = ["planned_hours", "actual_hours", "mastery_level", "notes"]
+        widgets = {
+            "planned_hours": forms.NumberInput(attrs={"min": 0, "step": "0.5", "class": "cell-number"}),
+            "actual_hours": forms.NumberInput(attrs={"min": 0, "step": "0.5", "class": "cell-number"}),
+            "mastery_level": forms.Select(attrs={"class": "cell-level", "data-level-select": ""}),
+            "notes": forms.TextInput(attrs={"placeholder": "Notes…", "class": "cell-notes"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Le numéro reste visible dans le sélecteur : c’est lui qu’on lit en diagonale.
+        self.fields["mastery_level"].choices = [
+            (value, f"{value} - {label}") for value, label in ProgressRecord.Mastery.choices
+        ]
+        for field in self.fields.values():
+            field.label = ""
+
+
+ProgressRowFormSet = forms.modelformset_factory(ProgressRecord, form=ProgressRowForm, extra=0)
