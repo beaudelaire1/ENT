@@ -34,11 +34,9 @@ def path_detail(request, pk):
 @login_required
 def path_edit(request, pk=None):
     path = get_object_or_404(LearningPath, owner=request.user, pk=pk) if pk else None
-    form = LearningPathForm(request.POST or None, instance=path)
+    form = LearningPathForm(request.POST or None, instance=path, scope={"owner": request.user})
     if request.method == "POST" and form.is_valid():
-        path = form.save(commit=False)
-        path.owner = request.user
-        path.save()
+        path = form.save()
         messages.success(request, "Formation enregistrée.")
         return redirect("formations:detail", pk=path.pk)
     return render(
@@ -51,11 +49,9 @@ def path_edit(request, pk=None):
 @login_required
 def period_new(request, path_pk):
     path = get_object_or_404(LearningPath, owner=request.user, pk=path_pk)
-    form = PeriodForm(request.POST or None)
+    form = PeriodForm(request.POST or None, scope={"path": path})
     if request.method == "POST" and form.is_valid():
-        period = form.save(commit=False)
-        period.path = path
-        period.save()
+        form.save()
         return redirect("formations:detail", pk=path.pk)
     return render(request, "formations/form.html", {"form": form, "title": f"Nouvelle période · {path.title}"})
 
@@ -63,12 +59,9 @@ def period_new(request, path_pk):
 @login_required
 def unit_new(request, period_pk):
     period = get_object_or_404(Period, path__owner=request.user, pk=period_pk)
-    form = LearningUnitForm(request.POST or None, user=request.user)
+    form = LearningUnitForm(request.POST or None, user=request.user, scope={"period": period})
     if request.method == "POST" and form.is_valid():
-        unit = form.save(commit=False)
-        unit.period = period
-        unit.save()
-        form.save_m2m()
+        form.save()
         return redirect("formations:detail", pk=period.path_id)
     return render(request, "formations/form.html", {"form": form, "title": f"Nouveau module · {period.title}"})
 
@@ -86,12 +79,9 @@ def unit_detail(request, pk):
 @login_required
 def competency_new(request, unit_pk):
     unit = get_object_or_404(LearningUnit, period__path__owner=request.user, pk=unit_pk)
-    form = CompetencyForm(request.POST or None, user=request.user)
+    form = CompetencyForm(request.POST or None, user=request.user, scope={"unit": unit})
     if request.method == "POST" and form.is_valid():
-        competency = form.save(commit=False)
-        competency.unit = unit
-        competency.save()
-        form.save_m2m()
+        form.save()
         return redirect("formations:unit", pk=unit.pk)
     return render(request, "formations/form.html", {"form": form, "title": f"Nouvelle compétence · {unit.title}"})
 
@@ -100,13 +90,11 @@ def competency_new(request, unit_pk):
 def progress_edit(request, competency_pk):
     competency = get_object_or_404(Competency, unit__period__path__owner=request.user, pk=competency_pk)
     progress, _ = ProgressRecord.objects.get_or_create(owner=request.user, competency=competency)
-    form = ProgressForm(request.POST or None, instance=progress)
+    form = ProgressForm(
+        request.POST or None, instance=progress, scope={"owner": request.user, "competency": competency}
+    )
     if request.method == "POST" and form.is_valid():
-        progress = form.save(commit=False)
-        progress.owner = request.user
-        progress.competency = competency
-        progress.full_clean()
-        progress.save()
+        form.save()
         return redirect("formations:unit", pk=competency.unit_id)
     return render(request, "formations/form.html", {"form": form, "title": f"Progression · {competency.title}"})
 
@@ -114,11 +102,9 @@ def progress_edit(request, competency_pk):
 @login_required
 def metric_definition_new(request, path_pk):
     path = get_object_or_404(LearningPath, owner=request.user, pk=path_pk)
-    form = MetricDefinitionForm(request.POST or None)
+    form = MetricDefinitionForm(request.POST or None, scope={"path": path})
     if request.method == "POST" and form.is_valid():
-        metric = form.save(commit=False)
-        metric.path = path
-        metric.save()
+        form.save()
         return redirect("formations:detail", pk=path.pk)
     return render(request, "formations/form.html", {"form": form, "title": f"Nouvelle métrique · {path.title}"})
 
@@ -126,11 +112,8 @@ def metric_definition_new(request, path_pk):
 @login_required
 def metric_value_new(request, unit_pk):
     unit = get_object_or_404(LearningUnit, period__path__owner=request.user, pk=unit_pk)
-    form = MetricValueForm(request.POST or None, path=unit.period.path)
+    form = MetricValueForm(request.POST or None, path=unit.period.path, scope={"unit": unit})
     if request.method == "POST" and form.is_valid():
-        value = form.save(commit=False)
-        value.unit = unit
-        value.full_clean()
-        value.save()
+        form.save()
         return redirect("formations:unit", pk=unit.pk)
     return render(request, "formations/form.html", {"form": form, "title": f"Métrique · {unit.title}"})

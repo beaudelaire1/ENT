@@ -100,11 +100,9 @@ def playlist_list(request):
 @login_required
 def playlist_edit(request, pk=None):
     playlist = get_object_or_404(Playlist, owner=request.user, pk=pk) if pk else None
-    form = PlaylistForm(request.POST or None, instance=playlist)
+    form = PlaylistForm(request.POST or None, instance=playlist, scope={"owner": request.user})
     if request.method == "POST" and form.is_valid():
-        playlist = form.save(commit=False)
-        playlist.owner = request.user
-        playlist.save()
+        playlist = form.save()
         return redirect("sablier:playlist_detail", pk=playlist.pk)
     return render(request, "sablier/playlist_form.html", {"form": form, "playlist": playlist})
 

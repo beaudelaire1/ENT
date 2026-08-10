@@ -6,6 +6,8 @@ import bleach
 from django import forms
 from django.conf import settings
 
+from core.forms import ScopedModelForm
+
 from .models import Folder, LibraryItem, Tag
 
 ALLOWED_TAGS = [
@@ -29,7 +31,7 @@ ALLOWED_TAGS = [
 ALLOWED_ATTRIBUTES = {"a": ["href", "title", "target", "rel"]}
 
 
-class LibraryItemForm(forms.ModelForm):
+class LibraryItemForm(ScopedModelForm):
     note_delta_json = forms.CharField(widget=forms.HiddenInput, required=False)
     note_html_input = forms.CharField(widget=forms.HiddenInput, required=False)
     note_text_input = forms.CharField(widget=forms.HiddenInput, required=False)
@@ -41,6 +43,7 @@ class LibraryItemForm(forms.ModelForm):
 
     def __init__(self, *args, user=None, **kwargs):
         self.user = user
+        kwargs.setdefault("scope", {"owner": user})
         super().__init__(*args, **kwargs)
         self.fields["folder"].queryset = Folder.objects.filter(owner=user)
         self.fields["tags"].queryset = Tag.objects.filter(owner=user)
@@ -85,7 +88,6 @@ class LibraryItemForm(forms.ModelForm):
 
     def save(self, commit=True):
         item = super().save(commit=False)
-        item.owner = self.user
         if item.kind == LibraryItem.Kind.NOTE:
             item.note_delta = self.cleaned_data.get("note_delta_json") or {}
             item.note_text = (self.cleaned_data.get("note_text_input") or "").strip()
@@ -98,33 +100,30 @@ class LibraryItemForm(forms.ModelForm):
                 else item.mime_type
             )
         if commit:
-            item.full_clean()
             item.save()
             self.save_m2m()
         return item
 
 
-class FolderForm(forms.ModelForm):
+class FolderForm(ScopedModelForm):
     class Meta:
         model = Folder
         fields = ["name", "parent"]
 
     def __init__(self, *args, user=None, **kwargs):
         self.user = user
+        kwargs.setdefault("scope", {"owner": user})
         super().__init__(*args, **kwargs)
         self.fields["parent"].queryset = Folder.objects.filter(owner=user)
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        instance.owner = self.user
-        if commit:
-            instance.full_clean()
-            instance.save()
-        return instance
 
-
-class TagForm(forms.ModelForm):
+class TagForm(ScopedModelForm):
     class Meta:
         model = Tag
         fields = ["name", "color"]
         widgets = {"color": forms.TextInput(attrs={"type": "color"})}
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        kwargs.setdefault("scope", {"owner": user})
+        super().__init__(*args, **kwargs)

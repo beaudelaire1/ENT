@@ -62,11 +62,9 @@ def folder_new(request):
 
 @login_required
 def tag_new(request):
-    form = TagForm(request.POST or None)
+    form = TagForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
-        tag = form.save(commit=False)
-        tag.owner = request.user
-        tag.save()
+        form.save()
         messages.success(request, "Étiquette créée.")
         return redirect("library:list")
     return render(request, "library/simple_form.html", {"form": form, "title": "Nouvelle étiquette"})

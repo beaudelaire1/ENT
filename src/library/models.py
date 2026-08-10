@@ -29,7 +29,19 @@ class Folder(TimeStampedModel):
     class Meta:
         ordering = ["name"]
         constraints = [
-            models.UniqueConstraint(fields=["owner", "parent", "name"], name="unique_folder_name_per_parent")
+            # Deux contraintes sont nécessaires : `parent IS NULL` n’entre jamais en
+            # conflit avec lui-même en SQL, la première laisserait donc passer autant de
+            # dossiers homonymes que voulu à la racine.
+            models.UniqueConstraint(
+                fields=["owner", "parent", "name"],
+                condition=Q(parent__isnull=False),
+                name="unique_folder_name_per_parent",
+            ),
+            models.UniqueConstraint(
+                fields=["owner", "name"],
+                condition=Q(parent__isnull=True),
+                name="unique_root_folder_name_per_owner",
+            ),
         ]
 
     def clean(self):

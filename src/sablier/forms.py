@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models import Sum
 
 from accounts.models import UserProfile
+from core.forms import ScopedModelForm
 
 from .models import AudioTrack, FocusPreference, Playlist
 
@@ -38,13 +39,14 @@ class FocusPreferenceForm(forms.ModelForm):
         return image
 
 
-class AudioTrackForm(forms.ModelForm):
+class AudioTrackForm(ScopedModelForm):
     class Meta:
         model = AudioTrack
         fields = ["title", "artist", "file"]
 
     def __init__(self, *args, user=None, **kwargs):
         self.user = user
+        kwargs.setdefault("scope", {"owner": user})
         super().__init__(*args, **kwargs)
 
     def clean_file(self):
@@ -68,7 +70,6 @@ class AudioTrackForm(forms.ModelForm):
 
     def save(self, commit=True):
         track = super().save(commit=False)
-        track.owner = self.user
         upload = self.cleaned_data["file"]
         track.file_size = upload.size
         track.mime_type = upload.detected_mime
@@ -78,7 +79,7 @@ class AudioTrackForm(forms.ModelForm):
         return track
 
 
-class PlaylistForm(forms.ModelForm):
+class PlaylistForm(ScopedModelForm):
     class Meta:
         model = Playlist
         fields = ["title", "description"]
