@@ -7,7 +7,7 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 - tableau de bord personnalisable et responsive ;
 - agenda, tâches ponctuelles et rappels ;
 - bibliothèque de liens, fichiers privés et notes riches assainies ;
-- recherche globale ;
+- recherche globale indexée : une entrée par objet dans `core.SearchEntry`, tenue à jour par signaux, interrogée en plein texte PostgreSQL (configuration `french`, titre pondéré au-dessus du corps, syntaxe `websearch`) avec repli `icontains` sous SQLite ;
 - formations génériques : parcours, périodes, unités, compétences et métriques libres ;
 - Sablier web avec quatre visualisations, quatre ambiances, trois niveaux de concentration, plein écran et reprise exacte après actualisation ;
 - bibliothèque audio privée et playlists indépendantes du minuteur ;
@@ -44,7 +44,7 @@ Sans `DATABASE_URL`, Django utilise uniquement une base SQLite locale de dévelo
 ```powershell
 python src/manage.py check
 python src/manage.py makemigrations --check --dry-run
-python src/manage.py test accounts.tests core.tests dashboard.tests library.tests planner.tests sablier.tests
+python src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests planner.tests sablier.tests
 ```
 
 Consulter [le déploiement Coolify](docs/DEPLOYMENT.md), [la migration de l’existant](docs/MIGRATION.md) et [la feuille de maturation](docs/ROADMAP.md). Les sources historiques se trouvent dans [oldVersion](oldVersion/README.md).

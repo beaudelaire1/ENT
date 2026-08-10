@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import connection
-from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+
+from core.search import SOURCES
+from core.search import search as search_entries
 
 
 def root_redirect(request):
@@ -24,34 +27,19 @@ def health(request):
 @login_required
 def search(request):
     query = request.GET.get("q", "").strip()
-    results = {"library": [], "tasks": [], "events": [], "formations": []}
-    if query:
-        from formations.models import Competency, LearningPath, LearningUnit
-        from library.models import LibraryItem
-        from planner.models import CalendarEvent, Task
-
-        results["library"] = LibraryItem.objects.for_user(request.user).search(query)[:20]
-        results["tasks"] = Task.objects.filter(owner=request.user).filter(
-            Q(title__icontains=query) | Q(description__icontains=query)
-        )[:20]
-        results["events"] = CalendarEvent.objects.filter(owner=request.user).filter(
-            Q(title__icontains=query) | Q(description__icontains=query) | Q(location__icontains=query)
-        )[:20]
-        results["formations"] = (
-            list(
-                LearningPath.objects.filter(owner=request.user).filter(
-                    Q(title__icontains=query) | Q(description__icontains=query)
-                )[:10]
-            )
-            + list(
-                LearningUnit.objects.filter(period__path__owner=request.user).filter(
-                    Q(title__icontains=query) | Q(description__icontains=query)
-                )[:10]
-            )
-            + list(
-                Competency.objects.filter(unit__period__path__owner=request.user).filter(
-                    Q(title__icontains=query) | Q(description__icontains=query)
-                )[:10]
-            )
-        )
-    return render(request, "core/search.html", {"query": query, "results": results})
+    object_type = request.GET.get("type") or ""
+    if object_type not in SOURCES:
+        object_type = ""
+    entries = search_entries(request.user, query, object_type or None)
+    page = Paginator(entries, 25).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "core/search.html",
+        {
+            "query": query,
+            "page": page,
+            "object_type": object_type,
+            "types": [(key, source.label) for key, source in SOURCES.items()],
+            "total": page.paginator.count if query else 0,
+        },
+    )

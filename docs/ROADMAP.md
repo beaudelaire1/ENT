@@ -10,7 +10,7 @@
 ## Stabilisation
 
 - ajouter les récurrences simples d’événements et de tâches ;
-- enrichir la recherche PostgreSQL (index plein texte, filtres et raccourcis) ;
+- compléter la recherche : surlignage des extraits, raccourcis clavier et suggestions ;
 - ajouter des tests navigateur automatisés aux quatre modes de Sablier ;
 - suivre erreurs, latence, files Celery, quotas et succès des sauvegardes ;
 - rendre l’éditeur riche autonome dans le dépôt si une politique sans CDN devient nécessaire.

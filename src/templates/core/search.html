@@ -1,9 +1,48 @@
 {% extends "base.html" %}
 {% block title %}Recherche · MyENT{% endblock %}
 {% block content %}
-<header class="page-header"><div><p class="eyebrow">RECHERCHE GLOBALE</p><h1>{% if query %}Résultats pour « {{ query }} »{% else %}Que cherchez-vous ?{% endif %}</h1></div></header>
-{% if query %}<div class="dashboard-grid">
-{% for label, items in results.items %}<section class="panel widget"><h2>{{ label|title }}</h2>{% for item in items %}<div class="list-row"><span>{{ item }}</span></div>{% empty %}<p class="empty">Aucun résultat.</p>{% endfor %}</section>{% endfor %}
-</div>{% endif %}
-{% endblock %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">RECHERCHE GLOBALE</p>
+    <h1>{% if query %}Résultats pour « {{ query }} »{% else %}Que cherchez-vous ?{% endif %}</h1>
+    {% if query %}<p class="muted">{{ total }} résultat{{ total|pluralize }} dans tout votre espace.</p>{% endif %}
+  </div>
+</header>
 
+{% if query %}
+<nav class="filter-chips" aria-label="Filtrer par type">
+  <a class="chip{% if not object_type %} active{% endif %}" href="?q={{ query|urlencode }}">Tout</a>
+  {% for key, label in types %}
+    <a class="chip{% if object_type == key %} active{% endif %}" href="?q={{ query|urlencode }}&amp;type={{ key }}">{{ label }}</a>
+  {% endfor %}
+</nav>
+
+<section class="panel">
+  <div class="list">
+    {% for entry in page %}
+      <article class="list-row search-result">
+        <div>
+          <a class="search-title" href="{{ entry.url }}">{{ entry.title }}</a>
+          {% if entry.body %}<p class="muted search-excerpt">{{ entry.body|truncatechars:220 }}</p>{% endif %}
+        </div>
+        <span class="chip static">{{ entry.type_label }}</span>
+      </article>
+    {% empty %}
+      <p class="empty">Aucun résultat. Essayez un autre terme, ou une expression exacte entre guillemets.</p>
+    {% endfor %}
+  </div>
+
+  {% if page.paginator.num_pages > 1 %}
+    <nav class="pagination" aria-label="Pages de résultats">
+      {% if page.has_previous %}
+        <a class="button" href="?q={{ query|urlencode }}{% if object_type %}&amp;type={{ object_type }}{% endif %}&amp;page={{ page.previous_page_number }}">Précédent</a>
+      {% endif %}
+      <span class="muted">Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}
+        <a class="button" href="?q={{ query|urlencode }}{% if object_type %}&amp;type={{ object_type }}{% endif %}&amp;page={{ page.next_page_number }}">Suivant</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
