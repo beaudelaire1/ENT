@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Notifications · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">CENTRE DE NOTIFICATIONS</p><h1>Notifications</h1></div><form method="post" action="{% url 'notifications:read_all' %}">{% csrf_token %}<button class="button">Tout marquer comme lu</button></form></header>
+<section class="panel"><div class="list">{% for notification in notifications %}<div class="list-row {% if not notification.read_at %}unread{% endif %}"><div><strong>{{ notification.title }}</strong><p class="muted">{{ notification.message }}</p></div>{% if not notification.read_at %}<form method="post" action="{% url 'notifications:read' notification.pk %}">{% csrf_token %}<button class="button">Ouvrir</button></form>{% endif %}</div>{% empty %}<p class="empty">Aucune notification.</p>{% endfor %}</div></section>
+{% endblock %}
+

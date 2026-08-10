@@ -1,0 +1,23 @@
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
+
+from core.views import health, root_redirect, search
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("", root_redirect, name="root"),
+    path("healthz/", health, name="health"),
+    path("search/", search, name="search"),
+    path("accounts/", include("accounts.urls")),
+    path("dashboard/", include("dashboard.urls")),
+    path("", include("planner.urls")),
+    path("library/", include("library.urls")),
+    path("formations/", include("formations.urls")),
+    path("sablier/", include("sablier.urls")),
+    path("notifications/", include("notifications.urls")),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

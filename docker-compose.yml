@@ -1,0 +1,129 @@
+x-app-environment: &app-environment
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
+  SITE_URL: ${SITE_URL:-http://localhost:8000}
+  TIME_ZONE: ${TIME_ZONE:-America/Cayenne}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-myent}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-myent}
+  REDIS_URL: redis://redis:6379/0
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-MyENT <noreply@localhost>}
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+  EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+  USE_S3: ${USE_S3:-false}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+  AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-}
+  AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-}
+  AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-}
+  BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+  BACKUP_DAILY_RETENTION: ${BACKUP_DAILY_RETENTION:-14}
+  BACKUP_WEEKLY_RETENTION: ${BACKUP_WEEKLY_RETENTION:-8}
+  BACKUP_MONTHLY_RETENTION: ${BACKUP_MONTHLY_RETENTION:-12}
+  LIBRARY_MAX_UPLOAD_MB: ${LIBRARY_MAX_UPLOAD_MB:-25}
+  AUDIO_MAX_TRACK_MB: ${AUDIO_MAX_TRACK_MB:-50}
+  AUDIO_DEFAULT_QUOTA_MB: ${AUDIO_DEFAULT_QUOTA_MB:-1024}
+
+x-app-service: &app-service
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: myent:${MYENT_IMAGE_TAG:-local}
+  restart: unless-stopped
+  environment: *app-environment
+  volumes:
+    - private_media:/app/src/media
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-myent}
+      POSTGRES_USER: ${POSTGRES_USER:-myent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    <<: *app-service
+    restart: "no"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    <<: *app-service
+    expose:
+      - "8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    <<: *app-service
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=2"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$${HOSTNAME} --timeout=5"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  beat:
+    <<: *app-service
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO", "--schedule=/var/run/celery/celerybeat-schedule"]
+    volumes:
+      - private_media:/app/src/media
+      - celerybeat_data:/var/run/celery
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  backup:
+    <<: *app-service
+    profiles: ["ops"]
+    restart: "no"
+    command: ["python", "manage.py", "backup_database"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  private_media:
+  celerybeat_data:
+

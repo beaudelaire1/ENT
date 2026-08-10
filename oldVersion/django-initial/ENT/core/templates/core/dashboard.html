@@ -1,0 +1,68 @@
+
+{% extends "core/base.html" %}
+{% block title %}Tableau de bord — Suivi L3{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>📊 Synthèse</h2>
+  <table>
+    <tr><th>Total planifié</th><th>Total réalisé</th><th>Reste</th><th>Progression travail</th></tr>
+    <tr>
+      <td>{{ totals.planned }} h</td>
+      <td>{{ totals.done }} h</td>
+      <td>{{ totals.left }} h</td>
+      <td>
+        <div class="progress" data-percent="{{ global_work }}">
+          <div class="fill" style="width: {{ global_work }}%"></div>
+        </div>
+        <div><b>{{ global_work }}%</b></div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+{% for sem in "LS5,LS6".split(",") %}
+<div class="card">
+  <h3>{% if sem == "LS5" %}🍁 Semestre 5{% else %}🌸 Semestre 6{% endif %}</h3>
+  <table>
+    <tr>
+      <th style="min-width:260px">Matière</th>
+      <th>Planifié</th><th>Fait</th><th>Reste</th>
+      <th>Prog. Travail</th><th>Prog. Compétence</th>
+      <th>Actions</th>
+    </tr>
+    {% for m, p_work, p_comp, left in grouped|get_item:sem %}
+    <tr>
+      <td class="matiere">{{ m.icon }} {{ m.name }}</td>
+      <td>{{ m.planned_hours }} h</td>
+      <td>{{ m.done_hours }} h</td>
+      <td>{{ left }} h</td>
+      <td>
+        <div class="progress" data-percent="{{ p_work }}"><div class="fill" style="width: {{ p_work }}%"></div></div>
+        <div><small><b>{{ p_work }}%</b></small></div>
+      </td>
+      <td>
+        <div class="progress" data-percent="{{ p_comp }}"><div class="fill" style="width: {{ p_comp }}%"></div></div>
+        <div><small><b>{{ p_comp }}%</b></small></div>
+      </td>
+      <td>
+        <a class="btn sm" href="{% url 'matiere_edit' m.pk %}">Modifier</a>
+        <a class="btn sm" href="{% url 'competence_add' %}?matiere={{ m.pk }}">+ Compétence</a>
+      </td>
+    </tr>
+    {% for c in m.competence_set.all %}
+    <tr>
+      <td class="competence">• {{ c.title }}</td>
+      <td colspan="2"></td><td></td>
+      <td colspan="2">
+        Niveau: {{ c.level }}/4
+      </td>
+      <td><a class="btn sm" href="{% url 'competence_edit' c.pk %}">Modifier</a></td>
+    </tr>
+    {% endfor %}
+    {% empty %}
+    <tr><td colspan="7">Aucune matière pour ce semestre.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endfor %}
+{% endblock %}

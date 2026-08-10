@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Invitations · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">ADMINISTRATION</p><h1>Invitations</h1></div></header>
+<div class="two-columns"><section class="panel"><h2>Inviter une personne</h2><form method="post" class="stack-form">{% csrf_token %}{{ form.as_p }}<button class="button primary">Envoyer</button></form></section><section class="panel"><h2>Invitations récentes</h2><div class="list">{% for invitation in invitations %}<div class="list-row"><span>{{ invitation.email }}</span><span class="muted">{% if invitation.accepted_at %}Acceptée{% elif invitation.is_valid %}En attente{% else %}Expirée{% endif %}</span></div>{% empty %}<p class="empty">Aucune invitation.</p>{% endfor %}</div></section></div>
+{% endblock %}
+

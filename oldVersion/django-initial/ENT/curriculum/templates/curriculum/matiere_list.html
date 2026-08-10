@@ -1,0 +1,42 @@
+
+{% extends "core/base.html" %}
+{% block title %}Matières{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>📚 Matières</h2>
+  <p><a class="btn" href="{% url 'matiere_add' %}">+ Nouvelle matière</a></p>
+  <table>
+    <tr>
+      <th>Semestre</th><th>Matière</th><th>Coef</th><th>ECTS</th>
+      <th>Planifié</th><th>Fait</th><th>Reste</th>
+      <th>Progression travail</th><th>Actions</th>
+    </tr>
+    {% for m in matieres %}
+    {% with left=m.planned_hours|add:-m.done_hours %}
+    <tr>
+      <td>{{ m.semester }}</td>
+      <td class="matiere">{{ m.icon }} {{ m.name }}</td>
+      <td>{{ m.coef }}</td>
+      <td>{{ m.ects }}</td>
+      <td>{{ m.planned_hours }} h</td>
+      <td>{{ m.done_hours }} h</td>
+      <td>{{ left|default_if_none:0|yesno:"0,," }}{% if left < 0 %}0{% else %}{{ left }}{% endif %} h</td>
+      <td>
+        {% with pct=0 %}{% if m.planned_hours %}{% widthratio m.done_hours m.planned_hours 100 as pct %}{% endif %}
+        <div class="progress" data-percent="{{ pct }}">
+          <div class="fill" style="width: {{ pct }}%"></div>
+        </div>
+        <small><b>{{ pct }}%</b></small>
+        {% endwith %}
+      </td>
+      <td>
+        <a class="btn sm" href="{% url 'matiere_edit' m.pk %}">Modifier</a>
+      </td>
+    </tr>
+    {% endwith %}
+    {% empty %}
+    <tr><td colspan="9">Aucune matière — commencez par en créer une.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

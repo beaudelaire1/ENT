@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Tableau de bord · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">VOTRE ESPACE</p><h1>Bonjour {{ appearance.display_name|default:user.username }}</h1><p class="muted">Tout ce qui compte, sans bruit inutile.</p></div><div class="actions"><details class="widget-settings"><summary class="button">Personnaliser</summary><div class="panel"><h2>Widgets visibles</h2>{% for widget in widgets %}<label><input type="checkbox" data-widget-toggle="{{ widget.kind }}" {% if widget.visible %}checked{% endif %}> {{ widget.get_kind_display }}</label>{% endfor %}<button class="button" type="button" data-save-widgets>Appliquer</button></div></details><a class="button primary" href="{% url 'sablier:home' %}">Ouvrir Sablier</a></div></header>
+<div class="dashboard-grid" id="dashboard-grid" data-layout-url="{% url 'dashboard:save_layout' %}">
+{% for widget in widgets %}{% if widget.visible %}
+  <section class="panel widget {% if widget.kind == 'today' or widget.kind == 'recent' %}wide{% endif %}" draggable="true" data-widget="{{ widget.kind }}">
+    <div class="widget-heading"><span class="drag-handle" title="Déplacer">⋮⋮</span><h2>{{ widget.get_kind_display }}</h2></div>
+    {% if widget.kind == 'today' %}
+      {% for event in events_today %}<div class="list-row"><span>{{ event.title }}</span><time>{{ event.starts_at|time:"H:i" }}</time></div>{% empty %}<p class="empty">Aucun événement aujourd’hui.</p>{% endfor %}
+    {% elif widget.kind == 'tasks' %}
+      {% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><span class="muted">{{ task.get_priority_display }}</span></div>{% empty %}<p class="empty">Tout est à jour.</p>{% endfor %}
+    {% elif widget.kind == 'reminders' %}
+      {% for note in notifications %}<div class="list-row"><span>{{ note.title }}</span></div>{% empty %}<p class="empty">Aucun rappel.</p>{% endfor %}
+    {% elif widget.kind == 'recent' %}
+      {% for item in recent_items %}<div class="list-row"><a href="{% url 'library:detail' item.pk %}">{{ item.title }}</a><span class="muted">{{ item.get_kind_display }}</span></div>{% empty %}<p class="empty">Bibliothèque vide.</p>{% endfor %}
+    {% elif widget.kind == 'formations' %}
+      {% for path in formations %}<div class="list-row"><a href="{% url 'formations:detail' path.pk %}">{{ path.title }}</a></div>{% empty %}<p class="empty">Aucune formation.</p>{% endfor %}
+    {% elif widget.kind == 'quick_note' %}
+      <form method="post" action="{% url 'dashboard:quick_note' %}" class="stack-form">{% csrf_token %}<textarea name="text" rows="3" placeholder="Capturez une idée…" required></textarea><button class="button">Ajouter à la bibliothèque</button></form>
+    {% elif widget.kind == 'sablier' %}
+      <p class="muted">Un espace calme pour travailler à votre rythme.</p><a class="button primary" href="{% url 'sablier:home' %}">Lancer une session</a>
+    {% endif %}
+  </section>
+{% endif %}{% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'dashboard/dashboard.js' %}" defer></script>{% endblock %}

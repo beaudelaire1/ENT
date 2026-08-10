@@ -1,0 +1,36 @@
+
+{% load static %}
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Suivi L3 Mathématiques{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script defer src="{% static 'js/tracker.js' %}"></script>
+  </head>
+  <body>
+    <div class="header">
+      <div class="container">
+        <h1>📘 Suivi de Compétences – L3
+          {% if header_student %}
+            — <span style="font-weight:700">{{ header_student.full_name }}</span>
+          {% endif %}
+        </h1>
+        <div class="nav">
+          <a href="{% url 'dashboard' %}">Tableau de bord</a>
+          <a href="{% url 'profile_edit' %}">Profil</a>
+          <a href="{% url 'matiere_list' %}">Matières</a>
+          <a href="/admin/">Admin</a>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      {% for message in messages %}
+      <div class="alert success">{{ message }}</div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+      <div class="footer">© L3Tracker — Django</div>
+    </div>
+  </body>
+</html>

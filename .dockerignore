@@ -1,0 +1,15 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+.venv
+**/venv
+**/__pycache__
+**/*.pyc
+src/data
+src/media
+src/staticfiles
+oldVersion
+migration-report.json
+

@@ -1,0 +1,51 @@
+{% load static %}
+<!doctype html>
+<html lang="fr" data-theme="{{ appearance.theme|default:'system' }}" style="--accent: {{ appearance.accent_color|default:'#7C6CFF' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}MyENT{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{% url 'dashboard:home' %}"><span class="brand-mark">M</span><span>MyENT</span></a>
+    <nav aria-label="Navigation principale">
+      <a href="{% url 'dashboard:home' %}">Tableau de bord</a>
+      <a href="{% url 'planner:agenda' %}">Agenda</a>
+      <a href="{% url 'planner:tasks' %}">Tâches</a>
+      <a href="{% url 'library:list' %}">Bibliothèque</a>
+      <a href="{% url 'formations:list' %}">Formations</a>
+      <a href="{% url 'sablier:home' %}">Sablier</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <a href="{% url 'notifications:list' %}">Notifications {% if unread_notifications %}<span class="badge">{{ unread_notifications }}</span>{% endif %}</a>
+      <a href="{% url 'accounts:settings' %}">Paramètres</a>
+      {% if user.is_staff %}<a href="{% url 'accounts:invitations' %}">Invitations</a>{% endif %}
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button">Déconnexion</button></form>
+    </div>
+  </aside>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="icon-button mobile-only" type="button" data-toggle-sidebar aria-label="Menu">☰</button>
+      <form class="global-search" action="{% url 'search' %}" method="get">
+        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Rechercher partout…" aria-label="Rechercher">
+      </form>
+      <span class="user-chip">{{ appearance.display_name|default:user.username }}</span>
+    </header>
+    <main class="main-content">
+{% else %}
+    <main class="auth-shell">
+{% endif %}
+      {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  {% if user.is_authenticated %}</div>{% endif %}
+  <script src="{% static 'js/app.js' %}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
+

@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+
+def parse_duration(value: str) -> int:
+    """Parse minutes, MM:SS or HH:MM:SS into 1..86400 seconds."""
+    value = value.strip().replace(",", ".")
+    if not value:
+        raise ValueError("La durée est vide.")
+    if ":" not in value:
+        try:
+            seconds = round(float(value) * 60)
+        except ValueError as exc:
+            raise ValueError("Durée invalide.") from exc
+    else:
+        parts = value.split(":")
+        if len(parts) not in {2, 3}:
+            raise ValueError("Utilisez MM:SS ou HH:MM:SS.")
+        try:
+            numbers = [int(part) for part in parts]
+        except ValueError as exc:
+            raise ValueError("Durée invalide.") from exc
+        if any(number < 0 for number in numbers) or numbers[-1] >= 60 or (len(numbers) == 3 and numbers[-2] >= 60):
+            raise ValueError("Minutes ou secondes invalides.")
+        seconds = (
+            numbers[0] * 60 + numbers[1] if len(numbers) == 2 else numbers[0] * 3600 + numbers[1] * 60 + numbers[2]
+        )
+    if not 1 <= seconds <= 86400:
+        raise ValueError("La durée doit être comprise entre 1 seconde et 24 heures.")
+    return seconds
+
+
+def format_duration(seconds: float) -> str:
+    total = max(0, int(seconds + 0.999999))
+    hours, remainder = divmod(total, 3600)
+    minutes, remaining_seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}"
+    return f"{minutes:02d}:{remaining_seconds:02d}"

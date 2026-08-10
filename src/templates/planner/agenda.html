@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Agenda · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">PLANIFICATEUR</p><h1>{{ anchor|date:"F Y"|capfirst }}</h1></div><a class="button primary" href="{% url 'planner:event_new' %}">Nouvel événement</a></header>
+<div class="two-columns"><section class="panel"><h2>Événements</h2>{% for event in events %}<div class="list-row"><div><strong>{{ event.title }}</strong><div class="muted">{{ event.starts_at|date:"d/m H:i" }} — {{ event.ends_at|date:"d/m H:i" }}</div></div><a href="{% url 'planner:event_edit' event.pk %}">Modifier</a></div>{% empty %}<p class="empty">Aucun événement.</p>{% endfor %}</section><section class="panel"><h2>Échéances</h2>{% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><time>{{ task.due_at|date:"d/m H:i" }}</time></div>{% empty %}<p class="empty">Aucune échéance.</p>{% endfor %}</section></div>
+{% endblock %}
+

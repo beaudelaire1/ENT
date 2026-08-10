@@ -1,0 +1,32 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}{{ category.name }} – My ENT{% endblock %}
+
+{% block content %}
+<h2 style="color: #f9b233; text-transform: uppercase; margin-top: 0;">{{ category.name }}</h2>
+<p style="color: #ccc;">{{ category.description }}</p>
+{% for course in courses %}
+  <div class="course-block">
+    <h3>{{ course.title }}</h3>
+    <p>{{ course.description }}</p>
+    <p>
+      <a href="{{ course.link }}" target="_blank">Ouvrir le cours</a> |
+      <a href="{% url 'portal:add_resource' course.id %}">Ajouter une ressource</a>
+    </p>
+    <h4>Ressources associées :</h4>
+    <ul>
+      {% for resource in course.resources.all %}
+        <li>
+          <strong>{{ resource.title }}</strong> –
+          <a href="{{ resource.link }}" target="_blank">{{ resource.get_resource_type_display }}</a>
+          {% if resource.description %}<br><em>{{ resource.description }}</em>{% endif %}
+        </li>
+      {% empty %}
+        <li>Aucune ressource pour ce cours.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% empty %}
+  <p>Aucun cours pour cette catégorie.</p>
+{% endfor %}
+{% endblock %}

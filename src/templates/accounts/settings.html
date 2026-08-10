@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Paramètres · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">PRÉFÉRENCES</p><h1>Votre environnement</h1></div></header>
+<section class="panel narrow"><form method="post" class="stack-form">{% csrf_token %}{{ form.as_p }}<button class="button primary">Enregistrer</button></form></section>
+{% endblock %}
+

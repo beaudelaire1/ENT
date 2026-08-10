@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}My ENT{% endblock %}</title>
+  <style>
+    body {
+      background: #05071b;
+      color: #f5f5f5;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+    header {
+      background: #0a0922;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #2a2850;
+    }
+    header a {
+      color: #f5f5f5;
+      text-decoration: none;
+      margin-right: 1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      background: #2a2850;
+    }
+    header a:hover {
+      background: #3d3a6f;
+    }
+    main {
+      padding: 2rem;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .card {
+      flex: 1 1 200px;
+      min-width: 180px;
+      padding: 1.5rem;
+      border-radius: 15px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    }
+    footer {
+      background: #0a0922;
+      color: #aaa;
+      padding: 2rem;
+      text-align: center;
+      border-top: 2px solid #2a2850;
+    }
+
+    /* Styles for course blocks in category pages */
+    .course-block {
+      background: #1c1a3f;
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+    .course-block h3 {
+      margin-top: 0;
+      color: #ffffff;
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .course-block p {
+      color: #cccccc;
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+    .course-block h4 {
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      color: #f9b233;
+      font-size: 1.1rem;
+    }
+    .course-block a {
+      color: #5faafc;
+      text-decoration: none;
+    }
+    .course-block a:hover {
+      text-decoration: underline;
+    }
+
+    .course-block ul {
+      margin-left: 1.5rem;
+      margin-top: 0.5rem;
+    }
+    .course-block li {
+      margin-bottom: 0.5rem;
+    }
+
+    /* Generic form container styles */
+    .form-container {
+      background: #1c1a3f;
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      max-width: 600px;
+    }
+    .form-container table {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+    .form-container td {
+      padding: 0.5rem 0.3rem;
+      color: #cccccc;
+    }
+    .form-container input,
+    .form-container select,
+    .form-container textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 8px;
+      border: 1px solid #4e9af1;
+      background: #0a0922;
+      color: #f5f5f5;
+    }
+    .form-container button {
+      padding: 0.6rem 1.5rem;
+      background: #4e9af1;
+      border: none;
+      border-radius: 25px;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .form-container button:hover {
+      background: #2a2850;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="/">My&nbsp;ENT</a></h1>
+    <nav>
+      {% for cat in categories_navigation %}
+        <a href="{{ cat.get_absolute_url }}">{{ cat.name }}</a>
+      {% endfor %}
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p>&copy; 2025 – My ENT. Plateforme d’apprentissage.</p>
+  </footer>
+</body>
+</html>

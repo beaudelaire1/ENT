@@ -1,0 +1,18 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}Ajouter un cours – My ENT{% endblock %}
+
+{% block content %}
+<h2>Ajouter un cours</h2>
+<div class="form-container">
+  <form method="post">
+    {% csrf_token %}
+    <table>
+      {{ form.as_table }}
+    </table>
+    <p style="text-align: right;">
+      <button type="submit">Enregistrer</button>
+    </p>
+  </form>
+</div>
+{% endblock %}

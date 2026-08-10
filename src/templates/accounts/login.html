@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Connexion · MyENT{% endblock %}
+{% block content %}
+<section class="auth-card">
+  <div class="brand large"><span class="brand-mark">M</span><span>MyENT</span></div>
+  <p class="eyebrow">ENVIRONNEMENT PERSONNEL</p>
+  <h1>Retrouvez votre espace</h1>
+  <form method="post" class="stack-form">{% csrf_token %}{{ form.as_p }}<button class="button primary">Se connecter</button></form>
+  <p class="muted">Les comptes sont créés sur invitation.</p>
+</section>
+{% endblock %}
+

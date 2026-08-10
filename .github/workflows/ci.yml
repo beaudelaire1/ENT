@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  django:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: myent_test
+          POSTGRES_USER: myent
+          POSTGRES_PASSWORD: test-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U myent -d myent_test"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DJANGO_SECRET_KEY: ci-only-secret
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: localhost
+      DATABASE_URL: postgresql://myent:test-password@127.0.0.1:5432/myent_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: python src/manage.py check --deploy
+      - run: python src/manage.py makemigrations --check --dry-run
+      - run: python src/manage.py generate_soundscapes
+      - run: python src/manage.py collectstatic --noinput
+      - run: python src/manage.py test accounts.tests core.tests dashboard.tests library.tests planner.tests sablier.tests

@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suivi de Compétences L3 Mathématiques</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f0f8ff;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1,
+    h2 {
+      text-align: center;
+      color: #1a5276;
+    }
+
+    .semester {
+      margin-bottom: 40px;
+    }
+
+    .semester h2 {
+      background: linear-gradient(135deg, #5D9CEC, #3A7BD5);
+      color: white;
+      padding: 15px;
+      margin: 0 0 20px 0;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .matiere {
+      background-color: #e3f2fd;
+      font-weight: bold;
+      text-align: left;
+      padding-left: 15px;
+    }
+
+    .competence {
+      text-align: left;
+      padding-left: 20px;
+      font-size: 0.9em;
+    }
+
+    .niveau {
+      width: 120px;
+    }
+
+    select {
+      width: 100%;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    .niveau-0 {
+      background-color: #ffcdd2;
+      color: #d32f2f;
+    }
+
+    .niveau-1 {
+      background-color: #ffecb3;
+      color: #f57c00;
+    }
+
+    .niveau-2 {
+      background-color: #c8e6c9;
+      color: #388e3c;
+    }
+
+    .niveau-3 {
+      background-color: #bbdefb;
+      color: #1976d2;
+    }
+
+    .niveau-4 {
+      background-color: #c5e1a5;
+      color: #2e7d32;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background-color: #ecf0f1;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 5px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ffcdd2 0%, #ffecb3 25%, #c8e6c9 50%, #bbdefb 75%, #c5e1a5 100%);
+      transition: width 0.3s ease;
+    }
+
+    .summary {
+      background: #f0f8ff;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+
+    .export-btn {
+      background: linear-gradient(135deg, #5D9CEC, #3A7BD5);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+      transition: transform 0.2s;
+    }
+
+    .export-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .legend {
+      background: #f0f8ff;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .legend-item {
+      display: inline-block;
+      margin: 5px 10px;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>📚 Suivi de Compétences L3 Mathématiques 2025-26</h1>
+
+    <div class="legend">
+      <h3>Légende des niveaux de maîtrise :</h3>
+      <div class="legend-item niveau-0">0 - Non abordé</div>
+      <div class="legend-item niveau-1">1 - Découvert</div>
+      <div class="legend-item niveau-2">2 - En cours</div>
+      <div class="legend-item niveau-3">3 - Acquis</div>
+      <div class="legend-item niveau-4">4 - Maîtrisé</div>
+    </div>
+
+    <div class="semester">
+      <h2>🍁 Semestre 5 (LS5)</h2>
+      <div class="table-container">
+        <table id="tableS5">
+          <thead>
+            <tr>
+              <th style="width: 300px;">Matière / Compétence</th>
+              <th style="width: 60px;">Coef.</th>
+              <th style="width: 60px;">ECTS</th>
+              <th style="width: 60px;">CM (h)</th>
+              <th style="width: 60px;">TD (h)</th>
+              <th style="width: 60px;">TP (h)</th>
+              <th style="width: 100px;">Travail Personnel Estimé (h)</th>
+              <th style="width: 100px;">Temps Réel (h)</th>
+              <th style="width: 120px;">Niveau de Maîtrise</th>
+              <th style="width: 200px;">Progression</th>
+              <th style="width: 150px;">Commentaires</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Topologie -->
+            <tr class="matiere-row">
+              <td class="matiere">🔄 TOPOLOGIE</td>
+              <td>5</td>
+              <td>5</td>
+              <td>20</td>
+              <td>30</td>
+              <td>0</td>
+              <td><input type="number" value="40" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau"></td>
+              <td class="progress-container"></td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Espaces métriques et topologiques</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Continuité et homéomorphismes</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Compacité et connexité</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+
+            <!-- Mesure et intégration -->
+            <tr class="matiere-row">
+              <td class="matiere">∫ MESURE ET INTÉGRATION</td>
+              <td>5</td>
+              <td>5</td>
+              <td>20</td>
+              <td>30</td>
+              <td>0</td>
+              <td><input type="number" value="40" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau"></td>
+              <td class="progress-container"></td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Théorie de la mesure (Lebesgue)</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Intégrale de Lebesgue</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Théorèmes de convergence</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+
+            <!-- Géométrie -->
+            <tr class="matiere-row">
+              <td class="matiere">△ GÉOMÉTRIE</td>
+              <td>5</td>
+              <td>5</td>
+              <td>20</td>
+              <td>30</td>
+              <td>0</td>
+              <td><input type="number" value="40" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau"></td>
+              <td class="progress-container"></td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Géométrie différentielle</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Courbes et surfaces</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Courbure et géométrie riemannienne</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+
+            <!-- Calcul scientifique -->
+            <tr class="matiere-row">
+              <td class="matiere">🔬 CALCUL SCIENTIFIQUE</td>
+              <td>3</td>
+              <td>3</td>
+              <td>12</td>
+              <td>12</td>
+              <td>12</td>
+              <td><input type="number" value="25" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau"></td>
+              <td class="progress-container"></td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Méthodes numériques de résolution</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Programmation scientifique</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+
+            <!-- Systèmes dynamiques -->
+            <tr class="matiere-row">
+              <td class="matiere">🌀 SYSTÈMES DYNAMIQUES</td>
+              <td>3</td>
+              <td>3</td>
+              <td>12</td>
+              <td>12</td>
+              <td>0</td>
+              <td><input type="number" value="20" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau"></td>
+              <td class="progress-container"></td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Équations différentielles</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Stabilité et bifurcations</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+
+            <!-- Algorithmique et programmation -->
+            <tr class="matiere-row">
+              <td class="matiere">💻 ALGORITHMIQUE ET PROGRAMMATION</td>
+              <td>3</td>
+              <td>3</td>
+              <td>12</td>
+              <td>0</td>
+              <td>12</td>
+              <td><input type="number" value="20" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau"></td>
+              <td class="progress-container"></td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Algorithmes fondamentaux</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Structures de données</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="semester">
+      <h2>🌸 Semestre 6 (LS6)</h2>
+      <div class="table-container">
+        <table id="tableS6">
+          <thead>
+            <tr>
+              <th style="width: 300px;">Matière / Compétence</th>
+              <th style="width: 60px;">Coef.</th>
+              <th style="width: 60px;">ECTS</th>
+              <th style="width: 60px;">CM (h)</th>
+              <th style="width: 60px;">TD (h)</th>
+              <th style="width: 60px;">TP (h)</th>
+              <th style="width: 100px;">Travail Personnel Estimé (h)</th>
+              <th style="width: 100px;">Temps Réel (h)</th>
+              <th style="width: 120px;">Niveau de Maîtrise</th>
+              <th style="width: 200px;">Progression</th>
+              <th style="width: 150px;">Commentaires</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Calcul différentiel -->
+            <tr class="matiere-row">
+              <td class="matiere">∂ CALCUL DIFFÉRENTIEL</td>
+              <td>5</td>
+              <td>5</td>
+              <td>20</td>
+              <td>30</td>
+              <td>0</td>
+              <td><input type="number" value="40" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau"></td>
+              <td class="progress-container"></td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Dérivées partielles et différentielles</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Théorèmes des fonctions implicites</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+            <tr>
+              <td class="competence">• Optimisation différentielle</td>
+              <td colspan="6"></td>
+              <td><input type="number" value="0" min="0" onchange="updateGlobalStats()" style="width:60px;"></td>
+              <td class="niveau">
+                <select onchange="updateProgress(this)">
+                  <option value="0">0 - Non abordé</option>
+                  <option value="1">1 - Découvert</option>
+                  <option value="2">2 - En cours</option>
+                  <option value="3">3 - Acquis</option>
+                  <option value="4">4 - Maîtrisé</option>
+                </select>
+              </td>
+              <td class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 0%"></div>
+                </div>
+              </td>
+              <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+            </tr>
+
+            <!-- Mesure et probabilités -->
+            <tr class="matiere-row">
+              <td class="matiere">∫ MESURE ET PROBABILITÉS</td>
+              <td>4</td>
+              <td>5</td>

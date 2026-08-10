@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Sablier · MyENT{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'sablier/sablier.css' %}?v=20260810">{% endblock %}
+{% block content %}
+<div class="focus-app" id="focus-app"
+     data-user="{{ user.pk }}" data-total="{{ preference.default_duration_seconds }}" data-mode="{{ preference.mode }}"
+     data-ambience="{{ preference.ambience }}" data-warning="{{ preference.warning_seconds }}"
+     data-focus-level="{{ preference.focus_level }}" data-accent="{{ preference.accent_color }}"
+     data-soundscape="{{ preference.soundscape_enabled|yesno:'true,false' }}"
+     data-end-sound="{{ preference.end_sound_enabled|yesno:'true,false' }}"
+     style="--focus-accent:{{ preference.accent_color }};{% if preference.background_image %}--focus-image:url('{{ preference.background_image.url }}');{% endif %}">
+  <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre atmosphère.</p></div><div class="focus-header-actions"><span class="live-chip" id="live-chip">● PRÊT</span><button class="focus-button" type="button" id="scene-button">Mode concentration ⛶</button></div></header>
+  <div class="focus-layout">
+    <aside class="focus-sidebar" id="focus-sidebar">
+      <p class="focus-eyebrow">CONFIGURATION</p><h1>Votre session</h1>
+      <label>INTENTION<input id="session-intention" value="{{ preference.session_intention }}" maxlength="80" placeholder="Réviser, créer, apprendre…"></label>
+      <label>DURÉE</label><div class="duration-row"><input id="duration-input" value="05:00" inputmode="numeric"><button class="focus-button primary" id="apply-duration" type="button">OK</button></div>
+      <div class="preset-row"><button data-preset="1">1m</button><button data-preset="3">3m</button><button data-preset="5">5m</button><button data-preset="10">10m</button></div>
+      <label>VISUALISATION</label><div class="mode-grid"><button data-mode="ring">◉<span>Anneau</span></button><button data-mode="hourglass">⌛<span>Sablier</span></button><button data-mode="digital">01<span>Digital</span></button><button data-mode="zen">◎<span>Zen</span></button></div>
+      <label>AMBIANCE<select id="ambience-select">{% for value,label in ambience_choices %}<option value="{{ value }}" {% if preference.ambience == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <div class="audio-options"><button class="focus-button" id="soundscape-toggle" type="button">◯ Son ambiant</button><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div></div>
+      <label>ALERTE FINALE <output id="warning-output">{{ preference.warning_seconds }} s</output><input id="warning-slider" type="range" min="10" max="180" step="10" value="{{ preference.warning_seconds }}"></label>
+      <details class="preference-panel"><summary>Apparence et sauvegarde</summary><form method="post" enctype="multipart/form-data" class="stack-form" id="focus-preferences">{% csrf_token %}{{ form.as_p }}<button class="focus-button primary">Enregistrer mes préférences</button></form></details>
+      <p class="shortcut-help">ESPACE · lecture / pause<br>R · reprise à zéro &nbsp; F11 · plein écran</p>
+    </aside>
+    <section class="focus-stage" id="focus-stage">
+      <div class="stage-status"><span id="session-status">● PRÊT</span><span id="ambience-status">CONCENTRATION · FOCUS 2</span></div>
+      <p class="stage-intention" id="stage-intention">SESSION DE CONCENTRATION</p>
+      <div class="visual-wrap" id="visual-wrap" data-mode="{{ preference.mode }}">
+        <canvas id="timer-canvas" aria-hidden="true"></canvas>
+        <div class="digital-visual"><strong id="digital-time">05:00</strong><span>COMPTE À REBOURS</span><i id="digital-progress"></i></div>
+        <div class="zen-visual"><div class="zen-rings"><div><strong id="zen-time">05:00</strong><span id="breath-label">CENTREZ-VOUS</span></div></div><p>Respirez · gardez votre rythme</p></div>
+        <div class="canvas-time"><strong id="canvas-time">05:00</strong><span id="canvas-label">ÉCOULEMENT RÉEL</span></div>
+      </div>
+      <div class="stage-message" id="stage-message">ESPACE POUR DÉMARRER</div>
+      <div class="flash-layer" id="flash-layer"></div>
+    </section>
+  </div>
+  <div class="focus-controls"><button id="minus-minute">− 1 min</button><button class="primary" id="main-control">▶ DÉMARRER</button><button id="reset-control">↻ Réinitialiser</button><button id="plus-minute">+ 1 min</button></div>
+  <section class="focus-player"><div><p class="focus-eyebrow">PLAYLIST PERSONNELLE</p><select id="playlist-select"><option value="">Aucune playlist</option>{% for playlist in playlists %}<option value="{{ playlist.pk }}">{{ playlist.title }}</option>{% endfor %}</select></div><div class="player-track"><strong id="player-title">Sélectionnez une playlist</strong><span id="player-artist"></span></div><button id="player-prev">⏮</button><button id="player-toggle">▶</button><button id="player-next">⏭</button><button id="player-shuffle">Aléatoire</button><button id="player-repeat">Répéter</button><label class="volume">Volume<input id="player-volume" type="range" min="0" max="1" step="0.01" value="0.65"></label><a href="{% url 'sablier:playlists' %}">Gérer</a></section>
+  <audio id="soundscape-audio" loop preload="none"></audio><audio id="playlist-audio" preload="metadata"></audio><audio id="finish-audio" src="{% static 'sablier/audio/finished.wav' %}" preload="auto"></audio>
+</div>
+{{ playlist_payload|json_script:"playlist-data" }}
+{% endblock %}
+{% block scripts %}<script src="{% static 'sablier/sablier.js' %}?v=20260810" defer></script>{% endblock %}

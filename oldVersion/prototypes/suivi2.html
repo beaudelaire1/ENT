@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi de Compétences L3 Mathématiques</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .semester {
+            margin-bottom: 40px;
+        }
+
+        .semester h2 {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px;
+            margin: 0 0 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .matiere {
+            background-color: #ecf0f1;
+            font-weight: bold;
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        .competence {
+            text-align: left;
+            padding-left: 20px;
+            font-size: 0.9em;
+        }
+
+        .niveau {
+            width: 120px;
+        }
+
+        select {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .niveau-0 {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .niveau-1 {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .niveau-2 {
+            background-color: #f1c40f;
+            color: #2c3e50;
+        }
+
+        .niveau-3 {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .niveau-4 {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c 0%, #f39c12 25%, #f1c40f 50%, #27ae60 75%, #2ecc71 100%);
+            transition: width 0.3s ease;
+        }
+
+        .summary {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .legend {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .legend-item {
+            display: inline-block;
+            margin: 5px 10px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📚 Suivi de Compétences L3 Mathématiques 2025-26</h1>
+
+        <div class="legend">
+            <h3>Légende des niveaux de maîtrise :</h3>
+            <div class="legend-item niveau-0">0 - Non abordé</div>
+            <div class="legend-item niveau-1">1 - Découvert</div>
+            <div class="legend-item niveau-2">2 - En cours</div>
+            <div class="legend-item niveau-3">3 - Acquis</div>
+            <div class="legend-item niveau-4">4 - Maîtrisé</div>
+        </div>
+
+        <div class="semester">
+            <h2>🍁 Semestre 5 (LS5)</h2>
+            <div class="table-container">
+                <table id="tableS5">
+                    <thead>
+                        <tr>
+                            <th style="width: 300px;">Matière / Compétence</th>
+                            <th style="width: 60px;">Coef.</th>
+                            <th style="width: 60px;">ECTS</th>
+                            <th style="width: 60px;">CM (h)</th>
+                            <th style="width: 60px;">TD (h)</th>
+                            <th style="width: 60px;">TP (h)</th>
+                            <th style="width: 100px;">Travail Personnel Estimé (h)</th>
+                            <th style="width: 100px;">Temps Réel (h)</th>
+                            <th style="width: 120px;">Niveau de Maîtrise</th>
+                            <th style="width: 200px;">Progression</th>
+                            <th style="width: 150px;">Commentaires</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Exemple pour une matière -->
+                        <tr class="matiere-row">
+                            <td class="matiere">🔄 TOPOLOGIE</td>
+                            <td>5</td>
+                            <td>5</td>
+                            <td>20</td>
+                            <td>30</td>
+                            <td>0</td>
+                            <td><input type="number" value="40" min="0" onchange="updateGlobalStats()"
+                                    style="width:60px;"></td>
+                            <td><input type="number" value="0" min="0" onchange="updateGlobalStats()"
+                                    style="width:60px;"></td>
+                            <td class="niveau"></td>
+                            <td class="progress-container"></td>
+                            <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+                        </tr>
+                        <tr>
+                            <td class="competence">• Espaces métriques et topologiques</td>
+                            <td colspan="6"></td>
+                            <td><input type="number" value="0" min="0" onchange="updateGlobalStats()"
+                                    style="width:60px;"></td>
+                            <td class="niveau">
+                                <select onchange="updateProgress(this)">
+                                    <option value="0">0 - Non abordé</option>
+                                    <option value="1">1 - Découvert</option>
+                                    <option value="2">2 - En cours</option>
+                                    <option value="3">3 - Acquis</option>
+                                    <option value="4">4 - Maîtrisé</option>
+                                </select>
+                            </td>
+                            <td class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 0%"></div>
+                                </div>
+                            </td>
+                            <td><input type="text" placeholder="Notes..." style="width:140px;"></td>
+                        </tr>
+                        <!-- Ajoutez d'autres lignes de matière et compétence ici -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="summary">
+            <h3>📈 Tableau de Bord Global</h3>
+            <div id="globalStats">
+                <p><strong>Progression générale :</strong> <span id="globalProgress">0%</span></p>
+                <div class="progress-bar" style="width: 300px; height: 25px;">
+                    <div id="globalProgressBar" class="progress-fill" style="width: 0%"></div>
+                </div>
+                <br>
+                <p><strong>Répartition par niveau :</strong></p>
+                <ul id="levelDistribution">
+                    <li>Non abordé (0) : <span id="level0Count">0</span> compétences</li>
+                    <li>Découvert (1) : <span id="level1Count">0</span> compétences</li>
+                    <li>En cours (2) : <span id="level2Count">0</span> compétences</li>
+                    <li>Acquis (3) : <span id="level3Count">0</span> compétences</li>
+                    <li>Maîtrisé (4) : <span id="level4Count">0</span> compétences</li>
+                </ul>
+                <p><strong>Total des heures de travail personnel estimées :</strong> <span id="totalWorkHours">0</span>h
+                </p>
+                <p><strong>Total des heures de travail personnel réelles :</strong> <span id="totalRealHours">0</span>h
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="export-btn" onclick="exportToCSV()">📊 Exporter en CSV</button>
+            <button class="export-btn" onclick="printDocument()">🖨️ Imprimer</button>
+            <button class="export-btn" onclick="saveProgress()">💾 Sauvegarder</button>
+            <button class="export-btn" onclick="loadProgress()">📁 Charger</button>
+        </div>
+    </div>
+
+    <script>
+        function updateProgress(selectElement) {
+            const row = selectElement.closest('tr');
+            const progressBar = row.querySelector('.progress-fill');
+            const value = parseInt(selectElement.value);
+
+            // Mettre à jour la barre de progression
+            const percentage = (value / 4) * 100;
+            progressBar.style.width = percentage + '%';
+
+            // Mettre à jour la classe pour la couleur
+            selectElement.className = 'niveau-' + value;
+
+            // Mettre à jour les statistiques globales
+            updateGlobalStats();
+        }
+
+        function updateGlobalStats() {
+            const selects = document.querySelectorAll('select');
+            let totalCompetences = selects.length;
+            let totalPoints = 0;
+            let levelCounts = [0, 0, 0, 0, 0];
+
+            selects.forEach(select => {
+                const value = parseInt(select.value);
+                totalPoints += value;
+                levelCounts[value]++;
+            });
+
+            // Calculer le pourcentage global
+            const globalPercentage = totalCompetences > 0 ? (totalPoints / (totalCompetences * 4)) * 100 : 0;
+            document.getElementById('globalProgress').textContent = Math.round(globalPercentage) + '%';
+            document.getElementById('globalProgressBar').style.width = globalPercentage + '%';
+
+            // Mettre à jour la distribution par niveau
+            for (let i = 0; i <= 4; i++) {
+                document.getElementById('level' + i + 'Count').textContent = levelCounts[i];
+            }
+
+            // Calculer le total des heures de travail personnel estimées et réelles
+            const workInputs = document.querySelectorAll('input[type="number"]');
+            let totalEstimatedHours = 0;
+            let totalRealHours = 0;
+
+            workInputs.forEach((input, index) => {
+                if (index % 2 === 0) {
+                    totalEstimatedHours += parseInt(input.value) || 0;
+                } else {
+                    totalRealHours += parseInt(input.value) || 0;
+                }
+            });
+
+            document.getElementById('totalWorkHours').textContent = totalEstimatedHours;
+            document.getElementById('totalRealHours').textContent = totalRealHours;
+        }
+
+        function exportToCSV() {
+            let csv = 'Matière,Compétence,Coefficient,ECTS,CM,TD,TP,Travail Personnel Estimé,Temps Réel,Niveau,Commentaires\n';
+
+            const tables = document.querySelectorAll('table');
+            tables.forEach(table => {
+                const rows = table.querySelectorAll('tbody tr');
+                let currentMatiere = '';
+
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 0) {
+                        if (row.classList.contains('matiere-row')) {
+                            currentMatiere = cells[0].textContent.trim();
+                            const coef = cells[1].textContent;
+                            const ects = cells[2].textContent;
+                            const cm = cells[3].textContent;
+                            const td = cells[4].textContent;
+                            const tp = cells[5].textContent;
+                            const estimatedWork = cells[6].querySelector('input').value;
+                            const realWork = cells[7].querySelector('input').value;
+                            csv += `"${currentMatiere}","","${coef}","${ects}","${cm}","${td}","${tp}","${estimatedWork}","${realWork}","",""\n`;
+                        } else {
+                            const competence = cells[0].textContent.trim();
+                            const estimatedWork = cells[6] ? cells[6].querySelector('input')?.value : '0';
+                            const realWork = cells[7] ? cells[7].querySelector('input')?.value : '0';
+                            const selectElement = cells[8].querySelector('select');
+                            const niveau = selectElement ? selectElement.options[selectElement.selectedIndex].text : '';
+                            const commentInput = cells[10].querySelector('input');
+                            const comment = commentInput ? commentInput.value : '';
+                            csv += `"${currentMatiere}","${competence}","","","","","","${estimatedWork}","${realWork}","${niveau}","${comment}"\n`;
+                        }
+                    }
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'suivi_competences_L3_maths.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function printDocument() {
+            window.print();
+        }
+
+        function saveProgress() {
+            const data = {};
+            const selects = document.querySelectorAll('select');
+            const workInputs = document.querySelectorAll('input[type="number"]');
+            const commentInputs = document.querySelectorAll('input[type="text"]');
+
+            data.levels = Array.from(selects).map(select => select.value);
+
+            // Extraire les heures estimées et réelles
+            data.estimatedHours = [];
+            data.realHours = [];
+            workInputs.forEach((input, index) => {
+                if (index % 2 === 0) {
+                    data.estimatedHours.push(input.value);
+                } else {
+                    data.realHours.push(input.value);
+                }
+            });
+
+            data.comments = Array.from(commentInputs).map(input => input.value);
+
+            const jsonData = JSON.stringify(data);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'progression_L3_maths.json');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function loadProgress() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function (event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            const selects = document.querySelectorAll('select');
+                            const workInputs = document.querySelectorAll('input[type="number"]');
+                            const commentInputs = document.querySelectorAll('input[type="text"]');
+
+                            if (data.levels) {
+                                data.levels.forEach((level, index) => {
+                                    if (selects[index]) {
+                                        selects[index].value = level;
+                                        updateProgress(selects[index]);
+                                    }
+                                });
+                            }
+
+                            if (data.estimatedHours) {
+                                data.estimatedHours.forEach((hours, index) => {
+                                    if (workInputs[index * 2]) {
+                                        workInputs[index * 2].value = hours;
+                                    }
+                                });
+                            }
+
+                            if (data.realHours) {
+                                data.realHours.forEach((hours, index) => {
+                                    if (workInputs[index * 2 + 1]) {
+                                        workInputs[index * 2 + 1].value = hours;
+                                    }
+                                });
+                            }
+
+                            if (data.comments) {
+                                data.comments.forEach((comment, index) => {
+                                    if (commentInputs[index]) {
+                                        commentInputs[index].value = comment;
+                                    }
+                                });
+                            }
+
+                            updateGlobalStats();
+                            alert('Progression chargée avec succès !');
+                        } catch (error) {
+                            alert('Erreur lors du chargement du fichier !');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // Initialiser les statistiques au chargement
+        document.addEventListener('DOMContentLoaded', function () {
+            updateGlobalStats();
+
+            // Ajouter des événements pour mettre à jour les stats quand les heures changent
+            const workInputs = document.querySelectorAll('input[type="number"]');
+            workInputs.forEach(input => {
+                input.addEventListener('input', updateGlobalStats);
+            });
+        });
+    </script>
+</body>
+
+</html>

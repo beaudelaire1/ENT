@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Bibliothèque · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">CONTENUS PERSONNELS</p><h1>Bibliothèque</h1></div><div class="actions"><a class="button" href="{% url 'library:folder_new' %}">Dossier</a><a class="button" href="{% url 'library:tag_new' %}">Étiquette</a><a class="button primary" href="{% url 'library:new' %}">Ajouter</a></div></header>
+<div class="library-layout"><aside class="panel"><h2>Dossiers</h2><a href="{% url 'library:list' %}">Tous</a>{% for folder in folders %}<a href="?folder={{ folder.pk }}">{{ folder.name }}</a>{% endfor %}<h2>Types</h2><a href="?kind=note">Notes</a><a href="?kind=file">Fichiers</a><a href="?kind=link">Liens</a></aside><section class="content-cards">{% for item in items %}<a class="panel content-card" href="{% url 'library:detail' item.pk %}"><span class="eyebrow">{{ item.get_kind_display }}</span><h2>{{ item.title }}</h2><p class="muted">{{ item.description|default:item.note_text|truncatechars:150 }}</p></a>{% empty %}<div class="panel"><p class="empty">Votre bibliothèque est vide.</p></div>{% endfor %}</section></div>
+{% endblock %}
+
