@@ -18,3 +18,4 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 .session-log li { display:flex; justify-content:space-between; gap:10px; font-size:12px; }
 .session-log strong { white-space:nowrap; }
 .session-log span { opacity:.65; text-align:right; }
+.player-hint { margin:0; font-size:13px; opacity:.7; max-width:340px; }

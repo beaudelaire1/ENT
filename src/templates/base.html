@@ -21,6 +21,7 @@
       <a href="{% url 'formations:list' %}">Formations</a>
       <a href="{% url 'sablier:home' %}">Sablier</a>
       <a class="sub-link" href="{% url 'sablier:audio' %}">Musiques</a>
+      <a class="sub-link" href="{% url 'sablier:playlists' %}">Playlists</a>
     </nav>
     <div class="sidebar-bottom">
       <a href="{% url 'notifications:list' %}">Notifications {% if unread_notifications %}<span class="badge">{{ unread_notifications }}</span>{% endif %}</a>

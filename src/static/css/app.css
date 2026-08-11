@@ -78,6 +78,16 @@ input:focus,select:focus,textarea:focus { border-color:var(--accent); box-shadow
 .button { display:inline-flex; justify-content:center; align-items:center; min-height:42px; padding:9px 16px; border:1px solid var(--border); background:var(--surface); border-radius:11px; cursor:pointer; font-weight:700; }
 .button.primary { background:var(--accent); color:white; border-color:transparent; }
 .button.danger { background:var(--danger); color:white; border-color:transparent; }
+.button.danger:hover { filter:brightness(1.08); }
+/* Actions dans une ligne de liste : même affordance que les autres boutons, en plus discret. */
+.button.small { min-height:32px; padding:5px 11px; font-size:13px; font-weight:650; }
+.button.small.quiet { background:transparent; border-color:transparent; color:var(--muted); }
+.button.small.quiet:hover { background:var(--surface); color:var(--text); }
+.button.small.quiet.danger { background:transparent; color:var(--danger); }
+.button.small.quiet.danger:hover { background:var(--danger); color:white; }
+/* Un état vide doit porter la sortie, pas seulement constater le vide. */
+.empty-state { display:grid; justify-items:start; gap:12px; padding:6px 0; }
+.empty-state .empty { margin:0; }
 .messages { display:grid; gap:8px; margin-bottom:18px; }
 .message { padding:12px 15px; border-radius:11px; background:var(--surface); border:1px solid var(--border); }
 .message.success { border-color:var(--success); }

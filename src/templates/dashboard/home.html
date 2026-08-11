@@ -8,15 +8,15 @@
   <section class="panel widget {% if widget.kind == 'today' or widget.kind == 'recent' %}wide{% endif %}" draggable="true" data-widget="{{ widget.kind }}">
     <div class="widget-heading"><span class="drag-handle" title="Déplacer">⋮⋮</span><h2>{{ widget.get_kind_display }}</h2></div>
     {% if widget.kind == 'today' %}
-      {% for event in events_today %}<div class="list-row"><span>{{ event.title }}</span><time>{{ event.starts_at|time:"H:i" }}</time></div>{% empty %}<p class="empty">Aucun événement aujourd’hui.</p>{% endfor %}
+      {% for event in events_today %}<div class="list-row"><span>{{ event.title }}</span><time>{{ event.starts_at|time:"H:i" }}</time></div>{% empty %}<div class="empty-state"><p class="empty">Rien de prévu aujourd’hui.</p><a class="button small" href="{% url 'planner:event_new' %}">Ajouter un événement</a></div>{% endfor %}
     {% elif widget.kind == 'tasks' %}
-      {% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><span class="muted">{{ task.get_priority_display }}</span></div>{% empty %}<p class="empty">Tout est à jour.</p>{% endfor %}
+      {% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><span class="muted">{{ task.get_priority_display }}</span></div>{% empty %}<div class="empty-state"><p class="empty">Tout est à jour.</p><a class="button small" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}
     {% elif widget.kind == 'reminders' %}
       {% for note in notifications %}<div class="list-row"><span>{{ note.title }}</span></div>{% empty %}<p class="empty">Aucun rappel.</p>{% endfor %}
     {% elif widget.kind == 'recent' %}
-      {% for item in recent_items %}<div class="list-row"><a href="{% url 'library:detail' item.pk %}">{{ item.title }}</a><span class="muted">{{ item.get_kind_display }}</span></div>{% empty %}<p class="empty">Bibliothèque vide.</p>{% endfor %}
+      {% for item in recent_items %}<div class="list-row"><a href="{% url 'library:detail' item.pk %}">{{ item.title }}</a><span class="muted">{{ item.get_kind_display }}</span></div>{% empty %}<div class="empty-state"><p class="empty">Bibliothèque vide.</p><a class="button small" href="{% url 'library:new' %}">Ajouter un contenu</a></div>{% endfor %}
     {% elif widget.kind == 'formations' %}
-      {% for path in formations %}<div class="list-row"><a href="{% url 'formations:detail' path.pk %}">{{ path.title }}</a></div>{% empty %}<p class="empty">Aucune formation.</p>{% endfor %}
+      {% for path in formations %}<div class="list-row"><a href="{% url 'formations:detail' path.pk %}">{{ path.title }}</a></div>{% empty %}<div class="empty-state"><p class="empty">Aucune formation.</p><a class="button small" href="{% url 'formations:new' %}">Créer une formation</a></div>{% endfor %}
     {% elif widget.kind == 'quick_note' %}
       <form method="post" action="{% url 'dashboard:quick_note' %}" class="stack-form">{% csrf_token %}<textarea name="text" rows="3" placeholder="Capturez une idée…" required></textarea><button class="button">Ajouter à la bibliothèque</button></form>
     {% elif widget.kind == 'sablier' %}
