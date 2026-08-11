@@ -192,8 +192,15 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 LIBRARY_MAX_UPLOAD_MB = int(os.getenv("LIBRARY_MAX_UPLOAD_MB", "25"))
-AUDIO_MAX_TRACK_MB = int(os.getenv("AUDIO_MAX_TRACK_MB", "50"))
-AUDIO_DEFAULT_QUOTA_MB = int(os.getenv("AUDIO_DEFAULT_QUOTA_MB", "1024"))
+AUDIO_MAX_TRACK_MB = int(os.getenv("AUDIO_MAX_TRACK_MB", "1024"))
+AUDIO_DEFAULT_QUOTA_MB = int(os.getenv("AUDIO_DEFAULT_QUOTA_MB", "10240"))
+
+# Un envoi volumineux est écrit sur disque plutôt que gardé en mémoire, sans quoi
+# plusieurs téléversements simultanés suffiraient à saturer le conteneur.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+# Ne concerne que les champs de formulaire hors fichiers : les pièces jointes ne sont
+# pas comptées ici, la limite par piste s'en charge.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = not DEBUG

@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models import Sum
 
 from accounts.models import UserProfile
+from core.formatting import human_mb
 from core.forms import ScopedModelForm
 
 from .models import AudioTrack, FocusPreference, Playlist
@@ -55,7 +56,7 @@ class AudioTrackForm(ScopedModelForm):
             return upload
         max_bytes = settings.AUDIO_MAX_TRACK_MB * 1024 * 1024
         if upload.size > max_bytes:
-            raise forms.ValidationError(f"La piste dépasse {settings.AUDIO_MAX_TRACK_MB} Mo.")
+            raise forms.ValidationError(f"La piste dépasse {human_mb(settings.AUDIO_MAX_TRACK_MB)}.")
         suffix = Path(upload.name).suffix.lower()
         allowed = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".ogg": "audio/ogg"}
         if suffix not in allowed:
@@ -67,7 +68,10 @@ class AudioTrackForm(ScopedModelForm):
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         quota_mb = profile.audio_quota_mb
         if used + upload.size > quota_mb * 1024 * 1024:
-            raise forms.ValidationError(f"Le quota audio de {quota_mb} Mo serait dépassé.")
+            remaining = max(0, quota_mb * 1024 * 1024 - used) / 1024 / 1024
+            raise forms.ValidationError(
+                f"Le quota audio de {human_mb(quota_mb)} serait dépassé : il reste {human_mb(remaining)}."
+            )
         upload.detected_mime = allowed[suffix]
         return upload
 

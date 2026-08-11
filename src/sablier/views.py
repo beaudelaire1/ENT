@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import UserProfile
 from core.deletion import confirm_delete
+from core.formatting import human_mb
 from core.queue import enqueue
 from formations.models import Competency
 
@@ -84,13 +85,19 @@ def audio_library(request):
     used = (
         AudioTrack.objects.filter(owner=request.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"] or 0
     )
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    used_mb = used / 1024 / 1024
     return render(
         request,
         "sablier/audio.html",
         {
             "form": form,
             "tracks": AudioTrack.objects.filter(owner=request.user),
-            "used_mb": round(used / 1024 / 1024, 1),
+            "used": human_mb(used_mb),
+            "quota": human_mb(profile.audio_quota_mb),
+            "remaining": human_mb(max(0, profile.audio_quota_mb - used_mb)),
+            "max_track": human_mb(settings.AUDIO_MAX_TRACK_MB),
+            "used_percent": min(100, round(used_mb * 100 / profile.audio_quota_mb)) if profile.audio_quota_mb else 0,
         },
     )
 

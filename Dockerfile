@@ -28,5 +28,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl --fail --silent http://127.0.0.1:8000/healthz/ || exit 1
 
-CMD ["gunicorn", "config.wsgi:application", "--bind=0.0.0.0:8000", "--workers=3", "--threads=2", "--timeout=60", "--access-logfile=-", "--error-logfile=-"]
+# `exec` remplace le shell pour que gunicorn reçoive bien les signaux d'arrêt.
+# Le délai par défaut de 60 s tuait le worker au milieu d'un téléversement volumineux :
+# une piste de 1 Go met plusieurs minutes à monter sur une connexion domestique.
+CMD ["sh", "-c", "exec gunicorn config.wsgi:application --bind=0.0.0.0:8000 --workers=3 --threads=2 --timeout=${GUNICORN_TIMEOUT:-900} --access-logfile=- --error-logfile=-"]
 

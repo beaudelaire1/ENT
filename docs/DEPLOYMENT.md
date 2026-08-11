@@ -11,6 +11,16 @@
 7. Créer l’administrateur : `python manage.py createsuperuser` dans le conteneur `web`.
 8. Ajouter une tâche planifiée Coolify nocturne exécutant `docker compose --profile ops run --rm backup` depuis le projet.
 
+## Téléversements volumineux
+
+Une piste audio peut atteindre 1 Go (`AUDIO_MAX_TRACK_MB`), pour un quota de 10 Go par compte (`AUDIO_DEFAULT_QUOTA_MB`). Trois réglages en dépendent hors de Django :
+
+- `GUNICORN_TIMEOUT` vaut 900 s. En dessous, le worker est tué au milieu d’un envoi long : 1 Go demande une dizaine de minutes sur une connexion domestique.
+- Le proxy placé devant l’application doit accepter des corps de requête de cette taille. Traefik, utilisé par Coolify, ne limite rien par défaut ; **une configuration Nginx personnalisée refuserait la requête dès 1 Mo** — il faut alors relever `client_max_body_size`.
+- Le conteneur écrit le fichier reçu dans son répertoire temporaire avant de le déplacer : prévoir l’espace disque correspondant.
+
+Avec `USE_S3=true`, le navigateur peut téléverser directement vers le bucket via une URL présignée, ce qui contourne les deux premiers points. La limite S3 d’un envoi en une seule requête est de 5 Go, bien au-delà de la limite par piste.
+
 ## Contrôles avant production
 
 - ouvrir `/healthz/` et vérifier `{"status":"ok"}` ;
