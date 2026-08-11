@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ item.title }} · MyENT{% endblock %}
 {% block content %}
-<header class="page-header"><div><p class="eyebrow">{{ item.get_kind_display|upper }}</p><h1>{{ item.title }}</h1></div><div class="actions"><a class="button" href="{% url 'library:edit' item.pk %}">Modifier</a>{% if item.kind == 'file' %}<a class="button primary" href="{% url 'library:download' item.pk %}">Télécharger</a>{% elif item.kind == 'link' %}<a class="button primary" href="{{ item.url }}" target="_blank" rel="noopener">Ouvrir</a>{% endif %}</div></header>
+<header class="page-header"><div><p class="eyebrow">{{ item.get_kind_display|upper }}</p><h1>{{ item.title }}</h1></div><div class="actions"><a class="button danger" href="{% url 'library:delete' item.pk %}">Supprimer</a><a class="button" href="{% url 'library:edit' item.pk %}">Modifier</a>{% if item.kind == 'file' %}<a class="button primary" href="{% url 'library:download' item.pk %}">Télécharger</a>{% elif item.kind == 'link' %}<a class="button primary" href="{{ item.url }}" target="_blank" rel="noopener">Ouvrir</a>{% endif %}</div></header>
 <section class="panel note-content">{% if item.kind == 'note' %}{{ item.note_html|safe }}{% else %}<p>{{ item.description|linebreaksbr }}</p>{% endif %}</section>
 {% endblock %}
 

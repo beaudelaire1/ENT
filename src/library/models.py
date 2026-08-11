@@ -23,10 +23,14 @@ class LibraryItemQuerySet(OwnedQuerySet):
 
 class Folder(TimeStampedModel):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="library_folders")
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="children")
-    name = models.CharField(max_length=120)
+    parent = models.ForeignKey(
+        "self", verbose_name="dossier parent", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
+    )
+    name = models.CharField("nom", max_length=120)
 
     class Meta:
+        verbose_name = "dossier"
+        verbose_name_plural = "dossiers"
         ordering = ["name"]
         constraints = [
             # Deux contraintes sont nécessaires : `parent IS NULL` n’entre jamais en
@@ -56,10 +60,12 @@ class Folder(TimeStampedModel):
 
 class Tag(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="library_tags")
-    name = models.CharField(max_length=64)
-    color = models.CharField(max_length=7, default="#7C6CFF")
+    name = models.CharField("nom", max_length=64)
+    color = models.CharField("couleur", max_length=7, default="#7C6CFF")
 
     class Meta:
+        verbose_name = "étiquette"
+        verbose_name_plural = "étiquettes"
         ordering = ["name"]
         constraints = [models.UniqueConstraint(fields=["owner", "name"], name="unique_tag_name_per_user")]
 
@@ -79,25 +85,29 @@ class LibraryItem(TimeStampedModel):
         NOTE = "note", "Note"
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="library_items")
-    folder = models.ForeignKey(Folder, null=True, blank=True, on_delete=models.SET_NULL, related_name="items")
-    tags = models.ManyToManyField(Tag, blank=True, related_name="items")
-    kind = models.CharField(max_length=8, choices=Kind.choices)
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    url = models.URLField(max_length=1000, blank=True)
-    file = models.FileField(upload_to=library_upload_path, blank=True)
-    file_size = models.PositiveBigIntegerField(default=0)
-    mime_type = models.CharField(max_length=120, blank=True)
+    folder = models.ForeignKey(
+        Folder, verbose_name="dossier", null=True, blank=True, on_delete=models.SET_NULL, related_name="items"
+    )
+    tags = models.ManyToManyField(Tag, verbose_name="étiquettes", blank=True, related_name="items")
+    kind = models.CharField("type", max_length=8, choices=Kind.choices)
+    title = models.CharField("titre", max_length=200)
+    description = models.TextField("description", blank=True)
+    url = models.URLField("adresse", max_length=1000, blank=True)
+    file = models.FileField("fichier", upload_to=library_upload_path, blank=True)
+    file_size = models.PositiveBigIntegerField("taille", default=0)
+    mime_type = models.CharField("type MIME", max_length=120, blank=True)
     note_delta = models.JSONField(default=dict, blank=True)
-    note_text = models.TextField(blank=True)
+    note_text = models.TextField("texte de la note", blank=True)
     note_html = models.TextField(blank=True)
-    provider_name = models.CharField(max_length=160, blank=True)
-    source_category = models.CharField(max_length=160, blank=True)
+    provider_name = models.CharField("source", max_length=160, blank=True)
+    source_category = models.CharField("catégorie", max_length=160, blank=True)
     legacy_source = models.CharField(max_length=80, blank=True)
     legacy_id = models.CharField(max_length=80, blank=True)
     objects = LibraryItemQuerySet.as_manager()
 
     class Meta:
+        verbose_name = "élément"
+        verbose_name_plural = "éléments"
         ordering = ["-updated_at"]
 
     def clean(self):

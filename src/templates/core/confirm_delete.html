@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">SUPPRESSION</p>
+    <h1>{{ title }}</h1>
+  </div>
+</header>
+
+<section class="panel narrow">
+  <p>Supprimer <strong>{{ instance }}</strong> ? Cette action est définitive.</p>
+
+  {% if cascade %}
+    <p class="muted">Seront également supprimés :</p>
+    <ul class="cascade-list">
+      {% for label, count in cascade %}<li><strong>{{ count }}</strong> {{ label }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <form method="post" class="actions">
+    {% csrf_token %}
+    <button class="button danger" type="submit">Supprimer définitivement</button>
+    <a class="button" href="{{ back_to }}">Annuler</a>
+  </form>
+</section>
+{% endblock %}
