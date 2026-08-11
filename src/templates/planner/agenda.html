@@ -1,7 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Agenda · MyENT{% endblock %}
 {% block content %}
-<header class="page-header"><div><p class="eyebrow">PLANIFICATEUR</p><h1>{{ anchor|date:"F Y"|capfirst }}</h1></div><a class="button primary" href="{% url 'planner:event_new' %}">Nouvel événement</a></header>
-<div class="two-columns"><section class="panel"><h2>Événements</h2>{% for event in events %}<div class="list-row"><div><strong>{{ event.title }}</strong><div class="muted">{{ event.starts_at|date:"d/m H:i" }} — {{ event.ends_at|date:"d/m H:i" }}</div></div><a href="{% url 'planner:event_edit' event.pk %}">Modifier</a></div>{% empty %}<p class="empty">Aucun événement.</p>{% endfor %}</section><section class="panel"><h2>Échéances</h2>{% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><time>{{ task.due_at|date:"d/m H:i" }}</time></div>{% empty %}<p class="empty">Aucune échéance.</p>{% endfor %}</section></div>
+<header class="page-header">
+  <div>
+    <p class="eyebrow">PLANIFICATEUR</p>
+    <h1>{{ anchor|date:"F Y"|capfirst }}</h1>
+  </div>
+  <div class="actions">
+    <a class="button" href="?month={{ previous_month|date:'Y-m' }}" aria-label="Mois précédent">‹ {{ previous_month|date:"F"|capfirst }}</a>
+    {% if not is_current_month %}<a class="button" href="{% url 'planner:agenda' %}">Aujourd’hui</a>{% endif %}
+    <a class="button" href="?month={{ next_month|date:'Y-m' }}" aria-label="Mois suivant">{{ next_month|date:"F"|capfirst }} ›</a>
+    <a class="button primary" href="{% url 'planner:event_new' %}">Nouvel événement</a>
+  </div>
+</header>
+<div class="two-columns"><section class="panel"><h2>Événements</h2>{% for event in events %}<div class="list-row"><div><strong>{{ event.title }}</strong>{% if event.series_id or event.is_series_head %} <span class="chip static" title="Fait partie d’une série">série</span>{% endif %}<div class="muted">{{ event.starts_at|date:"d/m H:i" }} — {{ event.ends_at|date:"d/m H:i" }}{% if event.location %} · {{ event.location }}{% endif %}</div></div><div class="actions"><a href="{% url 'planner:event_edit' event.pk %}">Modifier</a><a class="danger-link" href="{% url 'planner:event_delete' event.pk %}">Supprimer</a></div></div>{% empty %}<p class="empty">Aucun événement.</p>{% endfor %}</section><section class="panel"><h2>Échéances</h2>{% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><time>{{ task.due_at|date:"d/m H:i" }}</time></div>{% empty %}<p class="empty">Aucune échéance.</p>{% endfor %}</section></div>
 {% endblock %}
 

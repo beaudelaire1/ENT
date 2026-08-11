@@ -48,7 +48,7 @@ class ReminderTests(TestCase):
     @patch("planner.tasks.send_mail", side_effect=RuntimeError("SMTP indisponible"))
     def test_failure_is_recorded_before_retry(self, send_mail):
         reminder = Reminder.objects.get(task=self.task)
-        with self.assertRaises(Exception):
+        with self.assertRaises(RuntimeError):
             deliver_reminder.run(reminder.pk)
         reminder.refresh_from_db()
         self.assertEqual(reminder.status, Reminder.Status.FAILED)
