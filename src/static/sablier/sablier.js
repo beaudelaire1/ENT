@@ -32,7 +32,25 @@ document.addEventListener("DOMContentLoaded", () => {
   function resize(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,rect.width*dpr);canvas.height=Math.max(1,rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
   function drawRing(progress){resize();const w=canvas.clientWidth,h=canvas.clientHeight,cx=w/2,cy=h/2,r=Math.min(w,h)*.34,line=Math.max(14,r*.075),accent=getComputedStyle(app).getPropertyValue("--focus-accent").trim(),border=getComputedStyle(app).getPropertyValue("--focus-border").trim();ctx.clearRect(0,0,w,h);ctx.lineCap="round";ctx.lineWidth=line;ctx.strokeStyle=border;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();if(progress>.001){ctx.strokeStyle=accent;ctx.shadowColor=accent;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);ctx.stroke();ctx.shadowBlur=0;}}
   function bottlePath(cx,cy,hw,hh){const neck=hw*.1;ctx.beginPath();ctx.moveTo(cx-hw,cy-hh);ctx.bezierCurveTo(cx-hw*.94,cy-hh*.46,cx-hw*.23,cy-hh*.19,cx-neck,cy);ctx.bezierCurveTo(cx-hw*.23,cy+hh*.19,cx-hw*.94,cy+hh*.46,cx-hw,cy+hh);ctx.lineTo(cx+hw,cy+hh);ctx.bezierCurveTo(cx+hw*.94,cy+hh*.46,cx+hw*.23,cy+hh*.19,cx+neck,cy);ctx.bezierCurveTo(cx+hw*.23,cy-hh*.19,cx+hw*.94,cy-hh*.46,cx+hw,cy-hh);ctx.closePath();}
-  function drawHourglass(progress){resize();const w=canvas.clientWidth,h=canvas.clientHeight,cx=w/2,cy=h*.44,hh=h*.32,hw=w*.22,accent=getComputedStyle(app).getPropertyValue("--focus-accent").trim(),border=getComputedStyle(app).getPropertyValue("--focus-border").trim();ctx.clearRect(0,0,w,h);bottlePath(cx,cy,hw,hh);ctx.fillStyle="rgba(170,180,220,.08)";ctx.fill();ctx.strokeStyle="rgba(220,230,250,.6)";ctx.lineWidth=2;ctx.stroke();ctx.save();bottlePath(cx,cy,hw-4,hh-5);ctx.clip();const upper=cy-hh+13+(hh-17)*(1-progress),surfaceHalf=hw*(.89-.73*(1-progress));ctx.fillStyle=accent;if(progress>.001){ctx.beginPath();ctx.moveTo(cx-surfaceHalf,upper);ctx.lineTo(cx+surfaceHalf,upper);ctx.lineTo(cx+hw*.085,cy-3);ctx.lineTo(cx-hw*.085,cy-3);ctx.closePath();ctx.fill();}const received=1-progress,floor=cy+hh-10,pileH=received*hh*.79,pileW=hw*(.15+received*.74);if(received>.001){ctx.beginPath();ctx.moveTo(cx-pileW,floor);ctx.quadraticCurveTo(cx-pileW*.56,floor-pileH*.17,cx,floor-pileH);ctx.quadraticCurveTo(cx+pileW*.56,floor-pileH*.17,cx+pileW,floor);ctx.closePath();ctx.fill();}if(state.running&&progress>.001){ctx.strokeStyle=accent;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,floor-pileH);ctx.stroke();}ctx.restore();ctx.fillStyle=border;for(const y of [cy-hh-7,cy+hh-7]){ctx.beginPath();ctx.roundRect(cx-hw*1.2,y,hw*2.4,15,7);ctx.fill();}}
+  function drawHourglass(progress){resize();const w=canvas.clientWidth,h=canvas.clientHeight,cx=w/2,cy=h*.44,hh=h*.32,hw=w*.22,accent=getComputedStyle(app).getPropertyValue("--focus-accent").trim(),border=getComputedStyle(app).getPropertyValue("--focus-border").trim();ctx.clearRect(0,0,w,h);bottlePath(cx,cy,hw,hh);ctx.fillStyle="rgba(170,180,220,.08)";ctx.fill();ctx.strokeStyle="rgba(220,230,250,.6)";ctx.lineWidth=2;ctx.stroke();ctx.save();bottlePath(cx,cy,hw-4,hh-5);ctx.clip();ctx.fillStyle=accent;
+    // Le sable est peint sur toute la largeur et c'est le découpage qui lui donne sa
+    // forme : il épouse ainsi exactement la paroi, y compris là où elle s'évase.
+    // Le dessiner comme un trapèze à bords droits laissait des vides contre la courbe.
+    const topY=cy-hh,floorY=cy+hh,received=1-progress;
+    if(progress>.001){
+      const surface=cy-(cy-topY)*progress;               // la surface descend vers le col
+      ctx.fillRect(cx-hw,surface,hw*2,cy-surface+1);
+    }
+    let peak=floorY;
+    if(received>.001){
+      const level=floorY-(floorY-cy)*received;           // le niveau monte du fond vers le col
+      const mound=(floorY-cy)*.16*(1-received)*Math.min(1,received*6);
+      peak=level-mound;
+      ctx.fillRect(cx-hw,level,hw*2,floorY-level+1);
+      ctx.beginPath();ctx.moveTo(cx-hw,level+1);ctx.lineTo(cx,peak);ctx.lineTo(cx+hw,level+1);ctx.closePath();ctx.fill();
+    }
+    if(state.running&&progress>.001){ctx.strokeStyle=accent;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,peak);ctx.stroke();}
+    ctx.restore();ctx.fillStyle=border;for(const y of [cy-hh-7,cy+hh-7]){ctx.beginPath();ctx.roundRect(cx-hw*1.2,y,hw*2.4,15,7);ctx.fill();}}
   function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
   function finish(){state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});logSession();}
   // Une session achevée est envoyée au serveur : c'est ce qui alimente le temps réel de
