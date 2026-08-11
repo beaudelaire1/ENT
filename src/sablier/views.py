@@ -24,7 +24,7 @@ from core.queue import enqueue
 from formations.models import Competency
 
 from . import scenes
-from .forms import AddTrackForm, AudioTrackForm, FocusPreferenceForm, PlaylistForm
+from .forms import AddTrackForm, AudioUploadForm, FocusPreferenceForm, PlaylistForm
 from .models import AudioTrack, FocusPreference, Playlist, PlaylistTrack
 from .services import record_session
 from .tasks import validate_audio_track
@@ -96,11 +96,18 @@ def home(request):
 
 @login_required
 def audio_library(request):
-    form = AudioTrackForm(request.POST or None, request.FILES or None, user=request.user)
+    form = AudioUploadForm(request.POST or None, request.FILES or None, user=request.user)
     if request.method == "POST" and form.is_valid():
-        track = form.save()
-        enqueue(validate_audio_track, track.pk)
-        messages.success(request, "Piste téléversée et mise en validation.")
+        tracks = form.save()
+        for track in tracks:
+            enqueue(validate_audio_track, track.pk)
+        messages.success(
+            request,
+            f"{len(tracks)} piste{'s' if len(tracks) > 1 else ''} téléversée{'s' if len(tracks) > 1 else ''} "
+            "et mise en validation."
+            if len(tracks) > 1
+            else "Piste téléversée et mise en validation.",
+        )
         return redirect("sablier:audio")
     used = (
         AudioTrack.objects.filter(owner=request.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"] or 0

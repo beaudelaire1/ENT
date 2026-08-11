@@ -12,7 +12,7 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 - formations génériques : parcours, périodes, unités, compétences et métriques libres ;
 - grille de suivi de compétences : une ligne par matière avec ses chiffres saisissables sur place, une ligne par compétence avec niveau de maîtrise, heures estimées et réelles, commentaires ; totaux par matière et par période calculés, tout s’enregistre en un seul envoi ;
 - Sablier web avec huit visualisations (anneau, sablier, marée, bougie, perles, lune, digital, zen), neuf ambiances qui colorent la scène et l'animent d'un décor — pétales, lucioles, feuilles, neige, pluie, vagues, sable, étoiles —, plein écran et reprise exacte après actualisation ;
-- bibliothèque audio privée et playlists indépendantes du minuteur ;
+- bibliothèque audio privée, téléversement de plusieurs pistes en une fois, et playlists indépendantes du minuteur ;
 - journal des sessions Sablier, rattachables à une compétence pour alimenter son temps réel sans écraser la saisie manuelle ;
 - notifications internes, emails, invitations à usage unique, réinitialisation de mot de passe, limitation des tentatives de connexion et préférences d’apparence.
 

@@ -41,50 +41,89 @@ class FocusPreferenceForm(forms.ModelForm):
         return image
 
 
-class AudioTrackForm(ScopedModelForm):
-    class Meta:
-        model = AudioTrack
-        fields = ["title", "artist", "file"]
+FORMATS = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".ogg": "audio/ogg"}
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    """Django refuse `multiple` sur un FileField ordinaire, faute de savoir quoi faire
+    d'une liste. Ce widget et le champ ci-dessous assument ce choix explicitement."""
+
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput(attrs={"multiple": True, "accept": "audio/*"}))
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        uploads = data if isinstance(data, (list, tuple)) else [data]
+        return [super(MultipleFileField, self).clean(upload, initial) for upload in uploads if upload]
+
+
+class AudioUploadForm(forms.Form):
+    """Téléversement de plusieurs pistes en une fois.
+
+    Le titre de chaque piste vient du nom de son fichier : imposer une saisie par
+    morceau reviendrait à rendre l'envoi groupé aussi lent que l'envoi un par un.
+    """
+
+    files = MultipleFileField(label="fichiers audio")
+    artist = forms.CharField(label="artiste", max_length=180, required=False)
 
     def __init__(self, *args, user=None, **kwargs):
         self.user = user
-        kwargs.setdefault("scope", {"owner": user})
         super().__init__(*args, **kwargs)
 
-    def clean_file(self):
-        upload = self.cleaned_data.get("file")
-        if not upload:
-            return upload
+    def clean_files(self):
+        uploads = self.cleaned_data.get("files") or []
         max_bytes = settings.AUDIO_MAX_TRACK_MB * 1024 * 1024
-        if upload.size > max_bytes:
-            raise forms.ValidationError(f"La piste dépasse {human_mb(settings.AUDIO_MAX_TRACK_MB)}.")
-        suffix = Path(upload.name).suffix.lower()
-        allowed = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".ogg": "audio/ogg"}
-        if suffix not in allowed:
-            raise forms.ValidationError("Formats acceptés : MP3, M4A/AAC et OGG.")
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
         used = (
             AudioTrack.objects.filter(owner=self.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"]
             or 0
         )
-        profile, _ = UserProfile.objects.get_or_create(user=self.user)
-        quota_mb = profile.audio_quota_mb
-        if used + upload.size > quota_mb * 1024 * 1024:
-            remaining = max(0, quota_mb * 1024 * 1024 - used) / 1024 / 1024
-            raise forms.ValidationError(
-                f"Le quota audio de {human_mb(quota_mb)} serait dépassé : il reste {human_mb(remaining)}."
-            )
-        upload.detected_mime = allowed[suffix]
-        return upload
+        quota = profile.audio_quota_mb * 1024 * 1024
 
-    def save(self, commit=True):
-        track = super().save(commit=False)
-        upload = self.cleaned_data["file"]
-        track.file_size = upload.size
-        track.mime_type = upload.detected_mime
-        track.status = AudioTrack.Status.VALIDATING
-        if commit:
-            track.save()
-        return track
+        erreurs, cumul = [], 0
+        for upload in uploads:
+            suffix = Path(upload.name).suffix.lower()
+            if suffix not in FORMATS:
+                erreurs.append(f"{upload.name} : formats acceptés MP3, M4A/AAC et OGG.")
+                continue
+            if upload.size > max_bytes:
+                erreurs.append(f"{upload.name} dépasse {human_mb(settings.AUDIO_MAX_TRACK_MB)}.")
+                continue
+            # Le quota se vérifie sur l'ensemble de la sélection, pas fichier par fichier :
+            # dix pistes acceptables séparément peuvent le dépasser ensemble.
+            if used + cumul + upload.size > quota:
+                reste = max(0, quota - used - cumul) / 1024 / 1024
+                erreurs.append(f"{upload.name} : quota dépassé, il reste {human_mb(reste)}.")
+                continue
+            cumul += upload.size
+            upload.detected_mime = FORMATS[suffix]
+
+        if erreurs:
+            raise forms.ValidationError(erreurs)
+        return uploads
+
+    def save(self):
+        """Crée une piste par fichier et renvoie la liste, pour mise en validation."""
+        artist = self.cleaned_data.get("artist", "")
+        tracks = []
+        for upload in self.cleaned_data["files"]:
+            tracks.append(
+                AudioTrack.objects.create(
+                    owner=self.user,
+                    title=Path(upload.name).stem[:180],
+                    artist=artist,
+                    file=upload,
+                    file_size=upload.size,
+                    mime_type=upload.detected_mime,
+                    status=AudioTrack.Status.VALIDATING,
+                )
+            )
+        return tracks
 
 
 class PlaylistForm(ScopedModelForm):
