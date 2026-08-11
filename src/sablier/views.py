@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import timedelta
 from pathlib import Path
 
 import boto3
@@ -11,12 +12,17 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Max, Sum
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import UserProfile
+from core.deletion import confirm_delete
+from formations.models import Competency
 
 from .forms import AddTrackForm, AudioTrackForm, FocusPreferenceForm, PlaylistForm
 from .models import AudioTrack, FocusPreference, Playlist, PlaylistTrack
+from .services import record_session
 from .tasks import validate_audio_track
 
 
@@ -46,6 +52,11 @@ def home(request):
         }
         for playlist in playlists
     ]
+    # Rattacher une session à une compétence reste facultatif : Sablier fonctionne
+    # entièrement sans le module Formations.
+    competencies = Competency.objects.filter(unit__period__path__owner=request.user).select_related(
+        "unit__period__path"
+    )
     return render(
         request,
         "sablier/home.html",
@@ -55,6 +66,8 @@ def home(request):
             "playlists": playlists,
             "playlist_payload": playlist_payload,
             "ambience_choices": FocusPreference.Ambience.choices,
+            "competencies": competencies,
+            "recent_sessions": request.user.focus_sessions.select_related("competency")[:5],
         },
     )
 
@@ -67,7 +80,9 @@ def audio_library(request):
         validate_audio_track.delay(track.pk)
         messages.success(request, "Piste téléversée et mise en validation.")
         return redirect("sablier:audio")
-    used = AudioTrack.objects.filter(owner=request.user).aggregate(total=Sum("file_size"))["total"] or 0
+    used = (
+        AudioTrack.objects.filter(owner=request.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"] or 0
+    )
     return render(
         request,
         "sablier/audio.html",
@@ -90,6 +105,24 @@ def audio_stream(request, pk):
     response = FileResponse(track.file.open("rb"), content_type=track.mime_type)
     response["Accept-Ranges"] = "bytes"
     return response
+
+
+@login_required
+def track_delete(request, pk):
+    track = get_object_or_404(AudioTrack, owner=request.user, pk=pk)
+    return confirm_delete(request, track, redirect_to=reverse("sablier:audio"), title="Supprimer cette piste")
+
+
+@login_required
+def playlist_delete(request, pk):
+    playlist = get_object_or_404(Playlist, owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        playlist,
+        redirect_to=reverse("sablier:playlists"),
+        title="Supprimer cette playlist",
+        back_to=reverse("sablier:playlist_detail", args=[playlist.pk]),
+    )
 
 
 @login_required
@@ -141,7 +174,9 @@ def presign_audio(request):
     allowed = {"audio/mpeg": ".mp3", "audio/mp4": ".m4a", "audio/aac": ".aac", "audio/ogg": ".ogg"}
     if mime not in allowed or size > settings.AUDIO_MAX_TRACK_MB * 1024 * 1024:
         return JsonResponse({"error": "Format ou taille refusé."}, status=400)
-    used = AudioTrack.objects.filter(owner=request.user).aggregate(total=Sum("file_size"))["total"] or 0
+    used = (
+        AudioTrack.objects.filter(owner=request.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"] or 0
+    )
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     quota = profile.audio_quota_mb * 1024 * 1024
     if used + size > quota:
@@ -170,6 +205,42 @@ def presign_audio(request):
         ExpiresIn=900,
     )
     return JsonResponse({"track_id": track.pk, "upload": post})
+
+
+@login_required
+@require_POST
+def log_session(request):
+    """Enregistre une session terminée, envoyée par le minuteur."""
+    try:
+        data = json.loads(request.body)
+        seconds = int(data["seconds"])
+        intention = str(data.get("intention") or "")
+        competency_id = data.get("competency")
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return JsonResponse({"error": "Requête invalide."}, status=400)
+    if not 1 <= seconds <= 86400:
+        return JsonResponse({"error": "Durée hors limites."}, status=400)
+
+    competency = None
+    if competency_id:
+        competency = Competency.objects.filter(pk=competency_id, unit__period__path__owner=request.user).first()
+        if competency is None:
+            return JsonResponse({"error": "Compétence inconnue."}, status=400)
+
+    session = record_session(
+        request.user,
+        seconds=seconds,
+        started_at=timezone.now() - timedelta(seconds=seconds),
+        intention=intention,
+        competency=competency,
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "hours": str(session.hours),
+            "competency": competency.title if competency else None,
+        }
+    )
 
 
 @login_required

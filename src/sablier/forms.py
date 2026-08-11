@@ -60,7 +60,10 @@ class AudioTrackForm(ScopedModelForm):
         allowed = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".ogg": "audio/ogg"}
         if suffix not in allowed:
             raise forms.ValidationError("Formats acceptés : MP3, M4A/AAC et OGG.")
-        used = AudioTrack.objects.filter(owner=self.user).aggregate(total=Sum("file_size"))["total"] or 0
+        used = (
+            AudioTrack.objects.filter(owner=self.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"]
+            or 0
+        )
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         quota_mb = profile.audio_quota_mb
         if used + upload.size > quota_mb * 1024 * 1024:
