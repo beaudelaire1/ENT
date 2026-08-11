@@ -38,7 +38,7 @@ jobs:
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: python src/manage.py check --deploy
       - run: python src/manage.py makemigrations --check --dry-run
-      - run: python src/manage.py generate_soundscapes
+      - run: python src/manage.py generate_chime
       - run: python src/manage.py collectstatic --noinput
       - run: ruff check src
       - run: ruff format --check src

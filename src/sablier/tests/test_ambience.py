@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -21,40 +20,40 @@ class AmbiencePaletteTests(TestCase):
     def page(self):
         return self.client.get(reverse("sablier:home")).content.decode()
 
+    def scene_style(self):
+        """L'attribut `style` de la scène, seul endroit où une couleur peut tout écraser."""
+        page = self.page()
+        return page.split('id="focus-app"', 1)[1].split(">", 1)[0]
+
     def test_the_accent_is_never_forced_inline_by_default(self):
-        self.assertNotIn("--focus-accent:", self.page())
+        self.assertNotIn("--focus-accent", self.scene_style())
 
     def test_the_chosen_ambience_reaches_the_markup(self):
-        FocusPreference.objects.update_or_create(user=self.user, defaults={"ambience": FocusPreference.Ambience.ENERGY})
-        self.assertIn('data-ambience="energy"', self.page())
+        FocusPreference.objects.update_or_create(user=self.user, defaults={"ambience": FocusPreference.Ambience.ETE})
+        self.assertIn('data-ambience="ete"', self.page())
 
     def test_a_custom_colour_is_published_under_its_own_variable(self):
         FocusPreference.objects.update_or_create(
             user=self.user, defaults={"custom_accent": True, "accent_color": "#11AA22"}
         )
-        page = self.page()
+        style = self.scene_style()
 
         # Sous sa propre variable, la couleur sert de valeur par défaut aux palettes
         # sans empêcher l'alerte finale de reprendre la main.
-        self.assertIn("--focus-user-accent:#11AA22", page)
-        self.assertNotIn("--focus-accent:", page)
+        self.assertIn("--focus-user-accent:#11AA22", style)
+        self.assertNotIn("--focus-accent:", style)
 
     def test_without_the_option_the_stored_colour_never_reaches_the_scene(self):
         FocusPreference.objects.update_or_create(
             user=self.user, defaults={"custom_accent": False, "accent_color": "#11AA22"}
         )
-        page = self.page()
+        style = self.scene_style()
 
         # La couleur reste visible dans le sélecteur du panneau de préférences ; ce qui
         # compte est qu'elle ne soit appliquée à la scène sous aucune forme.
-        self.assertNotIn("--focus-user-accent", page)
-        self.assertNotIn("--focus-accent", page)
+        self.assertNotIn("--focus-user-accent", style)
+        self.assertNotIn("--focus-accent", style)
 
     def test_the_template_leaves_no_stray_comment_in_the_markup(self):
         self.assertNotIn("{#", self.page())
         self.assertNotIn("n’est plus posée en inline", self.page())
-
-    def test_every_ambience_has_its_own_palette(self):
-        css = (settings.BASE_DIR / "static" / "sablier" / "sablier.css").read_text(encoding="utf-8")
-        for ambience in FocusPreference.Ambience.values:
-            self.assertIn(f'[data-ambience="{ambience}"]', css)

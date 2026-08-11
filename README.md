@@ -11,7 +11,7 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 - recherche globale indexée : une entrée par objet dans `core.SearchEntry`, tenue à jour par signaux, interrogée en plein texte PostgreSQL (configuration `french`, titre pondéré au-dessus du corps, syntaxe `websearch`) avec repli `icontains` sous SQLite ;
 - formations génériques : parcours, périodes, unités, compétences et métriques libres ;
 - grille de suivi de compétences : une ligne par matière avec ses chiffres saisissables sur place, une ligne par compétence avec niveau de maîtrise, heures estimées et réelles, commentaires ; totaux par matière et par période calculés, tout s’enregistre en un seul envoi ;
-- Sablier web avec quatre visualisations, quatre ambiances, trois niveaux de concentration, plein écran et reprise exacte après actualisation ;
+- Sablier web avec huit visualisations (anneau, sablier, marée, bougie, perles, lune, digital, zen), neuf ambiances qui colorent la scène et l'animent d'un décor — pétales, lucioles, feuilles, neige, pluie, vagues, sable, étoiles —, plein écran et reprise exacte après actualisation ;
 - bibliothèque audio privée et playlists indépendantes du minuteur ;
 - journal des sessions Sablier, rattachables à une compétence pour alimenter son temps réel sans écraser la saisie manuelle ;
 - notifications internes, emails, invitations à usage unique, réinitialisation de mot de passe, limitation des tentatives de connexion et préférences d’apparence.
@@ -36,7 +36,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt -r requirements-dev.txt
 python src/manage.py migrate
-python src/manage.py generate_soundscapes
+python src/manage.py generate_chime
 python src/manage.py runserver
 ```
 

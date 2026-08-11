@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 RUN mkdir -p /app/src/data /app/src/media /app/src/staticfiles \
-    && python src/manage.py generate_soundscapes \
+    && python src/manage.py generate_chime \
     && python src/manage.py collectstatic --noinput \
     && addgroup --system myent \
     && adduser --system --ingroup myent --home /app myent \

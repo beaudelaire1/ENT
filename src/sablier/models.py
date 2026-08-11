@@ -25,14 +25,28 @@ class FocusPreference(models.Model):
     class Mode(models.TextChoices):
         RING = "ring", "Anneau"
         HOURGLASS = "hourglass", "Sablier"
+        WAVE = "wave", "Marée"
+        CANDLE = "candle", "Bougie"
+        BEADS = "beads", "Perles"
+        MOON = "moon", "Lune"
         DIGITAL = "digital", "Digital"
         ZEN = "zen", "Zen"
 
     class Ambience(models.TextChoices):
+        """Palette, décor animé et paysage sonore de chacune sont dans scenes.py.
+
+        Les deux listes doivent rester identiques ; un test s'en assure.
+        """
+
         CONCENTRATION = "concentration", "Concentration"
-        CALM = "calm", "Calme"
-        ENERGY = "energy", "Énergie"
-        NIGHT = "night", "Nocturne"
+        PRINTEMPS = "printemps", "Printemps"
+        ETE = "ete", "Été"
+        AUTOMNE = "automne", "Automne"
+        HIVER = "hiver", "Hiver"
+        PLUIE = "pluie", "Pluie"
+        OCEAN = "ocean", "Océan"
+        SAHARA = "sahara", "Sahara"
+        NUIT = "nuit", "Nuit"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_preference")
     default_duration_seconds = models.PositiveIntegerField(
@@ -47,7 +61,6 @@ class FocusPreference(models.Model):
     warning_seconds = models.PositiveSmallIntegerField(
         "alerte finale (s)", default=60, validators=[MinValueValidator(10), MaxValueValidator(180)]
     )
-    soundscape_enabled = models.BooleanField("son ambiant", default=False)
     end_sound_enabled = models.BooleanField("son de fin", default=True)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#8878FF", validators=[color_validator])
     # Sans ce choix explicite, une couleur enregistrée écraserait celle de l'ambiance

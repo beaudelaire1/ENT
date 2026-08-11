@@ -22,10 +22,18 @@ from core.formatting import human_mb
 from core.queue import enqueue
 from formations.models import Competency
 
+from . import scenes
 from .forms import AddTrackForm, AudioTrackForm, FocusPreferenceForm, PlaylistForm
 from .models import AudioTrack, FocusPreference, Playlist, PlaylistTrack
 from .services import record_session
 from .tasks import validate_audio_track
+
+
+def sablier_asset_version() -> str:
+    """Empreinte des ressources de Sablier : la date de la plus récente."""
+    folder = settings.BASE_DIR / "static" / "sablier"
+    stamps = [path.stat().st_mtime for path in folder.glob("*.*") if path.suffix in {".js", ".css"}]
+    return str(int(max(stamps))) if stamps else "0"
 
 
 @login_required
@@ -68,6 +76,11 @@ def home(request):
             "playlists": playlists,
             "playlist_payload": playlist_payload,
             "ambience_choices": FocusPreference.Ambience.choices,
+            "palette_css": scenes.palette_css(),
+            "decors": {scene.key: scene.decor for scene in scenes.SCENES},
+            # Les feuilles et scripts de Sablier changent souvent : sans cette empreinte,
+            # le navigateur servirait l'ancienne version après chaque correction.
+            "asset_version": sablier_asset_version(),
             "competencies": competencies,
             "recent_sessions": request.user.focus_sessions.select_related("competency")[:5],
         },
