@@ -18,13 +18,17 @@ class UserProfile(models.Model):
         DARK = "dark", "Sombre"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
-    display_name = models.CharField(max_length=120, blank=True)
-    theme = models.CharField(max_length=10, choices=Theme.choices, default=Theme.SYSTEM)
-    accent_color = models.CharField(max_length=7, default="#7C6CFF", validators=[accent_validator])
-    timezone = models.CharField(max_length=64, default="America/Cayenne")
-    audio_quota_mb = models.PositiveIntegerField(default=settings.AUDIO_DEFAULT_QUOTA_MB)
-    email_verified_at = models.DateTimeField(null=True, blank=True)
+    display_name = models.CharField("nom affiché", max_length=120, blank=True)
+    theme = models.CharField("thème", max_length=10, choices=Theme.choices, default=Theme.SYSTEM)
+    accent_color = models.CharField("couleur d’accent", max_length=7, default="#7C6CFF", validators=[accent_validator])
+    timezone = models.CharField("fuseau horaire", max_length=64, default="America/Cayenne")
+    audio_quota_mb = models.PositiveIntegerField("quota audio (Mo)", default=settings.AUDIO_DEFAULT_QUOTA_MB)
+    email_verified_at = models.DateTimeField("email vérifié le", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "profil"
+        verbose_name_plural = "profils"
 
     def __str__(self):
         return self.display_name or self.user.get_username()
@@ -32,14 +36,21 @@ class UserProfile(models.Model):
 
 class Invitation(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    email = models.EmailField(db_index=True)
-    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_invitations")
-    expires_at = models.DateTimeField()
-    accepted_at = models.DateTimeField(null=True, blank=True)
+    email = models.EmailField("adresse email", db_index=True)
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="invité par", on_delete=models.CASCADE, related_name="sent_invitations"
+    )
+    expires_at = models.DateTimeField("expire le")
+    accepted_at = models.DateTimeField("acceptée le", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = "invitation"
+        verbose_name_plural = "invitations"
         ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.email
 
     def save(self, *args, **kwargs):
         self.email = self.email.strip().lower()
@@ -50,6 +61,3 @@ class Invitation(models.Model):
     @property
     def is_valid(self):
         return self.accepted_at is None and self.expires_at > timezone.now()
-
-    def __str__(self):
-        return self.email

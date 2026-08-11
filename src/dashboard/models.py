@@ -15,12 +15,14 @@ class DashboardWidget(models.Model):
         SABLIER = "sablier", "Sablier"
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dashboard_widgets")
-    kind = models.CharField(max_length=24, choices=Kind.choices)
-    position = models.PositiveSmallIntegerField(default=0)
-    visible = models.BooleanField(default=True)
+    kind = models.CharField("bloc", max_length=24, choices=Kind.choices)
+    position = models.PositiveSmallIntegerField("position", default=0)
+    visible = models.BooleanField("visible", default=True)
     objects = OwnedQuerySet.as_manager()
 
     class Meta:
+        verbose_name = "bloc du tableau de bord"
+        verbose_name_plural = "blocs du tableau de bord"
         ordering = ["position", "pk"]
         constraints = [models.UniqueConstraint(fields=["owner", "kind"], name="unique_widget_per_user")]
 

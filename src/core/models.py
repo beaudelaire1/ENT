@@ -45,12 +45,12 @@ class SearchEntry(models.Model):
             GinIndex(fields=["search_vector"], name="search_vector_gin_idx"),
         ]
 
+    def __str__(self):
+        return self.title
+
     @property
     def type_label(self):
         from core.search import SOURCES
 
         source = SOURCES.get(self.object_type)
         return source.label if source else self.object_type
-
-    def __str__(self):
-        return self.title
