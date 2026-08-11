@@ -34,7 +34,22 @@ document.addEventListener("DOMContentLoaded", () => {
   function bottlePath(cx,cy,hw,hh){const neck=hw*.1;ctx.beginPath();ctx.moveTo(cx-hw,cy-hh);ctx.bezierCurveTo(cx-hw*.94,cy-hh*.46,cx-hw*.23,cy-hh*.19,cx-neck,cy);ctx.bezierCurveTo(cx-hw*.23,cy+hh*.19,cx-hw*.94,cy+hh*.46,cx-hw,cy+hh);ctx.lineTo(cx+hw,cy+hh);ctx.bezierCurveTo(cx+hw*.94,cy+hh*.46,cx+hw*.23,cy+hh*.19,cx+neck,cy);ctx.bezierCurveTo(cx+hw*.23,cy-hh*.19,cx+hw*.94,cy-hh*.46,cx+hw,cy-hh);ctx.closePath();}
   function drawHourglass(progress){resize();const w=canvas.clientWidth,h=canvas.clientHeight,cx=w/2,cy=h*.44,hh=h*.32,hw=w*.22,accent=getComputedStyle(app).getPropertyValue("--focus-accent").trim(),border=getComputedStyle(app).getPropertyValue("--focus-border").trim();ctx.clearRect(0,0,w,h);bottlePath(cx,cy,hw,hh);ctx.fillStyle="rgba(170,180,220,.08)";ctx.fill();ctx.strokeStyle="rgba(220,230,250,.6)";ctx.lineWidth=2;ctx.stroke();ctx.save();bottlePath(cx,cy,hw-4,hh-5);ctx.clip();const upper=cy-hh+13+(hh-17)*(1-progress),surfaceHalf=hw*(.89-.73*(1-progress));ctx.fillStyle=accent;if(progress>.001){ctx.beginPath();ctx.moveTo(cx-surfaceHalf,upper);ctx.lineTo(cx+surfaceHalf,upper);ctx.lineTo(cx+hw*.085,cy-3);ctx.lineTo(cx-hw*.085,cy-3);ctx.closePath();ctx.fill();}const received=1-progress,floor=cy+hh-10,pileH=received*hh*.79,pileW=hw*(.15+received*.74);if(received>.001){ctx.beginPath();ctx.moveTo(cx-pileW,floor);ctx.quadraticCurveTo(cx-pileW*.56,floor-pileH*.17,cx,floor-pileH);ctx.quadraticCurveTo(cx+pileW*.56,floor-pileH*.17,cx+pileW,floor);ctx.closePath();ctx.fill();}if(state.running&&progress>.001){ctx.strokeStyle=accent;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,floor-pileH);ctx.stroke();}ctx.restore();ctx.fillStyle=border;for(const y of [cy-hh-7,cy+hh-7]){ctx.beginPath();ctx.roundRect(cx-hw*1.2,y,hw*2.4,15,7);ctx.fill();}}
   function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
-  function finish(){state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});}
+  function finish(){state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});logSession();}
+  // Une session achevée est envoyée au serveur : c'est ce qui alimente le temps réel de
+  // la grille de suivi. Un échec réseau ne doit rien casser — la session est perdue,
+  // le minuteur continue de fonctionner.
+  function logSession(){
+    const seconds=Math.round(state.total);
+    if(!(seconds>=1&&seconds<=86400))return;
+    const select=$("#session-competency");
+    fetch(app.dataset.logUrl,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":app.dataset.csrf},
+      body:JSON.stringify({seconds,intention:state.intention||"",competency:select?.value||null}),
+    }).then(response=>response.ok?response.json():null).then(data=>{
+      if(data?.competency)$("#stage-message").textContent=`${data.hours} h REPORTÉES SUR ${data.competency.toUpperCase()}`;
+    }).catch(()=>{});
+  }
   function render(force=false){
     if(state.running){state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining<=0&&!state.finished)finish();}
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;

@@ -14,3 +14,7 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 @media(max-width:1400px){.focus-layout{grid-template-columns:1fr}.focus-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start}.focus-sidebar h1,.shortcut-help,.preference-panel{grid-column:1/-1}.focus-player{grid-template-columns:1fr repeat(3,auto)}.focus-player>*:nth-child(n+6){display:none}}
 @media(max-width:700px){.focus-app{padding:10px}.focus-header{align-items:flex-start}.focus-tagline,.live-chip{display:none}.focus-sidebar{display:flex}.focus-layout{min-height:0}.visual-wrap{min-height:430px}.focus-controls{display:grid;grid-template-columns:1fr 1fr}.focus-controls .primary{min-width:0}.focus-player{grid-template-columns:1fr repeat(3,auto)}.zen-rings{width:230px;height:230px}.mode-grid{grid-template-columns:repeat(2,1fr)}}
 @media(prefers-reduced-motion:reduce){.zen-rings{animation:none}}
+.session-log { list-style:none; margin:0 0 18px; padding:0; display:grid; gap:7px; }
+.session-log li { display:flex; justify-content:space-between; gap:10px; font-size:12px; }
+.session-log strong { white-space:nowrap; }
+.session-log span { opacity:.65; text-align:right; }

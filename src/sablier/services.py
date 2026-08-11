@@ -1,5 +1,36 @@
 from __future__ import annotations
 
+from django.db.models import F
+from django.utils import timezone
+
+
+def record_session(user, *, seconds: int, started_at, intention: str = "", competency=None):
+    """Enregistre une session terminée et reporte son temps sur la compétence visée.
+
+    Le report est cumulatif et ne touche qu'au temps réel : ce que l'utilisateur a saisi
+    à la main dans la grille de suivi n'est jamais écrasé, seulement complété. Sans
+    compétence choisie, la session est simplement journalisée.
+    """
+    from formations.models import ProgressRecord
+
+    from .models import FocusSession
+
+    session = FocusSession.objects.create(
+        owner=user,
+        competency=competency,
+        intention=intention[:80],
+        started_at=started_at,
+        seconds=seconds,
+    )
+    if competency is None:
+        return session
+
+    record, _ = ProgressRecord.objects.get_or_create(owner=user, competency=competency)
+    ProgressRecord.objects.filter(pk=record.pk).update(actual_hours=F("actual_hours") + session.hours)
+    session.counted_at = timezone.now()
+    session.save(update_fields=["counted_at", "updated_at"])
+    return session
+
 
 def parse_duration(value: str) -> int:
     """Parse minutes, MM:SS or HH:MM:SS into 1..86400 seconds."""

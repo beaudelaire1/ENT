@@ -46,7 +46,7 @@ class Command(BaseCommand):
                 envelope = math.sin(max(0.0, edge) * math.pi / 2) ** 2
                 breath = 0.68 + 0.18 * math.sin(2 * math.pi * t / 7.5)
                 left = right = 0.0
-                for frequency, weight in zip(frequencies, (1.0, 0.46, 0.24)):
+                for frequency, weight in zip(frequencies, (1.0, 0.46, 0.24), strict=True):
                     left += weight * math.sin(2 * math.pi * (frequency - left_detune) * t)
                     right += weight * math.sin(2 * math.pi * (frequency + right_detune) * t + 0.18)
                 amplitude = 2500 * envelope * breath

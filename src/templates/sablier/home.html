@@ -8,6 +8,7 @@
      data-focus-level="{{ preference.focus_level }}" data-accent="{{ preference.accent_color }}"
      data-soundscape="{{ preference.soundscape_enabled|yesno:'true,false' }}"
      data-end-sound="{{ preference.end_sound_enabled|yesno:'true,false' }}"
+     data-log-url="{% url 'sablier:log_session' %}" data-csrf="{{ csrf_token }}"
      style="--focus-accent:{{ preference.accent_color }};{% if preference.background_image %}--focus-image:url('{{ preference.background_image.url }}');{% endif %}">
   <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre atmosphère.</p></div><div class="focus-header-actions"><span class="live-chip" id="live-chip">● PRÊT</span><button class="focus-button" type="button" id="scene-button">Mode concentration ⛶</button></div></header>
   <div class="focus-layout">
@@ -20,6 +21,21 @@
       <label>AMBIANCE<select id="ambience-select">{% for value,label in ambience_choices %}<option value="{{ value }}" {% if preference.ambience == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
       <div class="audio-options"><button class="focus-button" id="soundscape-toggle" type="button">◯ Son ambiant</button><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div></div>
       <label>ALERTE FINALE <output id="warning-output">{{ preference.warning_seconds }} s</output><input id="warning-slider" type="range" min="10" max="180" step="10" value="{{ preference.warning_seconds }}"></label>
+      {% if competencies %}
+        <label>COMPÉTENCE TRAVAILLÉE
+          <select id="session-competency">
+            <option value="">Aucune · ne rien reporter</option>
+            {% for competency in competencies %}<option value="{{ competency.pk }}">{{ competency.unit.title }} · {{ competency.title }}</option>{% endfor %}
+          </select>
+        </label>
+        <p class="shortcut-help">Le temps de la session sera ajouté au temps réel de cette compétence.</p>
+      {% endif %}
+      {% if recent_sessions %}
+        <p class="focus-eyebrow">SESSIONS RÉCENTES</p>
+        <ul class="session-log">
+          {% for session in recent_sessions %}<li><strong>{{ session.minutes }} min</strong><span>{{ session.started_at|date:"d/m H:i" }}{% if session.competency %} · {{ session.competency.title }}{% endif %}</span></li>{% endfor %}
+        </ul>
+      {% endif %}
       <details class="preference-panel"><summary>Apparence et sauvegarde</summary><form method="post" enctype="multipart/form-data" class="stack-form" id="focus-preferences">{% csrf_token %}{{ form.as_p }}<button class="focus-button primary">Enregistrer mes préférences</button></form></details>
       <p class="shortcut-help">ESPACE · lecture / pause<br>R · reprise à zéro &nbsp; F11 · plein écran</p>
     </aside>
