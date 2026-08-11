@@ -4,19 +4,25 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+
+from core.deletion import confirm_delete
 
 from .forms import FolderForm, LibraryItemForm, TagForm
-from .models import Folder, LibraryItem
+from .models import Folder, LibraryItem, Tag
 
 
 @login_required
 def item_list(request):
     items = LibraryItem.objects.filter(owner=request.user).select_related("folder")
     folder_id = request.GET.get("folder")
+    tag_id = request.GET.get("tag")
     kind = request.GET.get("kind")
     query = request.GET.get("q", "").strip()
     if folder_id:
         items = items.filter(folder_id=folder_id)
+    if tag_id:
+        items = items.filter(tags__id=tag_id)
     if kind in LibraryItem.Kind.values:
         items = items.filter(kind=kind)
     if query:
@@ -24,7 +30,13 @@ def item_list(request):
     return render(
         request,
         "library/list.html",
-        {"items": items, "folders": Folder.objects.filter(owner=request.user), "kind": kind, "query": query},
+        {
+            "items": items,
+            "folders": Folder.objects.filter(owner=request.user),
+            "tags": Tag.objects.filter(owner=request.user),
+            "kind": kind,
+            "query": query,
+        },
     )
 
 
@@ -68,6 +80,30 @@ def tag_new(request):
         messages.success(request, "Étiquette créée.")
         return redirect("library:list")
     return render(request, "library/simple_form.html", {"form": form, "title": "Nouvelle étiquette"})
+
+
+@login_required
+def item_delete(request, pk):
+    item = get_object_or_404(LibraryItem, owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        item,
+        redirect_to=reverse("library:list"),
+        title="Supprimer cet élément",
+        back_to=reverse("library:detail", args=[item.pk]),
+    )
+
+
+@login_required
+def folder_delete(request, pk):
+    folder = get_object_or_404(Folder, owner=request.user, pk=pk)
+    return confirm_delete(request, folder, redirect_to=reverse("library:list"), title="Supprimer ce dossier")
+
+
+@login_required
+def tag_delete(request, pk):
+    tag = get_object_or_404(Tag, owner=request.user, pk=pk)
+    return confirm_delete(request, tag, redirect_to=reverse("library:list"), title="Supprimer cette étiquette")
 
 
 @login_required

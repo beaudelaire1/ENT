@@ -3,6 +3,9 @@ from __future__ import annotations
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+
+from core.deletion import confirm_delete
 
 from .forms import (
     CompetencyForm,
@@ -14,7 +17,7 @@ from .forms import (
     ProgressForm,
     ProgressRowFormSet,
 )
-from .models import Competency, LearningPath, LearningUnit, Period, ProgressRecord
+from .models import Competency, LearningPath, LearningUnit, MetricDefinition, Period, ProgressRecord
 from .services import build_tracking_grid, ensure_progress_records, tracked_records
 
 
@@ -131,6 +134,63 @@ def metric_definition_new(request, path_pk):
         form.save()
         return redirect("formations:detail", pk=path.pk)
     return render(request, "formations/form.html", {"form": form, "title": f"Nouvelle métrique · {path.title}"})
+
+
+@login_required
+def path_delete(request, pk):
+    path = get_object_or_404(LearningPath, owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        path,
+        redirect_to=reverse("formations:list"),
+        title="Supprimer cette formation",
+        back_to=reverse("formations:detail", args=[path.pk]),
+    )
+
+
+@login_required
+def period_delete(request, pk):
+    period = get_object_or_404(Period, path__owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        period,
+        redirect_to=reverse("formations:detail", args=[period.path_id]),
+        title="Supprimer cette période",
+    )
+
+
+@login_required
+def unit_delete(request, pk):
+    unit = get_object_or_404(LearningUnit, period__path__owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        unit,
+        redirect_to=reverse("formations:detail", args=[unit.period.path_id]),
+        title="Supprimer ce module",
+        back_to=reverse("formations:unit", args=[unit.pk]),
+    )
+
+
+@login_required
+def competency_delete(request, pk):
+    competency = get_object_or_404(Competency, unit__period__path__owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        competency,
+        redirect_to=reverse("formations:unit", args=[competency.unit_id]),
+        title="Supprimer cette compétence",
+    )
+
+
+@login_required
+def metric_definition_delete(request, pk):
+    metric = get_object_or_404(MetricDefinition, path__owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        metric,
+        redirect_to=reverse("formations:detail", args=[metric.path_id]),
+        title="Supprimer cette colonne",
+    )
 
 
 @login_required

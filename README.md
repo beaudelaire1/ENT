@@ -5,14 +5,16 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 ## Socle disponible
 
 - tableau de bord personnalisable et responsive ;
-- agenda, tâches ponctuelles et rappels ;
+- agenda navigable mois par mois, tâches, rappels, et répétitions simples (chaque jour, jours ouvrés, chaque semaine, une semaine sur deux, chaque mois) matérialisées en séances modifiables une par une ;
+- suppression confirmée de tout objet, annonçant ce qui disparaîtra en cascade ;
 - bibliothèque de liens, fichiers privés et notes riches assainies ;
 - recherche globale indexée : une entrée par objet dans `core.SearchEntry`, tenue à jour par signaux, interrogée en plein texte PostgreSQL (configuration `french`, titre pondéré au-dessus du corps, syntaxe `websearch`) avec repli `icontains` sous SQLite ;
 - formations génériques : parcours, périodes, unités, compétences et métriques libres ;
 - grille de suivi de compétences : une ligne par matière avec ses métriques, une ligne par compétence avec niveau de maîtrise, heures estimées et réelles, commentaires ; totaux par matière et par période calculés, enregistrement en une fois ;
 - Sablier web avec quatre visualisations, quatre ambiances, trois niveaux de concentration, plein écran et reprise exacte après actualisation ;
 - bibliothèque audio privée et playlists indépendantes du minuteur ;
-- notifications internes, emails, invitations à usage unique et préférences d’apparence.
+- journal des sessions Sablier, rattachables à une compétence pour alimenter son temps réel sans écraser la saisie manuelle ;
+- notifications internes, emails, invitations à usage unique, réinitialisation de mot de passe, limitation des tentatives de connexion et préférences d’apparence.
 
 Le serveur est un monolithe Django 5.2/Python 3.12. JavaScript ne gère que les interactions du navigateur, dont le moteur de Sablier. Le code Qt historique reste une référence archivée et n’est pas une dépendance de production.
 
@@ -45,7 +47,8 @@ Sans `DATABASE_URL`, Django utilise uniquement une base SQLite locale de dévelo
 ```powershell
 python src/manage.py check
 python src/manage.py makemigrations --check --dry-run
-python src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests planner.tests sablier.tests
+python src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests notifications.tests planner.tests sablier.tests
+coverage run src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests notifications.tests planner.tests sablier.tests && coverage report
 ```
 
 Consulter [le déploiement Coolify](docs/DEPLOYMENT.md), [la migration de l’existant](docs/MIGRATION.md) et [la feuille de maturation](docs/ROADMAP.md). Les sources historiques se trouvent dans [oldVersion](oldVersion/README.md).
