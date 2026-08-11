@@ -136,6 +136,8 @@ ul.errorlist { margin:4px 0 0; padding-left:18px; color:var(--danger); font-size
 .tracking-table .row-errors td { color:var(--danger); text-align:left; }
 .tracking-table input,.tracking-table select { padding:5px 7px; border-radius:8px; font-size:13px; }
 .tracking-table .cell-number { width:72px; }
+.tracking-table .cell-metric { width:62px; text-align:center; background:var(--panel); }
+.message.error { border-color:var(--danger); }
 .tracking-table .cell-level { width:130px; }
 .tracking-table .cell-notes { width:100%; min-width:130px; }
 .progress-bar { height:15px; border-radius:999px; background:var(--surface); border:1px solid var(--border); overflow:hidden; }

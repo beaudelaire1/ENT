@@ -14,9 +14,9 @@ est toujours la somme de ce qu’elle contient.
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
-from .models import Competency, MetricDefinition, MetricValue, ProgressRecord
+from .models import Competency, LearningUnit, MetricDefinition, MetricValue, ProgressRecord
 
 # Colonnes présentes quelle que soit la formation : intitulé, travail estimé, temps réel,
 # niveau de maîtrise, progression, commentaires.
@@ -67,6 +67,47 @@ def _totals(rows):
     return {"planned": planned, "actual": actual, "percent": percent}
 
 
+def metric_field_name(unit, definition) -> str:
+    return f"metric_{unit.pk}_{definition.pk}"
+
+
+def save_metric_values(path, data) -> list[str]:
+    """Enregistre les chiffres saisis dans les lignes de matière de la grille.
+
+    Ils étaient auparavant saisis un par un, chacun sur sa propre page : cinq colonnes
+    pour sept matières faisaient trente-cinq formulaires pour installer un semestre.
+    Ils se remplissent maintenant là où on les lit.
+
+    Une case vidée supprime la valeur : c'est ainsi qu'on distingue « zéro heure de TP »
+    d'une matière où la colonne n'a pas de sens.
+    """
+    definitions = {definition.pk: definition for definition in MetricDefinition.objects.filter(path=path)}
+    units = {unit.pk: unit for unit in LearningUnit.objects.filter(period__path=path)}
+
+    errors = []
+    for unit in units.values():
+        for definition in definitions.values():
+            name = metric_field_name(unit, definition)
+            if name not in data:
+                continue
+            raw = (data.get(name) or "").strip().replace(",", ".")
+            if not raw:
+                MetricValue.objects.filter(definition=definition, unit=unit).delete()
+                continue
+            try:
+                value = Decimal(raw)
+            except InvalidOperation:
+                errors.append(f"{unit.title} · {definition.label} : « {raw} » n’est pas un nombre.")
+                continue
+            if not -Decimal("99999999.99") <= value <= Decimal("99999999.99"):
+                errors.append(f"{unit.title} · {definition.label} : valeur hors limites.")
+                continue
+            MetricValue.objects.update_or_create(
+                definition=definition, unit=unit, defaults={"value": value.quantize(Decimal("0.01"))}
+            )
+    return errors
+
+
 def build_tracking_grid(path, formset):
     """Assemble la grille : les colonnes déclarées, puis les lignes par période.
 
@@ -91,8 +132,15 @@ def build_tracking_grid(path, formset):
             units.append(
                 {
                     "unit": unit,
-                    # Alignée sur `definitions` : une case par colonne, vide si non renseignée.
-                    "cells": [unit_metrics.get(definition.key) for definition in definitions],
+                    # Alignée sur `definitions` : une case saisissable par colonne.
+                    "cells": [
+                        {
+                            "name": metric_field_name(unit, definition),
+                            "value": unit_metrics.get(definition.key),
+                            "definition": definition,
+                        }
+                        for definition in definitions
+                    ],
                     "rows": rows,
                     "totals": _totals(rows),
                 }

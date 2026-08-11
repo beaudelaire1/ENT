@@ -131,7 +131,9 @@ class TrackingGridTests(TestCase):
         self.assertEqual([d.key for d in grid["definitions"]], ["coefficient", "stage"])
         self.assertEqual(grid["metric_count"], 2)
         self.assertEqual(grid["column_count"], 8)
-        self.assertEqual(grid["periods"][0]["units"][0]["cells"], [Decimal("5"), Decimal("12")])
+        self.assertEqual(
+            [cell["value"] for cell in grid["periods"][0]["units"][0]["cells"]], [Decimal("5"), Decimal("12")]
+        )
         self.assertContains(response, "Jours de stage (j)")
 
     def test_a_path_without_metric_renders_only_the_fixed_columns(self):
@@ -151,7 +153,7 @@ class TrackingGridTests(TestCase):
         LearningUnit.objects.create(period=self.period, title="ALGÈBRE", order=2)
         response = self.client.get(self.url())
         grid = response.context["grid"]
-        self.assertEqual(grid["periods"][0]["units"][1]["cells"], [None])
+        self.assertEqual([cell["value"] for cell in grid["periods"][0]["units"][1]["cells"]], [None])
 
     def test_the_grid_follows_the_declared_order_not_the_alphabet(self):
         LearningUnit.objects.create(period=self.period, title="ALGÈBRE", order=2)
@@ -169,6 +171,81 @@ class TrackingGridTests(TestCase):
         LearningUnit.objects.create(period=self.period, title="CALCUL SCIENTIFIQUE", order=2)
         response = self.client.get(self.url())
         self.assertContains(response, "CALCUL SCIENTIFIQUE")
+
+    def test_metrics_are_saved_from_the_grid(self):
+        self.client.get(self.url())
+        records = list(tracked_records(self.user, self.path))
+        data = {
+            "form-TOTAL_FORMS": str(len(records)),
+            "form-INITIAL_FORMS": str(len(records)),
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            f"metric_{self.unit.pk}_{self.coefficient.pk}": "7",
+        }
+        for index, record in enumerate(records):
+            data |= {
+                f"form-{index}-id": str(record.pk),
+                f"form-{index}-planned_hours": "0",
+                f"form-{index}-actual_hours": "0",
+                f"form-{index}-mastery_level": "0",
+                f"form-{index}-notes": "",
+            }
+
+        response = self.client.post(self.url(), data)
+
+        self.assertRedirects(response, self.url())
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("7.00"))
+
+    def test_clearing_a_metric_removes_it(self):
+        self.client.get(self.url())
+        records = list(tracked_records(self.user, self.path))
+        data = {
+            "form-TOTAL_FORMS": str(len(records)),
+            "form-INITIAL_FORMS": str(len(records)),
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            f"metric_{self.unit.pk}_{self.coefficient.pk}": "",
+        }
+        for index, record in enumerate(records):
+            data |= {
+                f"form-{index}-id": str(record.pk),
+                f"form-{index}-planned_hours": "0",
+                f"form-{index}-actual_hours": "0",
+                f"form-{index}-mastery_level": "0",
+                f"form-{index}-notes": "",
+            }
+
+        self.client.post(self.url(), data)
+
+        self.assertFalse(MetricValue.objects.filter(definition=self.coefficient, unit=self.unit).exists())
+
+    def test_a_non_numeric_metric_blocks_the_whole_save(self):
+        self.client.get(self.url())
+        records = list(tracked_records(self.user, self.path))
+        data = {
+            "form-TOTAL_FORMS": str(len(records)),
+            "form-INITIAL_FORMS": str(len(records)),
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            f"metric_{self.unit.pk}_{self.coefficient.pk}": "beaucoup",
+        }
+        for index, record in enumerate(records):
+            data |= {
+                f"form-{index}-id": str(record.pk),
+                f"form-{index}-planned_hours": "0",
+                f"form-{index}-actual_hours": "0",
+                f"form-{index}-mastery_level": "4",
+                f"form-{index}-notes": "",
+            }
+
+        response = self.client.post(self.url(), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "n’est pas un nombre")
+        # Le niveau de maîtrise ne doit pas non plus avoir été enregistré : soit tout
+        # passe, soit rien, pour que l'utilisateur sache où il en est.
+        self.assertEqual(tracked_records(self.user, self.path).first().mastery_level, 0)
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("5"))
 
     def test_another_users_path_is_not_reachable(self):
         bob = get_user_model().objects.create_user("bob", password="secret")

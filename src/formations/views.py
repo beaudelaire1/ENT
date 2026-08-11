@@ -12,13 +12,12 @@ from .forms import (
     LearningPathForm,
     LearningUnitForm,
     MetricDefinitionForm,
-    MetricValueForm,
     PeriodForm,
     ProgressForm,
     ProgressRowFormSet,
 )
 from .models import Competency, LearningPath, LearningUnit, MetricDefinition, Period, ProgressRecord
-from .services import build_tracking_grid, ensure_progress_records, tracked_records
+from .services import build_tracking_grid, ensure_progress_records, save_metric_values, tracked_records
 
 
 @login_required
@@ -42,10 +41,13 @@ def path_tracking(request, pk):
     path = get_object_or_404(LearningPath, owner=request.user, pk=pk)
     ensure_progress_records(request.user, path)
     formset = ProgressRowFormSet(request.POST or None, queryset=tracked_records(request.user, path))
+    metric_errors = []
     if request.method == "POST" and formset.is_valid():
-        formset.save()
-        messages.success(request, "Suivi enregistré.")
-        return redirect("formations:tracking", pk=path.pk)
+        metric_errors = save_metric_values(path, request.POST)
+        if not metric_errors:
+            formset.save()
+            messages.success(request, "Suivi enregistré.")
+            return redirect("formations:tracking", pk=path.pk)
     return render(
         request,
         "formations/tracking.html",
@@ -54,6 +56,7 @@ def path_tracking(request, pk):
             "formset": formset,
             "grid": build_tracking_grid(path, formset),
             "levels": ProgressRecord.Mastery.choices,
+            "metric_errors": metric_errors,
         },
     )
 
@@ -191,13 +194,3 @@ def metric_definition_delete(request, pk):
         redirect_to=reverse("formations:detail", args=[metric.path_id]),
         title="Supprimer cette colonne",
     )
-
-
-@login_required
-def metric_value_new(request, unit_pk):
-    unit = get_object_or_404(LearningUnit, period__path__owner=request.user, pk=unit_pk)
-    form = MetricValueForm(request.POST or None, path=unit.period.path, scope={"unit": unit})
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        return redirect("formations:unit", pk=unit.pk)
-    return render(request, "formations/form.html", {"form": form, "title": f"Métrique · {unit.title}"})

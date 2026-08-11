@@ -3,7 +3,7 @@ from django import forms
 from core.forms import ScopedModelForm
 from library.models import LibraryItem
 
-from .models import Competency, LearningPath, LearningUnit, MetricDefinition, MetricValue, Period, ProgressRecord
+from .models import Competency, LearningPath, LearningUnit, MetricDefinition, Period, ProgressRecord
 
 
 class LearningPathForm(ScopedModelForm):
@@ -45,16 +45,6 @@ class MetricDefinitionForm(ScopedModelForm):
     class Meta:
         model = MetricDefinition
         fields = ["key", "label", "unit_label", "order"]
-
-
-class MetricValueForm(ScopedModelForm):
-    class Meta:
-        model = MetricValue
-        fields = ["definition", "value"]
-
-    def __init__(self, *args, path=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["definition"].queryset = MetricDefinition.objects.filter(path=path)
 
 
 class ProgressForm(ScopedModelForm):

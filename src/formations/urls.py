@@ -19,6 +19,5 @@ urlpatterns = [
     path("units/<int:pk>/delete/", views.unit_delete, name="unit_delete"),
     path("units/<int:unit_pk>/competencies/new/", views.competency_new, name="competency_new"),
     path("competencies/<int:pk>/delete/", views.competency_delete, name="competency_delete"),
-    path("units/<int:unit_pk>/metrics/new/", views.metric_value_new, name="metric_value_new"),
     path("competencies/<int:competency_pk>/progress/", views.progress_edit, name="progress"),
 ]
