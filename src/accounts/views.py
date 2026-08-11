@@ -12,6 +12,8 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from core.queue import enqueue
+
 from . import throttling
 from .forms import InvitationAcceptForm, InvitationForm, ProfileForm
 from .models import Invitation, UserProfile
@@ -72,7 +74,7 @@ def invitations(request):
         invitation.save()
         from notifications.tasks import send_invitation_email
 
-        send_invitation_email.delay(invitation.pk)
+        enqueue(send_invitation_email, invitation.pk)
         messages.success(request, "Invitation créée et mise en file d’envoi.")
         return redirect("accounts:invitations")
     return render(

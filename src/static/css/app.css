@@ -27,6 +27,7 @@ button { color:inherit; }
 .brand-mark { display:grid; place-items:center; width:36px; height:36px; border-radius:12px; color:white; background:linear-gradient(135deg,var(--accent),#4fc3ff); box-shadow:0 0 28px color-mix(in srgb,var(--accent) 30%,transparent); }
 .sidebar nav { display:grid; gap:5px; margin-top:34px; }
 .sidebar nav a,.sidebar-bottom>a,.link-button { padding:10px 12px; border-radius:10px; color:var(--muted); }
+.sidebar nav a.sub-link { padding-left:28px; font-size:13px; opacity:.8; }
 .sidebar nav a:hover,.sidebar-bottom>a:hover,.link-button:hover { color:var(--text); background:var(--surface); }
 .sidebar-bottom { margin-top:auto; display:grid; gap:4px; }
 .link-button { background:none; border:0; width:100%; text-align:left; cursor:pointer; }

@@ -1,5 +1,6 @@
 from celery import shared_task
 from mutagen import File as MutagenFile
+from mutagen import MutagenError
 
 from .models import AudioTrack
 
@@ -15,8 +16,11 @@ def validate_audio_track(self, track_id: int):
             track.duration_seconds = max(1, round(metadata.info.length))
         track.status = AudioTrack.Status.READY
         track.rejection_reason = ""
-    except (ValueError, TypeError) as exc:
+    # MutagenError couvre les fichiers tronqués ou dont l'extension ment sur le contenu.
+    # Sans lui, la tâche plantait au lieu de refuser la piste, qui restait alors
+    # indéfiniment « en validation » — inutilisable et impossible à débloquer.
+    except (ValueError, TypeError, MutagenError) as exc:
         track.status = AudioTrack.Status.REJECTED
-        track.rejection_reason = str(exc)[:240]
+        track.rejection_reason = str(exc)[:240] or "Fichier audio illisible."
     track.save(update_fields=["duration_seconds", "status", "rejection_reason", "updated_at"])
     return track.status

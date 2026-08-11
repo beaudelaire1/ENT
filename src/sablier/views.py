@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import UserProfile
 from core.deletion import confirm_delete
+from core.queue import enqueue
 from formations.models import Competency
 
 from .forms import AddTrackForm, AudioTrackForm, FocusPreferenceForm, PlaylistForm
@@ -77,7 +78,7 @@ def audio_library(request):
     form = AudioTrackForm(request.POST or None, request.FILES or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         track = form.save()
-        validate_audio_track.delay(track.pk)
+        enqueue(validate_audio_track, track.pk)
         messages.success(request, "Piste téléversée et mise en validation.")
         return redirect("sablier:audio")
     used = (
@@ -249,5 +250,5 @@ def confirm_audio(request, pk):
     track = get_object_or_404(AudioTrack, owner=request.user, pk=pk, status=AudioTrack.Status.UPLOADING)
     track.status = AudioTrack.Status.VALIDATING
     track.save(update_fields=["status", "updated_at"])
-    validate_audio_track.delay(track.pk)
+    enqueue(validate_audio_track, track.pk)
     return JsonResponse({"ok": True})
