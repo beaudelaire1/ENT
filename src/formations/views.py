@@ -49,7 +49,7 @@ def path_tracking(request, pk):
         {
             "path": path,
             "formset": formset,
-            "periods": build_tracking_grid(path, formset),
+            "grid": build_tracking_grid(path, formset),
             "levels": ProgressRecord.Mastery.choices,
         },
     )

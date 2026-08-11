@@ -27,8 +27,10 @@ class TrackingGridTests(TestCase):
             Competency.objects.create(unit=self.unit, title="Espaces métriques et topologiques", order=1),
             Competency.objects.create(unit=self.unit, title="Compacité et connexité", order=2),
         ]
-        coefficient = MetricDefinition.objects.create(path=self.path, key="coefficient", label="Coefficient")
-        MetricValue.objects.create(definition=coefficient, unit=self.unit, value=Decimal("5"))
+        self.coefficient = MetricDefinition.objects.create(
+            path=self.path, key="coefficient", label="Coefficient", order=1
+        )
+        MetricValue.objects.create(definition=self.coefficient, unit=self.unit, value=Decimal("5"))
 
     def url(self):
         return reverse("formations:tracking", args=[self.path.pk])
@@ -108,12 +110,48 @@ class TrackingGridTests(TestCase):
 
         response = self.client.get(self.url())
         grid = build_tracking_grid(self.path, response.context["formset"])
-        unit_totals = grid[0]["units"][0]["totals"]
+        unit_totals = grid["periods"][0]["units"][0]["totals"]
 
         self.assertEqual(unit_totals["planned"], Decimal("15"))
         self.assertEqual(unit_totals["actual"], Decimal("6"))
         self.assertEqual(unit_totals["percent"], 75)
-        self.assertEqual(grid[0]["totals"]["percent"], 75)
+        self.assertEqual(grid["periods"][0]["totals"]["percent"], 75)
+
+    def test_columns_are_the_metrics_the_path_declares(self):
+        MetricDefinition.objects.create(path=self.path, key="stage", label="Jours de stage", unit_label="j", order=2)
+        MetricValue.objects.create(
+            definition=MetricDefinition.objects.get(path=self.path, key="stage"),
+            unit=self.unit,
+            value=Decimal("12"),
+        )
+
+        response = self.client.get(self.url())
+        grid = response.context["grid"]
+
+        self.assertEqual([d.key for d in grid["definitions"]], ["coefficient", "stage"])
+        self.assertEqual(grid["metric_count"], 2)
+        self.assertEqual(grid["column_count"], 8)
+        self.assertEqual(grid["periods"][0]["units"][0]["cells"], [Decimal("5"), Decimal("12")])
+        self.assertContains(response, "Jours de stage (j)")
+
+    def test_a_path_without_metric_renders_only_the_fixed_columns(self):
+        MetricValue.objects.all().delete()
+        MetricDefinition.objects.all().delete()
+
+        response = self.client.get(self.url())
+        grid = response.context["grid"]
+
+        self.assertEqual(grid["definitions"], [])
+        self.assertEqual(grid["column_count"], 6)
+        self.assertEqual(grid["periods"][0]["units"][0]["cells"], [])
+        self.assertNotContains(response, "Coefficient")
+        self.assertNotContains(response, 'colspan="0"')
+
+    def test_a_metric_left_empty_for_a_unit_shows_a_placeholder(self):
+        LearningUnit.objects.create(period=self.period, title="ALGÈBRE", order=2)
+        response = self.client.get(self.url())
+        grid = response.context["grid"]
+        self.assertEqual(grid["periods"][0]["units"][1]["cells"], [None])
 
     def test_the_grid_follows_the_declared_order_not_the_alphabet(self):
         LearningUnit.objects.create(period=self.period, title="ALGÈBRE", order=2)
@@ -121,8 +159,8 @@ class TrackingGridTests(TestCase):
 
         response = self.client.get(self.url())
         grid = build_tracking_grid(self.path, response.context["formset"])
-        units = [unit["unit"].title for unit in grid[0]["units"]]
-        titles = [row["competency"].title for row in grid[0]["units"][0]["rows"]]
+        units = [unit["unit"].title for unit in grid["periods"][0]["units"]]
+        titles = [row["competency"].title for row in grid["periods"][0]["units"][0]["rows"]]
 
         self.assertEqual(units, ["TOPOLOGIE", "ALGÈBRE"])
         self.assertEqual(titles, ["Espaces métriques et topologiques", "Compacité et connexité", "Axiomes"])

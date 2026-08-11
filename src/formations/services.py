@@ -3,6 +3,10 @@
 La page reprend la structure du tableau de suivi : une ligne par matière portant ses
 métriques, puis une ligne par compétence portant le niveau de maîtrise et les heures.
 
+Les colonnes chiffrées ne sont pas figées : ce sont les MetricDefinition du parcours.
+Une L3 déclare Coefficient/ECTS/CM/TD/TP, une formation professionnelle déclarera ce
+qu’elle veut, et la grille suit.
+
 Les totaux d’une matière ne sont pas saisis mais calculés à partir de ses compétences.
 Le prototype d’origine laissait ces deux niveaux se contredire ; ici la ligne de matière
 est toujours la somme de ce qu’elle contient.
@@ -12,9 +16,11 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from .models import Competency, MetricValue, ProgressRecord
+from .models import Competency, MetricDefinition, MetricValue, ProgressRecord
 
-METRIC_COLUMNS = ("coefficient", "ects", "cm", "td", "tp")
+# Colonnes présentes quelle que soit la formation : intitulé, travail estimé, temps réel,
+# niveau de maîtrise, progression, commentaires.
+FIXED_COLUMNS = 6
 
 
 def ensure_progress_records(user, path) -> None:
@@ -62,12 +68,13 @@ def _totals(rows):
 
 
 def build_tracking_grid(path, formset):
-    """Regroupe les lignes du formset par période puis par matière.
+    """Assemble la grille : les colonnes déclarées, puis les lignes par période.
 
     La structure vient de la base et non du formset : une matière sans compétence doit
     quand même apparaître dans la grille, avec ses métriques et une invitation à la
     remplir.
     """
+    definitions = list(MetricDefinition.objects.filter(path=path).order_by("order", "label"))
     metrics = _metrics_by_unit(path)
     forms_by_competency = {form.instance.competency_id: form for form in formset}
 
@@ -80,7 +87,22 @@ def build_tracking_grid(path, formset):
                 for competency in unit.competencies.all()
                 if competency.pk in forms_by_competency
             ]
-            units.append({"unit": unit, "metrics": metrics.get(unit.pk, {}), "rows": rows, "totals": _totals(rows)})
+            unit_metrics = metrics.get(unit.pk, {})
+            units.append(
+                {
+                    "unit": unit,
+                    # Alignée sur `definitions` : une case par colonne, vide si non renseignée.
+                    "cells": [unit_metrics.get(definition.key) for definition in definitions],
+                    "rows": rows,
+                    "totals": _totals(rows),
+                }
+            )
         all_rows = [row for unit in units for row in unit["rows"]]
         periods.append({"period": period, "units": units, "totals": _totals(all_rows)})
-    return periods
+
+    return {
+        "definitions": definitions,
+        "periods": periods,
+        "metric_count": len(definitions),
+        "column_count": len(definitions) + FIXED_COLUMNS,
+    }
