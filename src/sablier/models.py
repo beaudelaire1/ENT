@@ -29,8 +29,23 @@ class FocusPreference(models.Model):
         CANDLE = "candle", "Bougie"
         BEADS = "beads", "Perles"
         MOON = "moon", "Lune"
+        BARS = "bars", "Colonnes"
+        SPIRAL = "spiral", "Spirale"
+        SUN = "sun", "Soleil"
         DIGITAL = "digital", "Digital"
         ZEN = "zen", "Zen"
+
+    class Decor(models.IntegerChoices):
+        """Densité du décor animé, jusqu'à l'absence totale.
+
+        Un décor qui bouge aide certains à s'installer et en distrait d'autres ; le
+        choix reste à l'utilisateur plutôt qu'imposé par l'ambiance.
+        """
+
+        NONE = 0, "Aucun décor"
+        LIGHT = 1, "Léger"
+        NORMAL = 2, "Normal"
+        DENSE = 3, "Dense"
 
     class Ambience(models.TextChoices):
         """Palette, décor animé et paysage sonore de chacune sont dans scenes.py.
@@ -46,6 +61,10 @@ class FocusPreference(models.Model):
         PLUIE = "pluie", "Pluie"
         OCEAN = "ocean", "Océan"
         SAHARA = "sahara", "Sahara"
+        FORET = "foret", "Forêt"
+        ORAGE = "orage", "Orage"
+        BRAISES = "braises", "Braises"
+        AURORE = "aurore", "Aurore"
         NUIT = "nuit", "Nuit"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_preference")
@@ -61,12 +80,15 @@ class FocusPreference(models.Model):
     warning_seconds = models.PositiveSmallIntegerField(
         "alerte finale (s)", default=60, validators=[MinValueValidator(10), MaxValueValidator(180)]
     )
+    decor_density = models.PositiveSmallIntegerField("densité du décor", choices=Decor.choices, default=Decor.NORMAL)
     end_sound_enabled = models.BooleanField("son de fin", default=True)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#8878FF", validators=[color_validator])
     # Sans ce choix explicite, une couleur enregistrée écraserait celle de l'ambiance
     # et l'on retomberait sur le défaut d'origine : quatre ambiances pour un seul rendu.
     custom_accent = models.BooleanField("utiliser ma couleur plutôt que celle de l’ambiance", default=False)
     background_image = models.ImageField("image de fond", upload_to=focus_background_path, blank=True)
+    # Sert d'arbitre entre le serveur et le navigateur : voir sablier.js.
+    updated_at = models.DateTimeField("enregistré le", auto_now=True)
 
     class Meta:
         verbose_name = "préférence Sablier"

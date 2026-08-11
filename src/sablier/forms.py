@@ -23,6 +23,7 @@ class FocusPreferenceForm(forms.ModelForm):
             "ambience",
             "focus_level",
             "warning_seconds",
+            "decor_density",
             "end_sound_enabled",
             "custom_accent",
             "accent_color",

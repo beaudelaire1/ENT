@@ -154,6 +154,90 @@
       },
     },
 
+    spores: {
+      count: 30,
+      seed: (w, h) => ({ x: rand(0, w), y: rand(0, h), r: rand(1.4, 3.6), vy: rand(-9, -3), phase: rand(0, TAU), sway: rand(6, 18), a: rand(0.1, 0.35) }),
+      step: (p, dt, w, h) => {
+        p.y += p.vy * dt;
+        p.phase += dt * 0.7;
+        p.x += Math.sin(p.phase) * p.sway * dt;
+        if (p.y < -8) { p.y = h + 8; p.x = rand(0, w); }
+      },
+      draw: (ctx, p, color) => {
+        ctx.globalAlpha = p.a;
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+        ctx.globalAlpha = p.a * 0.3;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2.6, 0, TAU); ctx.fill();
+      },
+    },
+
+    embers: {
+      count: 40,
+      seed: (w, h) => ({ x: rand(w * 0.3, w * 0.7), y: rand(h * 0.6, h + 40), r: rand(1, 2.6), vy: rand(-70, -28), phase: rand(0, TAU), sway: rand(10, 30), life: rand(0.3, 1), a: 0 }),
+      step: (p, dt, w, h) => {
+        p.y += p.vy * dt;
+        p.phase += dt * 3;
+        p.x += Math.sin(p.phase) * p.sway * dt;
+        p.life -= dt * 0.22;
+        p.a = Math.max(0, p.life) * 0.55;   // l'étincelle pâlit en montant
+        if (p.life <= 0 || p.y < -10) { p.y = h + rand(0, 30); p.x = rand(w * 0.3, w * 0.7); p.life = rand(0.6, 1); }
+      },
+      draw: (ctx, p, color) => {
+        ctx.globalAlpha = p.a;
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+      },
+    },
+
+    // L'orage : une pluie battante, et de loin en loin un éclair qui blanchit la scène.
+    storm: {
+      count: 70,
+      seed: (w, h, index) => (index === 0
+        ? { lightning: true, timer: rand(2, 6), flash: 0 }
+        : { x: rand(0, w), y: rand(-h, h), len: rand(16, 40), vy: rand(620, 980), vx: rand(-90, -50), a: rand(0.14, 0.36) }),
+      step: (p, dt, w, h) => {
+        if (p.lightning) {
+          p.timer -= dt;
+          p.flash = Math.max(0, p.flash - dt * 3.2);
+          if (p.timer <= 0) { p.flash = 1; p.timer = rand(3, 9); }
+          return;
+        }
+        p.y += p.vy * dt;
+        p.x += p.vx * dt;
+        if (p.y > h + 24) { p.y = -24; p.x = rand(0, w + 120); }
+      },
+      draw: (ctx, p, color, w, h) => {
+        if (p.lightning) {
+          if (p.flash <= 0) return;
+          ctx.globalAlpha = p.flash * 0.16;
+          ctx.fillStyle = color;
+          ctx.fillRect(0, 0, w, h);
+          return;
+        }
+        ctx.globalAlpha = p.a;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.vx * 0.03, p.y + p.len); ctx.stroke();
+      },
+    },
+
+    // Aurore : des voiles qui ondulent lentement en haut de la scène.
+    aurora: {
+      count: 4,
+      seed: (w, h, index) => ({ index, amp: 16 + index * 9, len: 300 + index * 90, speed: 9 + index * 4, offset: rand(0, 500), base: h * (0.18 + index * 0.1), thickness: 34 + index * 12, a: 0.14 - index * 0.025 }),
+      step: (p, dt) => { p.offset += p.speed * dt; },
+      draw: (ctx, p, color, w) => {
+        ctx.globalAlpha = Math.max(0.03, p.a);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += 10) ctx.lineTo(x, p.base + Math.sin((x + p.offset) / p.len * TAU) * p.amp);
+        for (let x = w; x >= 0; x -= 10) ctx.lineTo(x, p.base + p.thickness + Math.sin((x + p.offset * 1.3) / p.len * TAU) * p.amp);
+        ctx.closePath();
+        ctx.fill();
+      },
+    },
+
     // Les vagues ne sont pas des particules : chaque « p » est une houle entière.
     waves: {
       count: 3,
@@ -188,12 +272,22 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function use(next) {
-      if (next === name) return;
+    // 0 n'affiche aucun décor ; les autres niveaux multiplient le nombre de particules.
+    const DENSITIES = { 0: 0, 1: 0.45, 2: 1, 3: 1.8 };
+    let density = 1;
+
+    function use(next, level) {
+      const factor = DENSITIES[level] ?? 1;
+      if (next === name && factor === density) return;
       name = next;
-      decor = DECORS[next] || null;
+      density = factor;
+      decor = factor > 0 ? DECORS[next] || null : null;
       resize();
-      particles = decor ? Array.from({ length: decor.count }, (_, i) => decor.seed(w || 1, h || 1, i)) : [];
+      // Les décors continus — houle, voiles — gardent toujours toutes leurs bandes :
+      // en retirer laisserait des trous au lieu d'alléger.
+      const continuous = next === "waves" || next === "aurora";
+      const count = continuous ? decor?.count : Math.max(1, Math.round((decor?.count || 0) * factor));
+      particles = decor ? Array.from({ length: count }, (_, i) => decor.seed(w || 1, h || 1, i)) : [];
     }
 
     function frame(now, color) {

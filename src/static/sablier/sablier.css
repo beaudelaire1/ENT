@@ -33,3 +33,41 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 /* Le décor occupe toute la scène, derrière le minuteur et sans jamais l'intercepter. */
 .decor-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; }
 .focus-stage > *:not(.decor-canvas) { position:relative; z-index:1; }
+
+/* Sur écran étroit la barre latérale passe en deux colonnes, et un intitulé se
+   retrouvait seul dans une cellule pendant que ses boutons partaient dans l'autre :
+   la zone « VISUALISATION » paraissait vide. Chaque intitulé et son groupe de
+   commandes occupent désormais toute la largeur. */
+@media(max-width:1400px){
+  .focus-sidebar > label,
+  .focus-sidebar > .mode-grid,
+  .focus-sidebar > .preset-row,
+  .focus-sidebar > .focus-levels,
+  .focus-sidebar > .duration-row { grid-column:1/-1; }
+}
+
+/* Dépouillement : les trois niveaux retirent progressivement ce qui entoure le
+   minuteur. Ils ne servaient jusqu'ici qu'au mode Zen — trois boutons sans effet
+   visible ailleurs.
+   Le niveau est porté par une classe et non par un attribut : la règle est alors
+   sans ambiguïté et se lit d'un coup d'œil dans l'inspecteur. */
+.focus-app.hushed .stage-message { opacity:.45; }
+.focus-app.bare .stage-status,
+.focus-app.bare .stage-intention,
+.focus-app.bare .stage-message,
+.focus-app.bare .canvas-time span { opacity:0; }
+.focus-app.bare .decor-canvas { opacity:.35; }
+.stage-status,.stage-intention,.stage-message,.canvas-time span,.decor-canvas { transition:opacity .4s; }
+
+/* La visualisation est le sujet de l'écran : elle occupe la scène au lieu de flotter
+   au centre d'un grand vide. */
+.visual-wrap { min-height:min(72vh,620px); }
+.visual-wrap canvas { width:min(660px,96%); height:min(660px,96%); }
+.digital-visual { width:min(720px,96%); }
+.zen-rings { width:min(400px,62vw); height:min(400px,62vw); }
+.canvas-time strong,.digital-visual strong { font-size:clamp(44px,6vw,64px); }
+@media(max-width:700px){ .visual-wrap { min-height:min(58vh,460px); } }
+
+/* Densité du décor : réglable en un clic, comme le mode et l'ambiance. */
+.decor-levels { display:flex; gap:8px; }
+.decor-levels button { flex:1; padding:9px 6px; font-size:11px; }

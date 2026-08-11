@@ -14,6 +14,7 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from accounts.models import UserProfile
@@ -37,7 +38,10 @@ def sablier_asset_version() -> str:
 
 
 @login_required
+@never_cache
 def home(request):
+    # Page entièrement personnelle, et dont les ressources changent souvent : la laisser
+    # en cache renvoyait un écran périmé qu'il fallait actualiser pour voir ses réglages.
     preference, _ = FocusPreference.objects.get_or_create(user=request.user)
     form = FocusPreferenceForm(request.POST or None, request.FILES or None, instance=preference)
     if request.method == "POST" and form.is_valid():
@@ -81,6 +85,9 @@ def home(request):
             # Les feuilles et scripts de Sablier changent souvent : sans cette empreinte,
             # le navigateur servirait l'ancienne version après chaque correction.
             "asset_version": sablier_asset_version(),
+            # À la seconde près, un enregistrement survenu dans la même seconde que
+            # le chargement serait indétectable côté navigateur.
+            "saved_at": f"{preference.updated_at.timestamp():.6f}",
             "competencies": competencies,
             "recent_sessions": request.user.focus_sessions.select_related("competency")[:5],
         },

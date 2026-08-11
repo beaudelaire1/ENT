@@ -34,6 +34,10 @@ SCENES: tuple[Scene, ...] = (
     Scene("pluie", "Pluie", "#6fa8dc", "#24506e", "rain"),
     Scene("ocean", "Océan", "#3fb9c9", "#1f7d8c", "waves"),
     Scene("sahara", "Sahara", "#f0a860", "#8a4b1c", "sand"),
+    Scene("foret", "Forêt", "#6fcf8a", "#1f6b3f", "spores"),
+    Scene("orage", "Orage", "#9aa8d8", "#1b2440", "storm"),
+    Scene("braises", "Braises", "#ff7043", "#8c2f12", "embers"),
+    Scene("aurore", "Aurore", "#5fe0c0", "#1c4f6b", "aurora"),
     Scene("nuit", "Nuit", "#6f7ee0", "#2b3577", "stars"),
 )
 

@@ -6,7 +6,7 @@
 <div class="focus-app" id="focus-app"
      data-user="{{ user.pk }}" data-total="{{ preference.default_duration_seconds }}" data-mode="{{ preference.mode }}"
      data-ambience="{{ preference.ambience }}" data-warning="{{ preference.warning_seconds }}"
-     data-focus-level="{{ preference.focus_level }}"
+     data-focus-level="{{ preference.focus_level }}" data-decor-density="{{ preference.decor_density }}" data-saved-at="{{ saved_at }}"
      data-end-sound="{{ preference.end_sound_enabled|yesno:'true,false' }}"
      data-log-url="{% url 'sablier:log_session' %}" data-csrf="{{ csrf_token }}"
      {% comment %}
@@ -21,9 +21,9 @@
       <label>INTENTION<input id="session-intention" value="{{ preference.session_intention }}" maxlength="80" placeholder="Réviser, créer, apprendre…"></label>
       <label>DURÉE</label><div class="duration-row"><input id="duration-input" value="05:00" inputmode="numeric"><button class="focus-button primary" id="apply-duration" type="button">OK</button></div>
       <div class="preset-row"><button data-preset="1">1m</button><button data-preset="3">3m</button><button data-preset="5">5m</button><button data-preset="10">10m</button></div>
-      <label>VISUALISATION</label><div class="mode-grid"><button data-mode="ring">◉<span>Anneau</span></button><button data-mode="hourglass">⌛<span>Sablier</span></button><button data-mode="wave">≈<span>Marée</span></button><button data-mode="candle">▯<span>Bougie</span></button><button data-mode="beads">⁘<span>Perles</span></button><button data-mode="moon">☾<span>Lune</span></button><button data-mode="digital">01<span>Digital</span></button><button data-mode="zen">◎<span>Zen</span></button></div>
+      <label>VISUALISATION</label><div class="mode-grid"><button data-mode="ring">◉<span>Anneau</span></button><button data-mode="hourglass">⌛<span>Sablier</span></button><button data-mode="wave">≈<span>Marée</span></button><button data-mode="candle">▯<span>Bougie</span></button><button data-mode="beads">⁘<span>Perles</span></button><button data-mode="moon">☾<span>Lune</span></button><button data-mode="bars">▮<span>Colonnes</span></button><button data-mode="spiral">◠<span>Spirale</span></button><button data-mode="sun">☀<span>Soleil</span></button><button data-mode="digital">01<span>Digital</span></button><button data-mode="zen">◎<span>Zen</span></button></div>
       <label>AMBIANCE<select id="ambience-select">{% for value,label in ambience_choices %}<option value="{{ value }}" {% if preference.ambience == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-      <label>DÉPOUILLEMENT</label><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div>
+      <label>DÉCOR</label><div class="decor-levels"><button data-decor="0">Aucun</button><button data-decor="1">Léger</button><button data-decor="2">Normal</button><button data-decor="3">Dense</button></div><label>DÉPOUILLEMENT</label><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div>
       <label>ALERTE FINALE <output id="warning-output">{{ preference.warning_seconds }} s</output><input id="warning-slider" type="range" min="10" max="180" step="10" value="{{ preference.warning_seconds }}"></label>
       {% if competencies %}
         <label>COMPÉTENCE TRAVAILLÉE
