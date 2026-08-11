@@ -5,11 +5,15 @@
 <div class="focus-app" id="focus-app"
      data-user="{{ user.pk }}" data-total="{{ preference.default_duration_seconds }}" data-mode="{{ preference.mode }}"
      data-ambience="{{ preference.ambience }}" data-warning="{{ preference.warning_seconds }}"
-     data-focus-level="{{ preference.focus_level }}" data-accent="{{ preference.accent_color }}"
+     data-focus-level="{{ preference.focus_level }}"
      data-soundscape="{{ preference.soundscape_enabled|yesno:'true,false' }}"
      data-end-sound="{{ preference.end_sound_enabled|yesno:'true,false' }}"
      data-log-url="{% url 'sablier:log_session' %}" data-csrf="{{ csrf_token }}"
-     style="--focus-accent:{{ preference.accent_color }};{% if preference.background_image %}--focus-image:url('{{ preference.background_image.url }}');{% endif %}">
+     {% comment %}
+       La couleur n'est plus posée en inline : elle écrasait l'ambiance, l'alerte finale
+       et la couleur de fin, qu'aucune règle de feuille de style ne pouvait plus atteindre.
+     {% endcomment %}
+     style="{% if preference.custom_accent %}--focus-user-accent:{{ preference.accent_color }};{% endif %}{% if preference.background_image %}--focus-image:url('{{ preference.background_image.url }}');{% endif %}">
   <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre atmosphère.</p></div><div class="focus-header-actions"><span class="live-chip" id="live-chip">● PRÊT</span><button class="focus-button" type="button" id="scene-button">Mode concentration ⛶</button></div></header>
   <div class="focus-layout">
     <aside class="focus-sidebar" id="focus-sidebar">

@@ -19,3 +19,23 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 .session-log strong { white-space:nowrap; }
 .session-log span { opacity:.65; text-align:right; }
 .player-hint { margin:0; font-size:13px; opacity:.7; max-width:340px; }
+
+/* Palettes d'ambiance.
+   Sélecteur volontairement peu spécifique ([data-ambience] seul, 0-1-0) afin que
+   .focus-app[data-warning] et [data-finished] (0-2-0) restent prioritaires quel que
+   soit l'ordre du fichier : l'alerte finale et la fin d'un compte à rebours doivent
+   toujours l'emporter sur l'ambiance choisie.
+   `--focus-user-accent` n'est posé que si l'utilisateur a demandé sa propre couleur. */
+[data-ambience="concentration"] { --focus-accent: var(--focus-user-accent,#8878ff); --focus-tint:#5b4bd6; }
+[data-ambience="calm"]          { --focus-accent: var(--focus-user-accent,#3fb9c9); --focus-tint:#1f7d8c; }
+[data-ambience="energy"]        { --focus-accent: var(--focus-user-accent,#ff8a3d); --focus-tint:#c2551a; }
+[data-ambience="night"]         { --focus-accent: var(--focus-user-accent,#6f7ee0); --focus-tint:#2b3577; }
+
+/* Le fond de scène prend la teinte de l'ambiance, pour que le changement se voie même
+   lorsque l'utilisateur impose sa propre couleur d'accent. */
+.focus-stage {
+  background:
+    radial-gradient(circle at 50% 44%, color-mix(in srgb,var(--focus-accent) 12%,transparent), transparent 48%),
+    radial-gradient(circle at 50% 96%, color-mix(in srgb,var(--focus-tint,var(--focus-accent)) 16%,transparent), transparent 62%),
+    color-mix(in srgb,var(--focus-bg) 96%,transparent);
+}

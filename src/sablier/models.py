@@ -50,6 +50,9 @@ class FocusPreference(models.Model):
     soundscape_enabled = models.BooleanField("son ambiant", default=False)
     end_sound_enabled = models.BooleanField("son de fin", default=True)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#8878FF", validators=[color_validator])
+    # Sans ce choix explicite, une couleur enregistrée écraserait celle de l'ambiance
+    # et l'on retomberait sur le défaut d'origine : quatre ambiances pour un seul rendu.
+    custom_accent = models.BooleanField("utiliser ma couleur plutôt que celle de l’ambiance", default=False)
     background_image = models.ImageField("image de fond", upload_to=focus_background_path, blank=True)
 
     class Meta:
