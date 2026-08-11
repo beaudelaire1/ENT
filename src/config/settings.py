@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -108,6 +109,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# La suite de tests crée des comptes en permanence ; le hachage par défaut, volontairement
+# coûteux, y domine le temps d'exécution sans rien protéger. Uniquement sous `manage.py test`.
+if "test" in sys.argv:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = os.getenv("TIME_ZONE", "America/Cayenne")
 USE_I18N = True
@@ -160,6 +166,17 @@ EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "MyENT <noreply@localhost>")
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Le cache porte le compteur de tentatives de connexion : il doit être partagé entre les
+# processus gunicorn. Redis quand il est configuré, mémoire locale en développement.
+if os.getenv("REDIS_URL"):
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
+else:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "10"))
+LOGIN_LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "900"))
+
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = None
 CELERY_TASK_IGNORE_RESULT = True

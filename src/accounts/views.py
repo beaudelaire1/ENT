@@ -6,13 +6,49 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model, login
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from . import throttling
 from .forms import InvitationAcceptForm, InvitationForm, ProfileForm
 from .models import Invitation, UserProfile
+
+
+class ThrottledLoginView(auth_views.LoginView):
+    """Connexion classique, mais les échecs répétés sur un compte finissent par bloquer."""
+
+    template_name = "accounts/login.html"
+
+    def form_valid(self, form):
+        throttling.clear(form.cleaned_data.get("username", ""))
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        username = form.data.get("username", "")
+        if throttling.attempts_exhausted(username):
+            return self.locked_out(form)
+        throttling.record_failure(username)
+        if throttling.attempts_exhausted(username):
+            return self.locked_out(form)
+        return super().form_invalid(form)
+
+    def post(self, request, *args, **kwargs):
+        if throttling.attempts_exhausted(request.POST.get("username", "")):
+            return self.locked_out(self.get_form())
+        return super().post(request, *args, **kwargs)
+
+    def locked_out(self, form):
+        minutes = max(1, throttling.LOCKOUT_SECONDS // 60)
+        form.errors.clear()
+        form.add_error(
+            None,
+            f"Trop de tentatives échouées pour ce compte. Réessayez dans {minutes} minutes, "
+            "ou réinitialisez votre mot de passe.",
+        )
+        return self.render_to_response(self.get_context_data(form=form), status=429)
 
 
 @login_required
