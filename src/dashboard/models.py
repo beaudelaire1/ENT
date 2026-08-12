@@ -11,6 +11,7 @@ class DashboardWidget(models.Model):
         REMINDERS = "reminders", "Rappels"
         RECENT = "recent", "Contenus récents"
         FORMATIONS = "formations", "Formations"
+        ACADEMIC = "academic", "Situation académique"
         QUICK_NOTE = "quick_note", "Note rapide"
         SABLIER = "sablier", "Sablier"
 

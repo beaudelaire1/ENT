@@ -1,7 +1,116 @@
 {% extends "base.html" %}
 {% block title %}Bibliothèque · MyENT{% endblock %}
 {% block content %}
-<header class="page-header"><div><p class="eyebrow">CONTENUS PERSONNELS</p><h1>Bibliothèque</h1></div><div class="actions"><a class="button" href="{% url 'library:folder_new' %}">Dossier</a><a class="button" href="{% url 'library:tag_new' %}">Étiquette</a><a class="button primary" href="{% url 'library:new' %}">Ajouter</a></div></header>
-<div class="library-layout"><aside class="panel"><h2>Dossiers</h2><a href="{% url 'library:list' %}">Tous</a>{% for folder in folders %}<span class="side-row"><a href="?folder={{ folder.pk }}">{{ folder.name }}</a><a class="side-edit" href="{% url 'library:folder_edit' folder.pk %}" title="Modifier le dossier « {{ folder.name }} »" aria-label="Modifier le dossier {{ folder.name }}">✎</a><a class="side-delete" href="{% url 'library:folder_delete' folder.pk %}" title="Supprimer le dossier « {{ folder.name }} »" aria-label="Supprimer le dossier {{ folder.name }}">×</a></span>{% endfor %}<h2>Étiquettes</h2>{% for tag in tags %}<span class="side-row"><a href="?tag={{ tag.pk }}">{{ tag.name }}</a><a class="side-edit" href="{% url 'library:tag_edit' tag.pk %}" title="Modifier l’étiquette « {{ tag.name }} »" aria-label="Modifier l’étiquette {{ tag.name }}">✎</a><a class="side-delete" href="{% url 'library:tag_delete' tag.pk %}" title="Supprimer l’étiquette « {{ tag.name }} »" aria-label="Supprimer l’étiquette {{ tag.name }}">×</a></span>{% empty %}<p class="empty">Aucune étiquette.</p>{% endfor %}<h2>Types</h2><a href="?kind=note">Notes</a><a href="?kind=file">Fichiers</a><a href="?kind=link">Liens</a></aside><section class="content-cards">{% for item in items %}<a class="panel content-card" href="{% url 'library:detail' item.pk %}"><span class="eyebrow">{{ item.get_kind_display }}</span><h2>{{ item.title }}</h2><p class="muted">{{ item.description|default:item.note_text|truncatechars:150 }}</p></a>{% empty %}<div class="panel"><div class="empty-state"><p class="empty">Votre bibliothèque est vide. Rassemblez ici vos liens, fichiers et notes.</p><div class="actions"><a class="button primary" href="{% url 'library:new' %}?kind=note">Écrire une note</a><a class="button" href="{% url 'library:new' %}?kind=link">Ajouter un lien</a><a class="button" href="{% url 'library:new' %}?kind=file">Téléverser un fichier</a></div></div></div>{% endfor %}</section></div>
-{% endblock %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">CONTENUS PERSONNELS</p>
+    <h1>Bibliothèque</h1>
+    <p class="muted">{{ total }} ressource{{ total|pluralize }} trouvée{{ total|pluralize }}</p>
+  </div>
+  <div class="actions">
+    <a class="button" href="{% url 'library:folder_new' %}">Dossier</a>
+    <a class="button" href="{% url 'library:tag_new' %}">Étiquette</a>
+    <a class="button primary" href="{% url 'library:new' %}">Ajouter</a>
+  </div>
+</header>
 
+<section class="panel library-filters">
+  <form method="get" class="filter-form" role="search">
+    <div class="field filter-search">
+      <label for="library-search">Rechercher</label>
+      <input id="library-search" type="search" name="q" value="{{ query }}" placeholder="Titre, contenu, source ou étiquette…">
+    </div>
+    <div class="field">
+      <label for="filter-folder">Dossier</label>
+      <select id="filter-folder" name="folder"><option value="">Tous</option>{% for folder in folders %}<option value="{{ folder.pk }}"{% if selected_folder.pk == folder.pk %} selected{% endif %}>{{ folder.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="field">
+      <label for="filter-kind">Format</label>
+      <select id="filter-kind" name="kind"><option value="">Tous</option>{% for value, label in kinds %}<option value="{{ value }}"{% if kind == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    </div>
+    <div class="field">
+      <label for="filter-purpose">Nature</label>
+      <select id="filter-purpose" name="purpose"><option value="">Toutes</option>{% for value, label in purposes %}<option value="{{ value }}"{% if purpose == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    </div>
+    <div class="field">
+      <label for="filter-tag">Étiquette</label>
+      <select id="filter-tag" name="tag"><option value="">Toutes</option>{% for tag in tags %}<option value="{{ tag.pk }}"{% if selected_tag.pk == tag.pk %} selected{% endif %}>{{ tag.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="field">
+      <label for="filter-unit">Matière</label>
+      <select id="filter-unit" name="unit"><option value="">Toutes</option>{% for unit in units %}<option value="{{ unit.pk }}"{% if selected_unit.pk == unit.pk %} selected{% endif %}>{{ unit.period.path.title }} · {{ unit.title }}</option>{% endfor %}</select>
+    </div>
+    <div class="field">
+      <label for="filter-competency">Compétence</label>
+      <select id="filter-competency" name="competency"><option value="">Toutes</option>{% for competency in competencies %}<option value="{{ competency.pk }}"{% if selected_competency.pk == competency.pk %} selected{% endif %}>{{ competency.path.title }} · {{ competency.title }}</option>{% endfor %}</select>
+    </div>
+    <div class="field">
+      <label for="filter-sort">Trier par</label>
+      <select id="filter-sort" name="sort">
+        <option value="updated"{% if sort == "updated" %} selected{% endif %}>Modifiées récemment</option>
+        <option value="created"{% if sort == "created" %} selected{% endif %}>Ajoutées récemment</option>
+        <option value="title"{% if sort == "title" %} selected{% endif %}>Titre A–Z</option>
+        <option value="title_desc"{% if sort == "title_desc" %} selected{% endif %}>Titre Z–A</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="button primary" type="submit">Appliquer</button>
+      {% if active_filters %}<a class="button quiet" href="{% url 'library:list' %}">Tout effacer</a>{% endif %}
+    </div>
+  </form>
+</section>
+
+<div class="library-layout">
+  <aside class="panel">
+    <h2>Dossiers</h2>
+    <a{% if not selected_folder %} class="active-side-link"{% endif %} href="{% url 'library:list' %}">Tous les dossiers</a>
+    {% for folder in folders %}
+      <span class="side-row folder-depth-{{ folder.tree_depth }}{% if selected_folder.pk == folder.pk %} active-side-row{% endif %}">
+        <a href="?folder={{ folder.pk }}">{{ folder.name }}</a>
+        <a class="side-edit" href="{% url 'library:folder_edit' folder.pk %}" title="Modifier le dossier « {{ folder.name }} »" aria-label="Modifier le dossier {{ folder.name }}">✎</a>
+        <a class="side-delete" href="{% url 'library:folder_delete' folder.pk %}" title="Supprimer le dossier « {{ folder.name }} »" aria-label="Supprimer le dossier {{ folder.name }}">×</a>
+      </span>
+    {% empty %}<p class="empty">Aucun dossier.</p>{% endfor %}
+    <h2>Étiquettes</h2>
+    {% for tag in tags %}
+      <span class="side-row{% if selected_tag.pk == tag.pk %} active-side-row{% endif %}">
+        <a href="?tag={{ tag.pk }}">{{ tag.name }}</a>
+        <a class="side-edit" href="{% url 'library:tag_edit' tag.pk %}" title="Modifier l’étiquette « {{ tag.name }} »" aria-label="Modifier l’étiquette {{ tag.name }}">✎</a>
+        <a class="side-delete" href="{% url 'library:tag_delete' tag.pk %}" title="Supprimer l’étiquette « {{ tag.name }} »" aria-label="Supprimer l’étiquette {{ tag.name }}">×</a>
+      </span>
+    {% empty %}<p class="empty">Aucune étiquette.</p>{% endfor %}
+  </aside>
+
+  <main class="library-results">
+    <div class="content-cards">
+      {% for item in items %}
+        <a class="panel content-card" href="{% url 'library:detail' item.pk %}">
+          <span class="eyebrow">{{ item.get_purpose_display }} · {{ item.get_kind_display }}</span>
+          <h2>{{ item.title }}</h2>
+          <p class="muted">{{ item.description|default:item.note_text|truncatechars:150 }}</p>
+          {% if item.folder %}<span class="chip static">{{ item.folder }}</span>{% endif %}
+        </a>
+      {% empty %}
+        <div class="panel">
+          <div class="empty-state">
+            {% if active_filters %}
+              <p class="empty">Aucune ressource ne correspond à ces filtres.</p>
+              <a class="button" href="{% url 'library:list' %}">Afficher toute la bibliothèque</a>
+            {% else %}
+              <p class="empty">Votre bibliothèque est vide. Rassemblez ici vos liens, fichiers et notes.</p>
+              <div class="actions"><a class="button primary" href="{% url 'library:new' %}?kind=note">Écrire une note</a><a class="button" href="{% url 'library:new' %}?kind=link">Ajouter un lien</a><a class="button" href="{% url 'library:new' %}?kind=file">Téléverser un fichier</a></div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="pagination" aria-label="Pages de la bibliothèque">
+        {% if page_obj.has_previous %}<a class="button small" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Précédent</a>{% endif %}
+        <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a class="button small" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Suivant</a>{% endif %}
+      </nav>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

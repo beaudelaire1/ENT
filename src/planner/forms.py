@@ -1,6 +1,7 @@
 from django import forms
 
 from core.forms import ScopedModelForm
+from formations.models import Assessment, Competency, LearningUnit
 
 from .models import CalendarEvent, Recurrence, Task
 
@@ -55,12 +56,29 @@ class RecurrenceMixin(forms.Form):
 class TaskForm(RecurrenceMixin, ScopedModelForm):
     class Meta:
         model = Task
-        fields = ["title", "description", "status", "priority", "due_at", "reminder_at", "email_reminder"]
+        fields = [
+            "title",
+            "description",
+            "status",
+            "priority",
+            "due_at",
+            "unit",
+            "competency",
+            "assessment",
+            "reminder_at",
+            "email_reminder",
+        ]
         widgets = {
             "due_at": DateTimeLocalInput(),
             "reminder_at": DateTimeLocalInput(),
             "description": forms.Textarea(attrs={"rows": 4}),
         }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["unit"].queryset = LearningUnit.objects.filter(period__path__owner=user).select_related("period")
+        self.fields["competency"].queryset = Competency.objects.filter(path__owner=user).select_related("path")
+        self.fields["assessment"].queryset = Assessment.objects.filter(owner=user).select_related("unit")
 
     def clean(self):
         cleaned = super().clean()
@@ -79,6 +97,9 @@ class CalendarEventForm(RecurrenceMixin, ScopedModelForm):
             "ends_at",
             "all_day",
             "location",
+            "unit",
+            "competency",
+            "assessment",
             "reminder_at",
             "email_reminder",
         ]
@@ -88,3 +109,9 @@ class CalendarEventForm(RecurrenceMixin, ScopedModelForm):
             "reminder_at": DateTimeLocalInput(),
             "description": forms.Textarea(attrs={"rows": 4}),
         }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["unit"].queryset = LearningUnit.objects.filter(period__path__owner=user).select_related("period")
+        self.fields["competency"].queryset = Competency.objects.filter(path__owner=user).select_related("path")
+        self.fields["assessment"].queryset = Assessment.objects.filter(owner=user).select_related("unit")

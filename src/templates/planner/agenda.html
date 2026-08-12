@@ -3,16 +3,66 @@
 {% block content %}
 <header class="page-header">
   <div>
-    <p class="eyebrow">PLANIFICATEUR</p>
-    <h1>{{ anchor|date:"F Y"|capfirst }}</h1>
+    <p class="eyebrow">PLANIFICATEUR · {% if view == 'week' %}SEMAINE{% else %}MOIS{% endif %}</p>
+    <h1>{% if view == 'week' %}Du {{ week_start|date:"d" }} au {{ week_end|date:"d F Y" }}{% else %}{{ anchor|date:"F Y"|capfirst }}{% endif %}</h1>
   </div>
   <div class="actions">
-    <a class="button" href="?month={{ previous_month|date:'Y-m' }}" aria-label="Mois précédent">‹ {{ previous_month|date:"F"|capfirst }}</a>
-    {% if not is_current_month %}<a class="button" href="{% url 'planner:agenda' %}">Aujourd’hui</a>{% endif %}
-    <a class="button" href="?month={{ next_month|date:'Y-m' }}" aria-label="Mois suivant">{{ next_month|date:"F"|capfirst }} ›</a>
+    {% if view == 'week' %}
+      <a class="button" href="?view=week&amp;date={{ previous_week|date:'Y-m-d' }}{% if selected_path %}&amp;path={{ selected_path.pk }}{% endif %}" aria-label="Semaine précédente">‹</a>
+      {% if not is_current_week %}<a class="button" href="?view=week{% if selected_path %}&amp;path={{ selected_path.pk }}{% endif %}">Cette semaine</a>{% endif %}
+      <a class="button" href="?view=week&amp;date={{ next_week|date:'Y-m-d' }}{% if selected_path %}&amp;path={{ selected_path.pk }}{% endif %}" aria-label="Semaine suivante">›</a>
+      <a class="button quiet" href="?{% if selected_path %}path={{ selected_path.pk }}{% endif %}">Vue mois</a>
+    {% else %}
+      <a class="button" href="?month={{ previous_month|date:'Y-m' }}{% if selected_path %}&amp;path={{ selected_path.pk }}{% endif %}" aria-label="Mois précédent">‹ {{ previous_month|date:"F"|capfirst }}</a>
+      {% if not is_current_month %}<a class="button" href="{% url 'planner:agenda' %}{% if selected_path %}?path={{ selected_path.pk }}{% endif %}">Aujourd’hui</a>{% endif %}
+      <a class="button" href="?month={{ next_month|date:'Y-m' }}{% if selected_path %}&amp;path={{ selected_path.pk }}{% endif %}" aria-label="Mois suivant">{{ next_month|date:"F"|capfirst }} ›</a>
+      <a class="button quiet" href="?view=week{% if selected_path %}&amp;path={{ selected_path.pk }}{% endif %}">Vue semaine</a>
+    {% endif %}
     <a class="button primary" href="{% url 'planner:event_new' %}">Nouvel événement</a>
   </div>
 </header>
-<div class="two-columns"><section class="panel"><h2>Événements</h2>{% for event in events %}<div class="list-row"><div><strong>{{ event.title }}</strong>{% if event.series_id or event.is_series_head %} <span class="chip static" title="Fait partie d’une série">série</span>{% endif %}<div class="muted">{{ event.starts_at|date:"d/m H:i" }} — {{ event.ends_at|date:"d/m H:i" }}{% if event.location %} · {{ event.location }}{% endif %}</div></div><div class="actions"><a class="button small quiet" href="{% url 'planner:event_edit' event.pk %}">Modifier</a><a class="button small quiet danger" href="{% url 'planner:event_delete' event.pk %}">Supprimer</a></div></div>{% empty %}<div class="empty-state"><p class="empty">Aucun événement ce mois-ci.</p><a class="button primary" href="{% url 'planner:event_new' %}">Ajouter un événement</a></div>{% endfor %}</section><section class="panel"><h2>Échéances</h2>{% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><time>{{ task.due_at|date:"d/m H:i" }}</time></div>{% empty %}<div class="empty-state"><p class="empty">Aucune échéance ce mois-ci.</p><a class="button" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}</section></div>
-{% endblock %}
 
+<form method="get" class="filter-form panel">
+  <input type="hidden" name="view" value="{{ view }}">
+  {% if view == 'week' %}<input type="hidden" name="date" value="{{ week_start|date:'Y-m-d' }}">{% else %}<input type="hidden" name="month" value="{{ anchor|date:'Y-m' }}">{% endif %}
+  <div class="field"><label for="agenda-path">Formation</label><select id="agenda-path" name="path"><option value="">Toutes</option>{% for path in formations %}<option value="{{ path.pk }}"{% if selected_path.pk == path.pk %} selected{% endif %}>{{ path.title }}</option>{% endfor %}</select></div>
+  <div class="form-actions"><button class="button" type="submit">Filtrer</button>{% if selected_path %}<a class="button quiet" href="?view={{ view }}">Effacer</a>{% endif %}</div>
+</form>
+
+{% if view == 'week' %}
+  <div class="week-grid">
+    {% for day in days %}
+      <section class="panel week-day{% if day.date == today %} today{% endif %}">
+        <h2>{{ day.date|date:"D d"|capfirst }}</h2>
+        {% for event in day.events %}
+          <article class="agenda-entry">
+            <time>{{ event.starts_at|time:"H:i" }}</time>
+            <a href="{% url 'planner:event_edit' event.pk %}">{{ event.title }}</a>
+            {% if event.unit %}<span class="muted">{{ event.unit.title }}</span>{% endif %}
+          </article>
+        {% endfor %}
+        {% for task in day.tasks %}
+          <article class="agenda-entry task-entry"><time>{{ task.due_at|time:"H:i" }}</time><a href="{% url 'planner:task_edit' task.pk %}">{{ task.title }}</a></article>
+        {% endfor %}
+        {% if not day.events and not day.tasks %}<p class="empty">Libre</p>{% endif %}
+      </section>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="two-columns">
+    <section class="panel">
+      <h2>Événements</h2>
+      {% for event in events %}
+        <div class="list-row">
+          <div><strong>{{ event.title }}</strong>{% if event.series_id or event.is_series_head %} <span class="chip static" title="Fait partie d’une série">série</span>{% endif %}<div class="muted">{{ event.starts_at|date:"d/m H:i" }} — {{ event.ends_at|date:"d/m H:i" }}{% if event.location %} · {{ event.location }}{% endif %}{% if event.unit %} · {{ event.unit.title }}{% endif %}</div></div>
+          <div class="actions"><a class="button small quiet" href="{% url 'planner:event_edit' event.pk %}">Modifier</a><a class="button small quiet danger" href="{% url 'planner:event_delete' event.pk %}">Supprimer</a>{% if event.series_id or event.is_series_head %}<a class="button small quiet danger" href="{% url 'planner:event_series_delete' event.pk %}">Toute la série</a>{% endif %}</div>
+        </div>
+      {% empty %}<div class="empty-state"><p class="empty">Aucun événement ce mois-ci.</p><a class="button primary" href="{% url 'planner:event_new' %}">Ajouter un événement</a></div>{% endfor %}
+    </section>
+    <section class="panel">
+      <h2>Échéances</h2>
+      {% for task in tasks %}<div class="list-row"><a href="{% url 'planner:task_edit' task.pk %}">{{ task.title }}</a><time>{{ task.due_at|date:"d/m H:i" }}</time></div>{% empty %}<div class="empty-state"><p class="empty">Aucune échéance ce mois-ci.</p><a class="button" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}
+    </section>
+  </div>
+{% endif %}
+{% endblock %}

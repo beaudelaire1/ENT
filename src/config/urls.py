@@ -3,12 +3,13 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from core.views import health, root_redirect, search
+from core.views import health, live, root_redirect, search
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", root_redirect, name="root"),
     path("healthz/", health, name="health"),
+    path("livez/", live, name="live"),
     path("search/", search, name="search"),
     path("accounts/", include("accounts.urls")),
     path("dashboard/", include("dashboard.urls")),

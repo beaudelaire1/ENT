@@ -2,6 +2,18 @@
 {% block title %}Tâches · MyENT{% endblock %}
 {% block content %}
 <header class="page-header"><div><p class="eyebrow">ORGANISATION</p><h1>Vos tâches</h1></div><a class="button primary" href="{% url 'planner:task_new' %}">Nouvelle tâche</a></header>
-<section class="panel"><div class="list">{% for task in tasks %}<div class="list-row"><div><strong>{{ task.title }}</strong><div class="muted">{{ task.get_status_display }} · {{ task.get_priority_display }}{% if task.due_at %} · {{ task.due_at|date:"d/m/Y H:i" }}{% endif %}</div></div><div class="actions"><a class="button small quiet" href="{% url 'planner:task_edit' task.pk %}">Modifier</a><a class="button small quiet danger" href="{% url 'planner:task_delete' task.pk %}">Supprimer</a><form method="post" action="{% url 'planner:task_toggle' task.pk %}">{% csrf_token %}<button class="button small">{% if task.status == 'done' %}Rouvrir{% else %}Terminer{% endif %}</button></form></div></div>{% empty %}<div class="empty-state"><p class="empty">Aucune tâche pour l’instant.</p><a class="button primary" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}</div></section>
+<form method="get" class="filter-form panel" role="search">
+  <div class="field"><label for="task-search">Rechercher</label><input id="task-search" type="search" name="q" value="{{ query }}"></div>
+  <div class="field"><label for="task-status">État</label><select id="task-status" name="status"><option value="">Tous</option>{% for value, label in statuses %}<option value="{{ value }}"{% if status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="task-path">Formation</label><select id="task-path" name="path"><option value="">Toutes</option>{% for path in formations %}<option value="{{ path.pk }}"{% if selected_path.pk == path.pk %} selected{% endif %}>{{ path.title }}</option>{% endfor %}</select></div>
+  <div class="form-actions"><button class="button" type="submit">Filtrer</button></div>
+</form>
+<section class="panel"><div class="list">
+  {% for task in tasks %}
+    <div class="list-row">
+      <div><strong>{{ task.title }}</strong>{% if task.series_id %} <span class="chip static">série</span>{% endif %}<div class="muted">{{ task.get_status_display }} · {{ task.get_priority_display }}{% if task.due_at %} · {{ task.due_at|date:"d/m/Y H:i" }}{% endif %}{% if task.unit %} · {{ task.unit.title }}{% endif %}{% if task.competency %} · {{ task.competency.title }}{% endif %}</div></div>
+      <div class="actions"><a class="button small quiet" href="{% url 'planner:task_edit' task.pk %}">Modifier</a><a class="button small quiet danger" href="{% url 'planner:task_delete' task.pk %}">Supprimer</a>{% if task.series_id %}<a class="button small quiet danger" href="{% url 'planner:task_series_delete' task.pk %}">Toute la série</a>{% endif %}<form method="post" action="{% url 'planner:task_toggle' task.pk %}">{% csrf_token %}<button class="button small">{% if task.status == 'done' %}Rouvrir{% else %}Terminer{% endif %}</button>{% if task.series_id %}<button class="button small quiet" type="submit" name="scope" value="series">{% if task.status == 'done' %}Rouvrir la série{% else %}Terminer la série{% endif %}</button>{% endif %}</form></div>
+    </div>
+  {% empty %}<div class="empty-state"><p class="empty">Aucune tâche pour l’instant.</p><a class="button primary" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}
+</div></section>
 {% endblock %}
-

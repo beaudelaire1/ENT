@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from .models import CalendarEvent, Recurrence, Reminder, Task
+from .models import CalendarEvent, Recurrence, Reminder, Task, TaskSeries
 
 # Garde-fou : une règle mal saisie ne doit pas remplir l'agenda de milliers de lignes.
 MAX_OCCURRENCES = 200
@@ -82,6 +82,9 @@ def expand_event_series(event: CalendarEvent, rule: str, until) -> int:
             location=event.location,
             reminder_at=starts_at + reminder_offset if reminder_offset else None,
             email_reminder=event.email_reminder,
+            unit=event.unit,
+            competency=event.competency,
+            assessment=event.assessment,
         )
         created += 1
     return created
@@ -93,16 +96,27 @@ def expand_task_series(task: Task, rule: str, until) -> int:
         return 0
 
     reminder_offset = task.reminder_at - task.due_at if task.reminder_at else None
-    existing = set(
-        Task.objects.filter(owner=task.owner, title=task.title, due_at__isnull=False).values_list("due_at", flat=True)
-    )
+    if task.series_id:
+        series = task.series
+        if series.recurrence != rule or series.repeat_until != until:
+            series.recurrence = rule
+            series.repeat_until = until
+            series.save(update_fields=["recurrence", "repeat_until", "updated_at"])
+    else:
+        series = TaskSeries.objects.create(owner=task.owner, recurrence=rule, repeat_until=until)
+        task.series = series
+        task.series_position = 0
+        task.save(update_fields=["series", "series_position", "updated_at"])
+    existing = set(series.tasks.filter(due_at__isnull=False).values_list("due_at", flat=True))
 
     created = 0
-    for due_at in occurrences_until(task.due_at, rule, until):
+    for position, due_at in enumerate(occurrences_until(task.due_at, rule, until), 1):
         if due_at in existing:
             continue
         Task.objects.create(
             owner=task.owner,
+            series=series,
+            series_position=position,
             title=task.title,
             description=task.description,
             status=Task.Status.TODO,
@@ -110,6 +124,9 @@ def expand_task_series(task: Task, rule: str, until) -> int:
             due_at=due_at,
             reminder_at=due_at + reminder_offset if reminder_offset else None,
             email_reminder=task.email_reminder,
+            unit=task.unit,
+            competency=task.competency,
+            assessment=task.assessment,
         )
         created += 1
     return created

@@ -93,10 +93,20 @@ class LibraryItemForm(ScopedModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        if cleaned.get("kind") == LibraryItem.Kind.NOTE:
+        kind = cleaned.get("kind")
+        if kind != LibraryItem.Kind.LINK:
+            cleaned["url"] = ""
+        if kind != LibraryItem.Kind.FILE:
+            # ``False`` demande à FileField de détacher un éventuel ancien fichier.
+            cleaned["file"] = False
+        if kind == LibraryItem.Kind.NOTE:
             self.instance.note_delta = cleaned.get("note_delta_json") or {}
             self.instance.note_text = (cleaned.get("note_text_input") or "").strip()
             self.instance.note_html = self.sanitize_note_html(cleaned.get("note_html_input") or "")
+        else:
+            self.instance.note_delta = {}
+            self.instance.note_text = ""
+            self.instance.note_html = ""
         return cleaned
 
     @staticmethod
@@ -137,7 +147,13 @@ class FolderForm(ScopedModelForm):
         self.user = user
         kwargs.setdefault("scope", {"owner": user})
         super().__init__(*args, **kwargs)
-        self.fields["parent"].queryset = Folder.objects.filter(owner=user)
+        choices = Folder.objects.filter(owner=user)
+        if self.instance.pk:
+            # L'instance reste dans le queryset afin que sa sélection frauduleuse arrive
+            # jusqu'à ``Folder.clean`` et rende le message précis « son propre parent ».
+            # Les descendants, eux, ne sont jamais proposés dans l'interface.
+            choices = choices.exclude(pk__in=self.instance.descendant_ids())
+        self.fields["parent"].queryset = choices
 
 
 class TagForm(ScopedModelForm):

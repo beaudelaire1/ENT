@@ -11,8 +11,9 @@
 </head>
 <body>
 {% if user.is_authenticated %}
-  <aside class="sidebar" id="sidebar">
-    <a class="brand" href="{% url 'dashboard:home' %}"><span class="brand-mark">M</span><span>MyENT</span></a>
+  <a class="skip-link" href="#main-content">Aller au contenu principal</a>
+  <aside class="sidebar" id="sidebar" aria-label="Volet de navigation">
+    <div class="sidebar-heading"><a class="brand" href="{% url 'dashboard:home' %}"><span class="brand-mark">M</span><span>MyENT</span></a><button class="icon-button mobile-only" type="button" data-close-sidebar aria-label="Fermer le menu">×</button></div>
     {% comment %}
       Le volet ne porte que la navigation permanente. Créer une matière, ajouter une
       ressource ou modifier une compétence sont des actions contextuelles : leur place est
@@ -55,6 +56,7 @@
       <details class="nav-group"{% if nav_section == 'sablier' %} open{% endif %}>
         <summary{% if nav_section == 'sablier' %} class="active"{% endif %}>Sablier</summary>
         <a href="{% url 'sablier:home' %}"{% if request.resolver_match.url_name == 'home' and nav_section == 'sablier' %} class="active" aria-current="page"{% endif %}>Minuteur</a>
+        <a href="{% url 'sablier:sessions' %}"{% if request.resolver_match.url_name == 'sessions' %} class="active" aria-current="page"{% endif %}>Historique</a>
         <a href="{% url 'sablier:audio' %}"{% if request.resolver_match.url_name == 'audio' %} class="active" aria-current="page"{% endif %}>Musiques</a>
         <a href="{% url 'sablier:playlists' %}"{% if request.resolver_match.url_name == 'playlists' %} class="active" aria-current="page"{% endif %}>Playlists</a>
       </details>
@@ -66,20 +68,21 @@
       <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button">Déconnexion</button></form>
     </div>
   </aside>
+  <button class="sidebar-backdrop" type="button" data-sidebar-backdrop tabindex="-1" aria-hidden="true"></button>
   <div class="app-shell">
     <header class="topbar">
-      <button class="icon-button mobile-only" type="button" data-toggle-sidebar aria-label="Menu">☰</button>
+      <button class="icon-button mobile-only" type="button" data-toggle-sidebar aria-label="Ouvrir le menu">☰</button>
       <form class="global-search" action="{% url 'search' %}" method="get">
         <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Rechercher partout…" aria-label="Rechercher">
       </form>
       <span class="user-chip">{{ appearance.display_name|default:user.username }}</span>
     </header>
-    <main class="main-content">
+    <main class="main-content" id="main-content" tabindex="-1">
 {% else %}
-    <main class="auth-shell">
+    <main class="auth-shell" id="main-content">
 {% endif %}
       {% if user.is_authenticated %}{% include "core/_breadcrumbs.html" %}{% endif %}
-      {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% if messages %}<div class="messages" aria-live="polite">{% for message in messages %}<div class="message {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}</div>{% endif %}
       {% block content %}{% endblock %}
     </main>
   {% if user.is_authenticated %}</div>{% endif %}

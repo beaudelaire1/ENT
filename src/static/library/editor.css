@@ -1,0 +1,6 @@
+.note-toolbar { display:flex; flex-wrap:wrap; gap:5px; padding:8px; border:1px solid var(--border); border-bottom:0; border-radius:11px 11px 0 0; background:var(--surface); }
+.note-toolbar button { min-height:34px; padding:5px 9px; border:1px solid transparent; border-radius:7px; background:var(--panel); cursor:pointer; }
+.note-toolbar button:hover { border-color:var(--accent); }
+#note-editor { min-height:280px; padding:14px; overflow:auto; border:1px solid var(--border); border-radius:0 0 11px 11px; background:var(--panel); color:var(--text); }
+#note-editor:focus { border-color:var(--accent); outline:3px solid color-mix(in srgb,var(--accent) 18%,transparent); }
+#note-editor:empty::before { content:"Commencez à écrire…"; color:var(--muted); pointer-events:none; }

@@ -9,12 +9,14 @@ from django.contrib.auth import get_user_model, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from core.queue import enqueue
 
 from . import throttling
+from .exporting import export_account
 from .forms import InvitationAcceptForm, InvitationForm, ProfileForm
 from .models import Invitation, UserProfile
 
@@ -62,6 +64,16 @@ def settings_view(request):
         messages.success(request, "Préférences enregistrées.")
         return redirect("accounts:settings")
     return render(request, "accounts/settings.html", {"form": form})
+
+
+@login_required
+def account_export(request):
+    response = JsonResponse(
+        export_account(request.user),
+        json_dumps_params={"ensure_ascii": False, "indent": 2},
+    )
+    response["Content-Disposition"] = 'attachment; filename="myent-mes-donnees.json"'
+    return response
 
 
 @staff_member_required

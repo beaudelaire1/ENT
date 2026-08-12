@@ -5,15 +5,15 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 ## Socle disponible
 
 - tableau de bord personnalisable et responsive ;
-- agenda navigable mois par mois, tâches, rappels, et répétitions simples (chaque jour, jours ouvrés, chaque semaine, une semaine sur deux, chaque mois) matérialisées en séances modifiables une par une ;
+- agenda en vues mois et semaine, tâches reliables aux études, rappels, et séries explicites dont chaque occurrence reste modifiable ;
 - suppression confirmée de tout objet, annonçant ce qui disparaîtra en cascade ;
-- bibliothèque de liens, fichiers privés et notes riches assainies ;
+- bibliothèque filtrable et paginée de liens, fichiers privés et notes riches assainies, avec éditeur local sans CDN ;
 - recherche globale indexée : une entrée par objet dans `core.SearchEntry`, tenue à jour par signaux, interrogée en plein texte PostgreSQL (configuration `french`, titre pondéré au-dessus du corps, syntaxe `websearch`) avec repli `icontains` sous SQLite ;
-- formations génériques : parcours, périodes, unités, compétences et métriques libres ;
+- formations génériques : catalogue, import/export, année, période courante, regroupements, matières, compétences et métriques libres ;
 - grille de suivi de compétences : une ligne par matière avec ses chiffres saisissables sur place, une ligne par compétence avec niveau de maîtrise, heures estimées et réelles, commentaires ; totaux par matière et par période calculés, tout s’enregistre en un seul envoi ;
 - Sablier web avec huit visualisations (anneau, sablier, marée, bougie, perles, lune, digital, zen), neuf ambiances qui colorent la scène et l'animent d'un décor — pétales, lucioles, feuilles, neige, pluie, vagues, sable, étoiles —, plein écran et reprise exacte après actualisation ;
 - bibliothèque audio privée, téléversement de plusieurs pistes en une fois, et playlists indépendantes du minuteur ;
-- journal des sessions Sablier, rattachables à une compétence pour alimenter son temps réel sans écraser la saisie manuelle ;
+- journal corrigeable des sessions Sablier, avec temps manuel, temps des sessions et total séparés ;
 - notifications internes, emails, invitations à usage unique, réinitialisation de mot de passe, limitation des tentatives de connexion et préférences d’apparence.
 
 Le serveur est un monolithe Django 5.2/Python 3.12. JavaScript ne gère que les interactions du navigateur, dont le moteur de Sablier. Le code Qt historique reste une référence archivée et n’est pas une dépendance de production.

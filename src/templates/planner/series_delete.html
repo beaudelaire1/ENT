@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Supprimer la série · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">SÉRIE</p><h1>Supprimer toute la série ?</h1></div></header>
+<section class="panel narrow"><p>« {{ title }} » et ses {{ count }} {{ kind }} seront supprimés. Cette action ne concerne pas les autres éléments du planning.</p><form method="post">{% csrf_token %}<div class="actions"><button class="button danger" type="submit">Supprimer toute la série</button><a class="button quiet" href="{{ back_to }}">Annuler</a></div></form></section>
+{% endblock %}

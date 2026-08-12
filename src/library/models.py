@@ -60,6 +60,33 @@ class Folder(TimeStampedModel):
             raise ValidationError({"parent": "Le dossier parent appartient à un autre utilisateur."})
         if self.pk and self.parent_id == self.pk:
             raise ValidationError({"parent": "Un dossier ne peut pas être son propre parent."})
+        ancestor = self.parent
+        seen = set()
+        while ancestor is not None and ancestor.pk not in seen:
+            if self.pk and ancestor.pk == self.pk:
+                raise ValidationError({"parent": "Ce choix créerait une boucle dans l’arborescence."})
+            seen.add(ancestor.pk)
+            ancestor = ancestor.parent
+
+    def ancestors(self):
+        """Parents de la racine au parent direct, pour les fils d'Ariane."""
+        result, current, seen = [], self.parent, set()
+        while current is not None and current.pk not in seen:
+            seen.add(current.pk)
+            result.append(current)
+            current = current.parent
+        return list(reversed(result))
+
+    def descendant_ids(self):
+        """Tous les descendants, sans dépendre d'une profondeur maximale."""
+        result, frontier = [], [self.pk]
+        while frontier:
+            children = list(
+                Folder.objects.filter(owner=self.owner, parent_id__in=frontier).values_list("pk", flat=True)
+            )
+            result.extend(children)
+            frontier = children
+        return result
 
     def __str__(self):
         return self.name

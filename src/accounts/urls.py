@@ -37,6 +37,7 @@ urlpatterns = [
         name="password_reset_complete",
     ),
     path("settings/", views.settings_view, name="settings"),
+    path("export/", views.account_export, name="export"),
     path("invitations/", views.invitations, name="invitations"),
     path("invite/<uuid:token>/", views.accept_invitation, name="accept_invitation"),
 ]

@@ -13,6 +13,18 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+  grid.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-move-widget]");
+    if (!button) return;
+    const card = button.closest("[data-widget]");
+    if (button.dataset.moveWidget === "up" && card.previousElementSibling) grid.insertBefore(card, card.previousElementSibling);
+    if (button.dataset.moveWidget === "down" && card.nextElementSibling) grid.insertBefore(card.nextElementSibling, card);
+    save().then(() => {
+      const status = document.querySelector("#layout-status");
+      if (status) status.textContent = `${card.querySelector("h2")?.textContent || "Widget"} déplacé.`;
+      button.focus();
+    });
+  });
   async function save() {
     const token = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
     await fetch(grid.dataset.layoutUrl, {

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{% if item %}Modifier{% else %}Ajouter{% endif %} · MyENT{% endblock %}
-{% block head %}<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">{% endblock %}
+{% block head %}<link href="{% static 'library/editor.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 <header class="page-header">
   <div>
@@ -16,7 +16,17 @@
     {% include "core/_form_fields.html" %}
     <div id="note-editor-wrap" class="field">
       <label for="note-editor">Contenu de la note</label>
-      <div id="note-editor"></div>
+      <div class="note-toolbar" role="toolbar" aria-label="Mise en forme de la note">
+        <button type="button" data-editor-command="bold" aria-label="Gras"><strong>G</strong></button>
+        <button type="button" data-editor-command="italic" aria-label="Italique"><em>I</em></button>
+        <button type="button" data-editor-command="underline" aria-label="Souligné"><u>S</u></button>
+        <button type="button" data-editor-command="insertUnorderedList" aria-label="Liste à puces">• Liste</button>
+        <button type="button" data-editor-command="insertOrderedList" aria-label="Liste numérotée">1. Liste</button>
+        <button type="button" data-editor-command="createLink" aria-label="Ajouter un lien">Lien</button>
+        <button type="button" data-editor-command="removeFormat">Effacer la mise en forme</button>
+      </div>
+      <div id="note-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Contenu de la note"></div>
+      <p class="field-help">L’éditeur est fourni par MyENT et fonctionne sans service externe.</p>
     </div>
     <div class="form-actions">
       <button class="button primary" type="submit">Enregistrer</button>
@@ -30,4 +40,4 @@
   </p>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script><script src="{% static 'library/editor.js' %}" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'library/editor.js' %}" defer></script>{% endblock %}

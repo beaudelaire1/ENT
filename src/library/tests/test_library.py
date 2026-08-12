@@ -37,3 +37,10 @@ class LibrarySecurityTests(TestCase):
         item = form.save()
         self.assertNotIn("<script", item.note_html)
         self.assertNotIn("javascript:", item.note_html)
+
+    def test_note_editor_has_no_remote_runtime_dependency(self):
+        self.client.force_login(self.alice)
+        response = self.client.get(reverse("library:new"), {"kind": "note"})
+        self.assertContains(response, "library/editor.js")
+        self.assertContains(response, "library/editor.css")
+        self.assertNotContains(response, "cdn.jsdelivr")
