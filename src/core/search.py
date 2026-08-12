@@ -49,7 +49,9 @@ SOURCES: dict[str, SearchSource] = {
         model_label="library.LibraryItem",
         owner=lambda o: o.owner,
         title=lambda o: o.title,
-        body=lambda o: _joined(o.description, o.note_text, o.provider_name, o.source_category),
+        body=lambda o: _joined(
+            o.description, o.note_text, o.provider_name, o.source_category, *o.tags.values_list("name", flat=True)
+        ),
         url=lambda o: reverse("library:detail", args=[o.pk]),
     ),
     "task": SearchSource(
@@ -57,7 +59,13 @@ SOURCES: dict[str, SearchSource] = {
         model_label="planner.Task",
         owner=lambda o: o.owner,
         title=lambda o: o.title,
-        body=lambda o: _joined(o.description, o.get_status_display()),
+        body=lambda o: _joined(
+            o.description,
+            o.get_status_display(),
+            o.unit.title if o.unit_id else "",
+            o.competency.title if o.competency_id else "",
+            o.assessment.title if o.assessment_id else "",
+        ),
         url=lambda o: reverse("planner:task_edit", args=[o.pk]),
     ),
     "event": SearchSource(
@@ -65,7 +73,13 @@ SOURCES: dict[str, SearchSource] = {
         model_label="planner.CalendarEvent",
         owner=lambda o: o.owner,
         title=lambda o: o.title,
-        body=lambda o: _joined(o.description, o.location),
+        body=lambda o: _joined(
+            o.description,
+            o.location,
+            o.unit.title if o.unit_id else "",
+            o.competency.title if o.competency_id else "",
+            o.assessment.title if o.assessment_id else "",
+        ),
         url=lambda o: reverse("planner:event_edit", args=[o.pk]),
     ),
     "path": SearchSource(
@@ -109,6 +123,41 @@ SOURCES: dict[str, SearchSource] = {
         body=lambda o: _joined(o.kind, o.period.title, o.period.path.title),
         url=lambda o: f"{reverse('formations:detail', args=[o.period.path_id])}#periode-{o.period_id}",
     ),
+    "assessment": SearchSource(
+        label="Évaluations",
+        model_label="formations.Assessment",
+        owner=lambda o: o.owner,
+        title=lambda o: o.title,
+        body=lambda o: _joined(
+            o.get_kind_display(),
+            o.get_status_display(),
+            o.description,
+            o.period.title if o.period_id else "",
+            o.unit.title if o.unit_id else "",
+            o.unit.period.path.title if o.unit_id else (o.period.path.title if o.period_id else ""),
+            *o.competencies.values_list("title", flat=True),
+        ),
+        url=lambda o: reverse("formations:assessment", args=[o.pk]),
+    ),
+    "result": SearchSource(
+        label="Résultats",
+        model_label="formations.AssessmentResult",
+        owner=lambda o: o.assessment.owner,
+        title=lambda o: f"Résultat · {o.assessment.title}",
+        body=lambda o: _joined(
+            "Absent" if o.absent else (f"{o.score:f} sur {o.scale:f}" if o.score is not None else "Sans note"),
+            o.comment,
+            o.self_review,
+            o.assessment.unit.title if o.assessment.unit_id else "",
+            o.assessment.period.title if o.assessment.period_id else "",
+            (
+                o.assessment.unit.period.path.title
+                if o.assessment.unit_id
+                else (o.assessment.period.path.title if o.assessment.period_id else "")
+            ),
+        ),
+        url=lambda o: reverse("formations:assessment", args=[o.assessment_id]),
+    ),
 }
 
 
@@ -125,18 +174,24 @@ def supports_full_text(model) -> bool:
     return connections[router.db_for_read(model) or "default"].vendor == "postgresql"
 
 
-def index_instance(instance) -> None:
+def index_instance(instance, *, refresh: bool = True) -> int | None:
+    """Projette un objet dans l'index. Rend la clé de l'entrée écrite, ou ``None``.
+
+    ``refresh=False`` diffère le calcul du vecteur : quand on réindexe une famille
+    entière, un seul ``UPDATE`` groupé remplace autant de requêtes qu'il y avait
+    d'objets.
+    """
     from core.models import SearchEntry
 
     key, source = source_for(instance)
     if source is None:
-        return
+        return None
     try:
         owner = source.owner(instance)
     except Exception:  # noqa: BLE001 — un parent supprimé ne doit jamais casser un save()
-        return
+        return None
     if owner is None:
-        return
+        return None
     entry, _ = SearchEntry.objects.update_or_create(
         object_type=key,
         object_id=instance.pk,
@@ -147,7 +202,9 @@ def index_instance(instance) -> None:
             "url": source.url(instance),
         },
     )
-    refresh_vectors(SearchEntry.objects.filter(pk=entry.pk))
+    if refresh:
+        refresh_vectors(SearchEntry.objects.filter(pk=entry.pk))
+    return entry.pk
 
 
 def unindex_instance(instance) -> None:
@@ -157,6 +214,80 @@ def unindex_instance(instance) -> None:
     if source is None:
         return
     SearchEntry.objects.filter(object_type=key, object_id=instance.pk).delete()
+
+
+def has_dependents(instance) -> bool:
+    """L'objet a-t-il une descendance à réindexer ?
+
+    Défini à côté de ``reindex_dependents`` pour que les deux listes ne divergent pas.
+    Sert à ne pas mettre en file une tâche qui n'aurait rien à faire : la plupart des
+    enregistrements — une ressource, une tâche, un résultat — ne portent le contexte de
+    personne, et une file pleine de tâches vides coûte plus qu'elle ne rapporte.
+    """
+    from formations.models import Assessment, Competency, LearningGroup, LearningPath, LearningUnit, Period
+    from library.models import Tag
+
+    return isinstance(instance, (LearningPath, Period, LearningGroup, LearningUnit, Competency, Assessment, Tag))
+
+
+def reindex_dependents(instance) -> int:
+    """Répercute un changement de contexte dans les projections de ses descendants.
+
+    Les entrées écrites sont collectées, puis leurs vecteurs recalculés en un seul
+    ``UPDATE``. Auparavant chaque objet en coûtait un : renommer une formation de deux
+    cents compétences produisait quatre cents requêtes là où il en faut désormais une
+    par objet, plus une pour tout le monde.
+    """
+    from core.models import SearchEntry
+    from formations.models import (
+        Assessment,
+        AssessmentResult,
+        Competency,
+        LearningGroup,
+        LearningPath,
+        LearningUnit,
+        Period,
+    )
+    from library.models import Tag
+
+    touched: list[int] = []
+
+    def project(objects) -> None:
+        for obj in objects:
+            written = index_instance(obj, refresh=False)
+            if written is not None:
+                touched.append(written)
+
+    def with_results(assessments) -> None:
+        project(assessments)
+        project(AssessmentResult.objects.filter(assessment__in=assessments))
+
+    if isinstance(instance, LearningPath):
+        project(LearningGroup.objects.filter(period__path=instance))
+        project(LearningUnit.objects.filter(period__path=instance))
+        project(instance.competencies.all())
+        with_results(Assessment.objects.filter(Q(period__path=instance) | Q(unit__period__path=instance)).distinct())
+    elif isinstance(instance, Period):
+        project(instance.groups.all())
+        project(instance.units.all())
+        project(Competency.objects.filter(Q(period=instance) | Q(units__period=instance)).distinct())
+        with_results(Assessment.objects.filter(Q(period=instance) | Q(unit__period=instance)).distinct())
+    elif isinstance(instance, LearningGroup):
+        project(instance.units.all())
+    elif isinstance(instance, LearningUnit):
+        project(instance.competencies.all())
+        with_results(instance.assessments.all())
+    elif isinstance(instance, Competency):
+        with_results(instance.assessments.all())
+    elif isinstance(instance, Assessment):
+        if hasattr(instance, "result"):
+            project([instance.result])
+    elif isinstance(instance, Tag):
+        project(instance.items.all())
+
+    if touched:
+        refresh_vectors(SearchEntry.objects.filter(pk__in=touched))
+    return len(touched)
 
 
 def refresh_vectors(queryset: QuerySet) -> None:

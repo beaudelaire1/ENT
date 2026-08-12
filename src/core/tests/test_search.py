@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from core.models import SearchEntry
 from core.search import reindex_all, search
-from formations.models import LearningPath, LearningUnit, Period
+from formations.models import Assessment, AssessmentResult, LearningPath, LearningUnit, Period
 from formations.tests.factories import competency_in
 from library.models import LibraryItem
 from planner.models import CalendarEvent, Task
@@ -50,6 +50,43 @@ class SearchIndexTests(TestCase):
         competency = competency_in(unit, title="Démontrer une récurrence")
         entry = SearchEntry.objects.get(object_type="competency", object_id=competency.pk)
         self.assertEqual(entry.owner, self.alice)
+
+    def test_assessment_and_result_are_indexed_with_academic_context(self):
+        path = LearningPath.objects.create(owner=self.alice, title="Licence")
+        period = Period.objects.create(path=path, title="Semestre 5")
+        unit = LearningUnit.objects.create(period=period, title="Topologie")
+        assessment = Assessment.objects.create(owner=self.alice, unit=unit, title="Partiel de compacité")
+        result = AssessmentResult.objects.create(
+            assessment=assessment, score=12, scale=20, comment="Revoir la connexité"
+        )
+        assessment_entry = SearchEntry.objects.get(object_type="assessment", object_id=assessment.pk)
+        result_entry = SearchEntry.objects.get(object_type="result", object_id=result.pk)
+        self.assertIn("Topologie", assessment_entry.body)
+        self.assertIn("Licence", result_entry.body)
+        self.assertIn("Revoir la connexité", result_entry.body)
+        self.assertEqual(result_entry.url, reverse("formations:assessment", args=[assessment.pk]))
+
+    def test_renaming_a_parent_reindexes_descendants(self):
+        path = LearningPath.objects.create(owner=self.alice, title="Ancienne licence")
+        period = Period.objects.create(path=path, title="Semestre")
+        unit = LearningUnit.objects.create(period=period, title="Topologie")
+        path.title = "Nouvelle licence"
+        path.save()
+        entry = SearchEntry.objects.get(object_type="unit", object_id=unit.pk)
+        self.assertIn("Nouvelle licence", entry.body)
+        self.assertNotIn("Ancienne licence", entry.body)
+
+    def test_adding_a_unit_link_reindexes_competency_body(self):
+        path = LearningPath.objects.create(owner=self.alice, title="Licence")
+        period = Period.objects.create(path=path, title="Semestre")
+        first = LearningUnit.objects.create(period=period, title="Analyse")
+        second = LearningUnit.objects.create(period=period, title="Topologie")
+        competency = competency_in(first, title="Rédiger une preuve")
+        from formations.models import UnitCompetency
+
+        UnitCompetency.objects.create(unit=second, competency=competency)
+        entry = SearchEntry.objects.get(object_type="competency", object_id=competency.pk)
+        self.assertIn("Topologie", entry.body)
 
 
 class SearchQueryTests(TestCase):

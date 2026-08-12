@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Max, Sum
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -23,6 +23,7 @@ from core.deletion import confirm_delete
 from core.formatting import human_mb
 from core.navigation import safe_next
 from core.queue import enqueue
+from core.serving import serve_private_file
 from formations.models import Competency
 
 from . import scenes
@@ -201,11 +202,10 @@ def audio_stream(request, pk):
     track = get_object_or_404(AudioTrack, owner=request.user, pk=pk, status=AudioTrack.Status.READY)
     if not track.file:
         raise Http404
-    storage = track.file.storage
-    if hasattr(storage, "bucket"):
-        return redirect(track.file.url)
-    response = FileResponse(track.file.open("rb"), content_type=track.mime_type)
-    response["Accept-Ranges"] = "bytes"
+    response = serve_private_file(track.file, content_type=track.mime_type)
+    # Sans cet en-tête, le navigateur refuse de déplacer la lecture dans la piste. Django
+    # et le proxy savent tous deux répondre à une requête partielle.
+    response.setdefault("Accept-Ranges", "bytes")
     return response
 
 

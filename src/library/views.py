@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import FileResponse, Http404
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from core.deletion import confirm_delete
 from core.editing import form_page
 from core.navigation import crumb, safe_next
+from core.serving import serve_private_file
 from formations.models import Competency, LearningUnit
 
 from .forms import FolderForm, LibraryItemForm, TagForm
@@ -24,35 +28,110 @@ def item_crumbs(item) -> list[dict]:
     """Le dossier apparaît dans le fil : une ressource se situe d'abord par son rangement."""
     trail = library_crumbs()
     if item.folder_id:
-        trail.append(crumb(item.folder.name, f"{reverse('library:list')}?folder={item.folder_id}"))
+        for folder in [*item.folder.ancestors(), item.folder]:
+            trail.append(crumb(folder.name, f"{reverse('library:list')}?folder={folder.pk}"))
     return trail + [crumb(item.title, reverse("library:detail", args=[item.pk]))]
+
+
+def _folder_tree(folders):
+    """Aplatit l'arbre dans l'ordre visuel tout en conservant sa profondeur."""
+    children = {}
+    for folder in folders:
+        children.setdefault(folder.parent_id, []).append(folder)
+    result = []
+
+    def visit(parent_id, depth):
+        for folder in children.get(parent_id, []):
+            folder.tree_depth = min(depth, 5)
+            result.append(folder)
+            visit(folder.pk, depth + 1)
+
+    visit(None, 0)
+    return result
 
 
 @login_required
 def item_list(request):
-    items = LibraryItem.objects.filter(owner=request.user).select_related("folder")
+    items = LibraryItem.objects.filter(owner=request.user).select_related("folder").prefetch_related("tags")
     folder_id = request.GET.get("folder")
     tag_id = request.GET.get("tag")
     kind = request.GET.get("kind")
+    purpose = request.GET.get("purpose")
+    unit_id = request.GET.get("unit")
+    competency_id = request.GET.get("competency")
+    sort = request.GET.get("sort", "updated")
     query = request.GET.get("q", "").strip()
-    if folder_id:
-        items = items.filter(folder_id=folder_id)
-    if tag_id:
-        items = items.filter(tags__id=tag_id)
+    folders = list(Folder.objects.filter(owner=request.user).select_related("parent"))
+    selected_folder = next((folder for folder in folders if str(folder.pk) == folder_id), None)
+    selected_tag = Tag.objects.filter(owner=request.user, pk=tag_id).first() if tag_id else None
+    selected_unit = (
+        LearningUnit.objects.filter(period__path__owner=request.user, pk=unit_id).select_related("period").first()
+        if unit_id
+        else None
+    )
+    selected_competency = (
+        Competency.objects.filter(path__owner=request.user, pk=competency_id).first() if competency_id else None
+    )
+    if selected_folder:
+        items = items.filter(folder_id__in=[selected_folder.pk, *selected_folder.descendant_ids()])
+    if selected_tag:
+        items = items.filter(tags=selected_tag)
     if kind in LibraryItem.Kind.values:
         items = items.filter(kind=kind)
+    if purpose in LibraryItem.Purpose.values:
+        items = items.filter(purpose=purpose)
+    if selected_unit:
+        items = items.filter(learning_units=selected_unit)
+    if selected_competency:
+        items = items.filter(competencies=selected_competency)
     if query:
         items = items.search(query)
+    orderings = {
+        "updated": ("-updated_at", "title"),
+        "created": ("-created_at", "title"),
+        "title": ("title",),
+        "title_desc": ("-title",),
+    }
+    sort = sort if sort in orderings else "updated"
+    items = items.distinct().order_by(*orderings[sort])
+    total = items.count()
+    page_obj = Paginator(items, 24).get_page(request.GET.get("page"))
+    preserved = [(key, value) for key, value in request.GET.items() if key != "page" and value]
+    page_query = urlencode(preserved)
+    active_filters = any([query, selected_folder, selected_tag, kind, purpose, selected_unit, selected_competency])
+    breadcrumbs = [crumb("Bibliothèque", reverse("library:list"))]
+    if selected_folder:
+        breadcrumbs.extend(
+            crumb(folder.name, f"{reverse('library:list')}?folder={folder.pk}")
+            for folder in selected_folder.ancestors()
+        )
+        breadcrumbs.append(crumb(selected_folder.name))
     return render(
         request,
         "library/list.html",
         {
-            "items": items,
-            "folders": Folder.objects.filter(owner=request.user),
+            "items": page_obj,
+            "page_obj": page_obj,
+            "total": total,
+            "folders": _folder_tree(folders),
             "tags": Tag.objects.filter(owner=request.user),
             "kind": kind,
+            "purpose": purpose,
             "query": query,
-            "breadcrumbs": [crumb("Bibliothèque")],
+            "selected_folder": selected_folder,
+            "selected_tag": selected_tag,
+            "selected_unit": selected_unit,
+            "selected_competency": selected_competency,
+            "kinds": LibraryItem.Kind.choices,
+            "purposes": LibraryItem.Purpose.choices,
+            "units": LearningUnit.objects.filter(period__path__owner=request.user).select_related(
+                "period", "period__path"
+            ),
+            "competencies": Competency.objects.filter(path__owner=request.user).select_related("path"),
+            "sort": sort,
+            "page_query": page_query,
+            "active_filters": active_filters,
+            "breadcrumbs": breadcrumbs,
         },
     )
 
@@ -221,7 +300,4 @@ def download(request, pk):
     item = get_object_or_404(LibraryItem, owner=request.user, pk=pk, kind=LibraryItem.Kind.FILE)
     if not item.file:
         raise Http404
-    storage = item.file.storage
-    if hasattr(storage, "bucket"):
-        return redirect(item.file.url)
-    return FileResponse(item.file.open("rb"), as_attachment=True, filename=item.file.name.rsplit("/", 1)[-1])
+    return serve_private_file(item.file, as_attachment=True)
