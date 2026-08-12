@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
 
@@ -21,7 +23,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-insecure-key-change-me")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+CSP_EXTERNAL_MEDIA_SOURCES = env_list("CSP_EXTERNAL_MEDIA_SOURCES")
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8000").rstrip("/")
+
+if not DEBUG and SECRET_KEY == "dev-only-insecure-key-change-me":
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être défini par un secret long en production.")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -54,6 +60,8 @@ def build_middleware(debug: bool) -> list[str]:
     return [
         "django.middleware.security.SecurityMiddleware",
         *([] if debug else ["whitenoise.middleware.WhiteNoiseMiddleware"]),
+        "core.middleware.RequestIdMiddleware",
+        "core.middleware.SecurityHeadersMiddleware",
         "django.contrib.sessions.middleware.SessionMiddleware",
         "django.middleware.locale.LocaleMiddleware",
         "django.middleware.common.CommonMiddleware",
@@ -103,17 +111,28 @@ def database_from_url(url: str) -> dict[str, object]:
     }
 
 
-database_url = os.getenv("DATABASE_URL")
-if database_url:
-    DATABASES = {"default": database_from_url(database_url)}
-else:
+def database_config(url: str | None, *, debug: bool) -> dict[str, object]:
+    """La base à utiliser, et le refus de démarrer sans elle en production.
+
+    Sans `DATABASE_URL`, le repli SQLite écrit dans `src/data/`, un répertoire créé par
+    l'image mais monté sur aucun volume. Une variable oubliée donnait donc une
+    application qui démarre, fonctionne, accepte des comptes — et perd tout au
+    redéploiement suivant, sans qu'aucune erreur n'ait jamais été levée. Le repli reste
+    le confort du développement local ; hors débogage, il est refusé comme l'est déjà
+    une clé secrète laissée par défaut.
+    """
+    if url:
+        return database_from_url(url)
+    if not debug:
+        raise ImproperlyConfigured(
+            "DATABASE_URL PostgreSQL est obligatoire hors débogage : "
+            "le repli SQLite n'est pas persisté et serait perdu au redéploiement."
+        )
     (BASE_DIR / "data").mkdir(exist_ok=True)
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "data" / "db.sqlite3",
-        }
-    }
+    return {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "data" / "db.sqlite3"}
+
+
+DATABASES = {"default": database_config(os.getenv("DATABASE_URL"), debug=DEBUG)}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -137,6 +156,11 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Emplacement interne du proxy pour la remise des fichiers privés (`X-Accel-Redirect`).
+# Vide, Django sert les fichiers lui-même et occupe un worker pendant tout le transfert :
+# acceptable en développement, coûteux dès qu'une piste audio est écoutée en entier.
+# Cet emplacement doit être déclaré `internal` côté proxy, jamais exposé publiquement.
+MEDIA_INTERNAL_LOCATION = os.getenv("MEDIA_INTERNAL_LOCATION", "")
 
 USE_S3 = env_bool("USE_S3", False)
 STORAGES = {
@@ -180,10 +204,28 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "MyENT <noreply@localhost>"
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+
+def redis_database(url: str, index: int) -> str:
+    """La même instance Redis, sur une autre base.
+
+    Le cache et le courtier Celery partageaient la base 0. Un `cache.clear()` — ou un
+    `FLUSHDB` passé à la main un jour de dépannage — effaçait donc la file des tâches en
+    attente avec les compteurs de connexion. Deux bases séparées coûtent une ligne et
+    rendent l'erreur impossible.
+    """
+    head, _, tail = url.rpartition("/")
+    return f"{head}/{index}" if head and tail.isdigit() else f"{url.rstrip('/')}/{index}"
+
+
 # Le cache porte le compteur de tentatives de connexion : il doit être partagé entre les
 # processus gunicorn. Redis quand il est configuré, mémoire locale en développement.
 if os.getenv("REDIS_URL"):
-    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": redis_database(REDIS_URL, 1),
+        }
+    }
 else:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
@@ -219,6 +261,9 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
@@ -226,10 +271,27 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
 
+# Une erreur serveur qui n'est vue de personne se répète. Sans dépendance externe, Django
+# sait déjà écrire aux ADMINS ; le courriel n'est monté que si des destinataires existent
+# et qu'un vrai serveur SMTP est configuré — sinon il finirait dans la console, où la
+# trace complète est déjà écrite.
+ADMINS = [(address.split("@")[0], address) for address in env_list("DJANGO_ADMINS")]
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+ALERT_BY_EMAIL = bool(ADMINS and EMAIL_HOST)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {"plain": {"format": "{asctime} {levelname} {name} {message}", "style": "{"}},
-    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
-    "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
+        "admins": (
+            {"class": "django.utils.log.AdminEmailHandler", "level": "ERROR", "include_html": False}
+            if ALERT_BY_EMAIL
+            # `include_html` n'est pas un argument de NullHandler : le passer quand même
+            # ferait échouer la configuration du journal au démarrage.
+            else {"class": "logging.NullHandler"}
+        ),
+    },
+    "root": {"handlers": ["console", "admins"], "level": os.getenv("LOG_LEVEL", "INFO")},
 }

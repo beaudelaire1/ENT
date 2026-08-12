@@ -8,6 +8,9 @@ x-app-environment: &app-environment
   DATABASE_URL: postgresql://${POSTGRES_USER:-myent}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-myent}
   REDIS_URL: redis://redis:6379/0
   DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-MyENT <noreply@localhost>}
+  # Destinataires des erreurs serveur. Sans eux, une 500 n'est vue de personne.
+  DJANGO_ADMINS: ${DJANGO_ADMINS:-}
+  SERVER_EMAIL: ${SERVER_EMAIL:-}
   EMAIL_HOST: ${EMAIL_HOST:-}
   EMAIL_PORT: ${EMAIL_PORT:-587}
   EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
@@ -26,6 +29,11 @@ x-app-environment: &app-environment
   LIBRARY_MAX_UPLOAD_MB: ${LIBRARY_MAX_UPLOAD_MB:-25}
   AUDIO_MAX_TRACK_MB: ${AUDIO_MAX_TRACK_MB:-1024}
   AUDIO_DEFAULT_QUOTA_MB: ${AUDIO_DEFAULT_QUOTA_MB:-10240}
+  # Sources externes autorisées par la politique de sécurité pour les images et médias.
+  CSP_EXTERNAL_MEDIA_SOURCES: ${CSP_EXTERNAL_MEDIA_SOURCES:-}
+  # Remise des fichiers privés par le proxy (X-Accel-Redirect). Vide, Django les sert
+  # lui-même et occupe un worker pendant tout le transfert.
+  MEDIA_INTERNAL_LOCATION: ${MEDIA_INTERNAL_LOCATION:-}
   GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-900}
 
 x-app-service: &app-service
