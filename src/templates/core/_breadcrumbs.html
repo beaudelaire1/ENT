@@ -1,0 +1,19 @@
+{% comment %}
+  Fil d'Ariane. Le dernier maillon est la page courante : il n'est jamais un lien, et
+  porte `aria-current` pour que la position soit annoncée et pas seulement vue.
+{% endcomment %}
+{% if breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Fil d’Ariane">
+  <ol>
+    {% for crumb in breadcrumbs %}
+      <li>
+        {% if crumb.url and not forloop.last %}
+          <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+        {% else %}
+          <span{% if forloop.last %} aria-current="page"{% endif %}>{{ crumb.label }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}

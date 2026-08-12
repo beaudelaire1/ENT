@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ competency.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">COMPÉTENCE</p>
+    <h1>{{ competency.title }}</h1>
+    {% if competency.description %}<p class="muted">{{ competency.description }}</p>{% endif %}
+  </div>
+  <div class="actions">
+    <a class="button primary" href="{% url 'formations:progress' competency.pk %}">Où j’en suis</a>
+    <a class="button" href="{% url 'formations:competency_edit' competency.pk %}">Modifier</a>
+  </div>
+</header>
+
+<div class="two-columns">
+  <section class="panel">
+    <h2>État de maîtrise</h2>
+    <div class="mastery-state">
+      <span class="legend-item level-{{ progress.mastery_level }}">{{ progress.mastery_level }} - {{ progress.get_mastery_level_display }}</span>
+      <div class="progress-bar" role="img" aria-label="Maîtrise : {{ progress.get_mastery_level_display }}, soit {{ progress.percent }} %">
+        <div class="progress-fill level-{{ progress.mastery_level }}" style="width:{{ progress.percent }}%"></div>
+      </div>
+    </div>
+    <div class="list-row"><span>Travail personnel estimé</span><strong>{{ progress.planned_hours|floatformat:"-2" }} h</strong></div>
+    <div class="list-row"><span>Temps réel</span><strong>{{ progress.actual_hours|floatformat:"-2" }} h</strong></div>
+    {% if progress.notes %}
+      <h2>Commentaire</h2>
+      <p class="muted">{{ progress.notes|linebreaksbr }}</p>
+    {% endif %}
+    <h2>Rattachement</h2>
+    <div class="list-row"><span>Matière</span><a href="{% url 'formations:unit' unit.pk %}">{{ unit.title }}</a></div>
+    <div class="list-row"><span>Période</span><span>{{ unit.period.title }}</span></div>
+    <div class="list-row">
+      <span>Formation</span><a href="{% url 'formations:detail' unit.period.path_id %}">{{ unit.period.path.title }}</a>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Ressources</h2>
+    {% for resource in resources %}
+      <div class="list-row">
+        <a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a>
+        <span class="chip static"><span class="chip-label">{{ resource.get_kind_display }}</span></span>
+      </div>
+    {% empty %}
+      <div class="empty-state">
+        <p class="empty">Aucune ressource associée. Rechercher dans la bibliothèque ou en ajouter une.</p>
+        <div class="actions">
+          <a class="button" href="{% url 'library:list' %}">Ouvrir la bibliothèque</a>
+          <a class="button" href="{% url 'formations:competency_edit' competency.pk %}?next={{ request.path|urlencode }}">Associer une ressource</a>
+        </div>
+      </div>
+    {% endfor %}
+    {% if resources %}
+      <div class="actions">
+        <a class="button" href="{% url 'formations:competency_edit' competency.pk %}?next={{ request.path|urlencode }}">Associer une ressource</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<p class="muted secondary-action">
+  <a class="danger-link" href="{% url 'formations:competency_delete' competency.pk %}">Supprimer cette compétence</a>
+</p>
+{% endblock %}

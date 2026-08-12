@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.deletion import confirm_delete
+from core.navigation import crumb, safe_next
 
 from .forms import CalendarEventForm, TaskForm
 from .models import CalendarEvent, Task
@@ -38,6 +39,7 @@ def agenda(request):
             "is_current_month": anchor == timezone.localdate().replace(day=1),
             "events": events,
             "tasks": tasks,
+            "breadcrumbs": [crumb("Agenda")],
         },
     )
 
@@ -45,7 +47,7 @@ def agenda(request):
 @login_required
 def task_list(request):
     tasks = Task.objects.filter(owner=request.user)
-    return render(request, "planner/tasks.html", {"tasks": tasks})
+    return render(request, "planner/tasks.html", {"tasks": tasks, "breadcrumbs": [crumb("Tâches")]})
 
 
 @login_required
@@ -63,9 +65,20 @@ def task_edit(request, pk=None):
             messages.success(request, f"Tâche enregistrée, avec {created} répétition{'s' if created > 1 else ''}.")
         else:
             messages.success(request, "Tâche enregistrée.")
-        return redirect("planner:tasks")
+        return redirect(safe_next(request, reverse("planner:tasks")))
+    title = "Modifier la tâche" if task else "Nouvelle tâche"
     return render(
-        request, "planner/form.html", {"form": form, "title": "Modifier la tâche" if task else "Nouvelle tâche"}
+        request,
+        "planner/form.html",
+        {
+            "form": form,
+            "title": title,
+            "eyebrow": "TÂCHES",
+            "breadcrumbs": [crumb("Tâches", reverse("planner:tasks")), crumb(task.title if task else title)],
+            "back_to": safe_next(request, reverse("planner:tasks")),
+            "delete_url": reverse("planner:task_delete", args=[task.pk]) if task else None,
+            "delete_label": "cette tâche",
+        },
     )
 
 
@@ -106,7 +119,18 @@ def event_edit(request, pk=None):
             messages.success(request, f"Événement enregistré, avec {created} séance{'s' if created > 1 else ''}.")
         else:
             messages.success(request, "Événement enregistré.")
-        return redirect("planner:agenda")
+        return redirect(safe_next(request, reverse("planner:agenda")))
+    title = "Modifier l’événement" if event else "Nouvel événement"
     return render(
-        request, "planner/form.html", {"form": form, "title": "Modifier l’événement" if event else "Nouvel événement"}
+        request,
+        "planner/form.html",
+        {
+            "form": form,
+            "title": title,
+            "eyebrow": "AGENDA",
+            "breadcrumbs": [crumb("Agenda", reverse("planner:agenda")), crumb(event.title if event else title)],
+            "back_to": safe_next(request, reverse("planner:agenda")),
+            "delete_url": reverse("planner:event_delete", args=[event.pk]) if event else None,
+            "delete_label": "cet événement",
+        },
     )

@@ -1,6 +1,33 @@
-{% extends "base.html" %}{% load static %}
+{% extends "base.html" %}
+{% load static %}
 {% block title %}{% if item %}Modifier{% else %}Ajouter{% endif %} · MyENT{% endblock %}
 {% block head %}<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">{% endblock %}
-{% block content %}<header class="page-header"><div><p class="eyebrow">BIBLIOTHÈQUE</p><h1>{% if item %}Modifier l’élément{% else %}Nouvel élément{% endif %}</h1></div></header><section class="panel narrow"><form method="post" enctype="multipart/form-data" class="stack-form" id="library-form">{% csrf_token %}{{ form.as_p }}<div id="note-editor-wrap"><label>Contenu de la note</label><div id="note-editor"></div></div><button class="button primary">Enregistrer</button></form></section>{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">BIBLIOTHÈQUE</p>
+    <h1>{% if item %}Modifier l’élément{% else %}Nouvel élément{% endif %}</h1>
+  </div>
+</header>
+<section class="panel narrow">
+  <form method="post" enctype="multipart/form-data" class="stack-form" id="library-form" data-guard-unsaved>
+    {% csrf_token %}
+    {% if back_to %}<input type="hidden" name="next" value="{{ back_to }}">{% endif %}
+    {% include "core/_form_fields.html" %}
+    <div id="note-editor-wrap" class="field">
+      <label for="note-editor">Contenu de la note</label>
+      <div id="note-editor"></div>
+    </div>
+    <div class="form-actions">
+      <button class="button primary" type="submit">Enregistrer</button>
+      {% if back_to %}<a class="button quiet" href="{{ back_to }}" data-leave-unguarded>Annuler</a>{% endif %}
+    </div>
+  </form>
+</section>
+{% if item %}
+  <p class="muted secondary-action">
+    <a class="danger-link" href="{% url 'library:delete' item.pk %}">Supprimer cet élément</a>
+  </p>
+{% endif %}
+{% endblock %}
 {% block scripts %}<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script><script src="{% static 'library/editor.js' %}" defer></script>{% endblock %}
-

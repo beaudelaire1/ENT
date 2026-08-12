@@ -41,18 +41,31 @@ INSTALLED_APPS = [
     "notifications",
 ]
 
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "accounts.middleware.UserTimezoneMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-]
+
+def build_middleware(debug: bool) -> list[str]:
+    """La pile de middlewares, dont WhiteNoise n'est monté qu'en production.
+
+    WhiteNoise sert les fichiers déjà collectés dans STATIC_ROOT et court-circuite la vue
+    de `staticfiles`. En développement il servait donc la copie figée de la dernière
+    `collectstatic`, avec des en-têtes de cache longue durée : toute modification de CSS ou
+    de JavaScript restait invisible dans le navigateur, sans erreur ni indice, et on
+    cherchait la faute dans le code plutôt que dans le fichier servi.
+    """
+    return [
+        "django.middleware.security.SecurityMiddleware",
+        *([] if debug else ["whitenoise.middleware.WhiteNoiseMiddleware"]),
+        "django.contrib.sessions.middleware.SessionMiddleware",
+        "django.middleware.locale.LocaleMiddleware",
+        "django.middleware.common.CommonMiddleware",
+        "django.middleware.csrf.CsrfViewMiddleware",
+        "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "accounts.middleware.UserTimezoneMiddleware",
+        "django.contrib.messages.middleware.MessageMiddleware",
+        "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    ]
+
+
+MIDDLEWARE = build_middleware(DEBUG)
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [

@@ -7,9 +7,23 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from core.deletion import confirm_delete
+from core.editing import form_page
+from core.navigation import crumb, safe_next
 
 from .forms import FolderForm, LibraryItemForm, TagForm
 from .models import Folder, LibraryItem, Tag
+
+
+def library_crumbs() -> list[dict]:
+    return [crumb("Bibliothèque", reverse("library:list"))]
+
+
+def item_crumbs(item) -> list[dict]:
+    """Le dossier apparaît dans le fil : une ressource se situe d'abord par son rangement."""
+    trail = library_crumbs()
+    if item.folder_id:
+        trail.append(crumb(item.folder.name, f"{reverse('library:list')}?folder={item.folder_id}"))
+    return trail + [crumb(item.title, reverse("library:detail", args=[item.pk]))]
 
 
 @login_required
@@ -36,14 +50,19 @@ def item_list(request):
             "tags": Tag.objects.filter(owner=request.user),
             "kind": kind,
             "query": query,
+            "breadcrumbs": [crumb("Bibliothèque")],
         },
     )
 
 
 @login_required
 def item_detail(request, pk):
-    item = get_object_or_404(LibraryItem.objects.prefetch_related("tags"), owner=request.user, pk=pk)
-    return render(request, "library/detail.html", {"item": item})
+    item = get_object_or_404(
+        LibraryItem.objects.select_related("folder").prefetch_related("tags", "learning_units", "competencies"),
+        owner=request.user,
+        pk=pk,
+    )
+    return render(request, "library/detail.html", {"item": item, "breadcrumbs": item_crumbs(item)})
 
 
 @login_required
@@ -58,28 +77,51 @@ def item_edit(request, pk=None):
     if request.method == "POST" and form.is_valid():
         item = form.save()
         messages.success(request, "Élément enregistré.")
-        return redirect("library:detail", pk=item.pk)
-    return render(request, "library/form.html", {"form": form, "item": item})
+        return redirect(safe_next(request, reverse("library:detail", args=[item.pk])))
+    return render(
+        request,
+        "library/form.html",
+        {
+            "form": form,
+            "item": item,
+            "breadcrumbs": (item_crumbs(item) + [crumb("Modifier")] if item else library_crumbs() + [crumb("Ajouter")]),
+            "back_to": safe_next(
+                request, reverse("library:detail", args=[item.pk]) if item else reverse("library:list")
+            ),
+        },
+    )
 
 
 @login_required
-def folder_new(request):
-    form = FolderForm(request.POST or None, user=request.user)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Dossier créé.")
-        return redirect("library:list")
-    return render(request, "library/simple_form.html", {"form": form, "title": "Nouveau dossier"})
+def folder_edit(request, pk=None):
+    folder = get_object_or_404(Folder, owner=request.user, pk=pk) if pk else None
+    return form_page(
+        request,
+        form=FolderForm(request.POST or None, instance=folder, user=request.user),
+        title="Modifier le dossier" if folder else "Nouveau dossier",
+        eyebrow="BIBLIOTHÈQUE",
+        breadcrumbs=library_crumbs() + [{"label": folder.name if folder else "Nouveau dossier", "url": None}],
+        fallback=lambda obj: f"{reverse('library:list')}?folder={obj.pk}",
+        default_back=reverse("library:list"),
+        delete_url=reverse("library:folder_delete", args=[folder.pk]) if folder else None,
+        delete_label="ce dossier",
+    )
 
 
 @login_required
-def tag_new(request):
-    form = TagForm(request.POST or None, user=request.user)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Étiquette créée.")
-        return redirect("library:list")
-    return render(request, "library/simple_form.html", {"form": form, "title": "Nouvelle étiquette"})
+def tag_edit(request, pk=None):
+    tag = get_object_or_404(Tag, owner=request.user, pk=pk) if pk else None
+    return form_page(
+        request,
+        form=TagForm(request.POST or None, instance=tag, user=request.user),
+        title="Modifier l’étiquette" if tag else "Nouvelle étiquette",
+        eyebrow="BIBLIOTHÈQUE",
+        breadcrumbs=library_crumbs() + [{"label": tag.name if tag else "Nouvelle étiquette", "url": None}],
+        fallback=lambda obj: f"{reverse('library:list')}?tag={obj.pk}",
+        default_back=reverse("library:list"),
+        delete_url=reverse("library:tag_delete", args=[tag.pk]) if tag else None,
+        delete_label="cette étiquette",
+    )
 
 
 @login_required

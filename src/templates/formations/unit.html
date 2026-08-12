@@ -1,4 +1,97 @@
 {% extends "base.html" %}
 {% block title %}{{ unit.title }} · MyENT{% endblock %}
-{% block content %}<header class="page-header"><div><p class="eyebrow">{{ unit.period.title|upper }}</p><h1>{{ unit.title }}</h1><p class="muted">{{ unit.description }}</p></div><div class="actions"><a class="button" href="{% url 'formations:tracking' unit.period.path_id %}">Grille de suivi</a><a class="button primary" href="{% url 'formations:competency_new' unit.pk %}">Compétence</a><a class="button danger" href="{% url 'formations:unit_delete' unit.pk %}">Supprimer le module</a></div></header><div class="two-columns"><section class="panel"><h2>Compétences</h2>{% for competency in unit.competencies.all %}<div class="list-row"><div><strong>{{ competency.title }}</strong><p class="muted">{{ competency.description }}</p></div><div class="actions"><a class="button small quiet" href="{% url 'formations:progress' competency.pk %}">Progression</a><a class="button small quiet danger" href="{% url 'formations:competency_delete' competency.pk %}">Supprimer</a></div></div>{% empty %}<div class="empty-state"><p class="empty">Aucune compétence dans ce module.</p><a class="button primary" href="{% url 'formations:competency_new' unit.pk %}">Ajouter une compétence</a></div>{% endfor %}</section><section class="panel"><h2>Chiffres</h2>{% for value in unit.metric_values.all %}<div class="list-row"><span>{{ value.definition.label }}</span><strong>{{ value.value|floatformat }} {{ value.definition.unit_label }}</strong></div>{% empty %}<p class="empty">Aucun chiffre saisi. Ils se remplissent dans la <a href="{% url 'formations:tracking' unit.period.path_id %}">grille de suivi</a>.</p>{% endfor %}<h2>Ressources</h2>{% for resource in unit.resources.all %}<div class="list-row"><a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a></div>{% empty %}<div class="empty-state"><p class="empty">Aucune ressource liée à ce module.</p><a class="button small" href="{% url 'library:list' %}">Ouvrir la bibliothèque</a></div>{% endfor %}</section></div>{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">{{ unit.period.title|upper }}</p>
+    <h1>{{ unit.title }}</h1>
+    {% if unit.description %}<p class="muted">{{ unit.description }}</p>{% endif %}
+  </div>
+  <div class="actions">
+    <a class="button primary" href="{% url 'formations:competency_new' unit.pk %}">Ajouter une compétence</a>
+    <a class="button" href="{% url 'formations:tracking' unit.period.path_id %}">Grille de suivi</a>
+    <a class="button" href="{% url 'formations:unit_edit' unit.pk %}">Modifier</a>
+  </div>
+</header>
 
+<div class="two-columns">
+  <section class="panel">
+    <h2>Compétences</h2>
+    {% comment %}
+      Chaque compétence montre son niveau, son temps et ses ressources : c'est ici qu'on
+      repère celle qui bloque, et qu'on part la travailler sans détour.
+    {% endcomment %}
+    {% for row in rows %}
+      {% with competency=row.competency progress=row.progress %}
+        <article class="competency-block">
+          <div class="list-row">
+            <div>
+              <a class="competency-title" href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
+              {% if competency.description %}<p class="muted">{{ competency.description }}</p>{% endif %}
+            </div>
+            <div class="actions">
+              <a class="button small quiet" href="{% url 'formations:progress' competency.pk %}">Où j’en suis</a>
+              <a class="button small quiet" href="{% url 'formations:competency_edit' competency.pk %}">Modifier</a>
+            </div>
+          </div>
+          {% if progress %}
+            <div class="competency-meta">
+              <span class="legend-item level-{{ progress.mastery_level }}">{{ progress.mastery_level }} - {{ progress.get_mastery_level_display }}</span>
+              <span class="muted">{{ progress.actual_hours|floatformat:"-2" }} h sur {{ progress.planned_hours|floatformat:"-2" }} h estimées</span>
+            </div>
+            {% if progress.notes %}<p class="muted">{{ progress.notes }}</p>{% endif %}
+          {% endif %}
+          <div class="competency-resources">
+            {% for resource in row.resources %}
+              <a class="chip" href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a>
+            {% empty %}
+              <p class="field-help">
+                Aucune ressource associée.
+                <a href="{% url 'library:list' %}">Rechercher dans la bibliothèque</a>
+                ou <a href="{% url 'formations:competency_edit' competency.pk %}">en ajouter une</a>.
+              </p>
+            {% endfor %}
+          </div>
+        </article>
+      {% endwith %}
+    {% empty %}
+      <div class="empty-state">
+        <p class="empty">Aucune compétence dans cette matière.</p>
+        <a class="button primary" href="{% url 'formations:competency_new' unit.pk %}">Ajouter une compétence</a>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="panel">
+    <h2>Chiffres</h2>
+    {% for value in unit.metric_values.all %}
+      <div class="list-row">
+        <span>{{ value.definition.label }}</span>
+        <strong>{{ value.value|floatformat:"-2" }} {{ value.definition.unit_label }}</strong>
+      </div>
+    {% empty %}
+      <p class="empty">Aucun chiffre saisi. Ils se remplissent dans la <a href="{% url 'formations:tracking' unit.period.path_id %}">grille de suivi</a>.</p>
+    {% endfor %}
+
+    <h2>Ressources de la matière</h2>
+    {% for resource in unit.resources.all %}
+      <div class="list-row"><a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a></div>
+    {% empty %}
+      <div class="empty-state">
+        <p class="empty">Aucune ressource liée à cette matière.</p>
+        <a class="button small" href="{% url 'formations:unit_edit' unit.pk %}">Associer une ressource</a>
+      </div>
+    {% endfor %}
+
+    <h2>Structure</h2>
+    <div class="list-row">
+      <span>Retour à la formation</span>
+      <a href="{% url 'formations:detail' unit.period.path_id %}">{{ unit.period.path.title }}</a>
+    </div>
+  </section>
+</div>
+
+<p class="muted secondary-action">
+  <a class="danger-link" href="{% url 'formations:unit_delete' unit.pk %}">Supprimer cette matière</a>
+</p>
+{% endblock %}

@@ -13,24 +13,29 @@
 {% if user.is_authenticated %}
   <aside class="sidebar" id="sidebar">
     <a class="brand" href="{% url 'dashboard:home' %}"><span class="brand-mark">M</span><span>MyENT</span></a>
+    {% comment %}
+      Le volet ne porte que la navigation permanente. Créer une matière, ajouter une
+      ressource ou modifier une compétence sont des actions contextuelles : leur place est
+      sur la page de l'objet concerné, pas dans un menu global.
+    {% endcomment %}
     <nav aria-label="Navigation principale">
-      <a href="{% url 'dashboard:home' %}">Tableau de bord</a>
-      <a href="{% url 'planner:agenda' %}">Agenda</a>
-      <a href="{% url 'planner:tasks' %}">Tâches</a>
-      <a href="{% url 'library:list' %}">Bibliothèque</a>
-      <a href="{% url 'formations:list' %}">Formations</a>
+      <a href="{% url 'dashboard:home' %}"{% if nav_section == 'dashboard' %} class="active" aria-current="page"{% endif %}>Tableau de bord</a>
+      <a href="{% url 'planner:agenda' %}"{% if nav_section == 'agenda' %} class="active" aria-current="page"{% endif %}>Agenda</a>
+      <a href="{% url 'planner:tasks' %}"{% if nav_section == 'tasks' %} class="active" aria-current="page"{% endif %}>Tâches</a>
+      <a href="{% url 'library:list' %}"{% if nav_section == 'library' %} class="active" aria-current="page"{% endif %}>Bibliothèque</a>
+      <a href="{% url 'formations:list' %}"{% if nav_section == 'formations' %} class="active" aria-current="page"{% endif %}>Formations</a>
       {% comment %}Replié par défaut, ouvert dès qu'on est dans Sablier : les
       sous-entrées ne s'étalent que lorsqu'elles servent.{% endcomment %}
-      <details class="nav-group"{% if request.resolver_match.app_name == 'sablier' %} open{% endif %}>
-        <summary>Sablier</summary>
-        <a href="{% url 'sablier:home' %}">Minuteur</a>
-        <a href="{% url 'sablier:audio' %}">Musiques</a>
-        <a href="{% url 'sablier:playlists' %}">Playlists</a>
+      <details class="nav-group"{% if nav_section == 'sablier' %} open{% endif %}>
+        <summary{% if nav_section == 'sablier' %} class="active"{% endif %}>Sablier</summary>
+        <a href="{% url 'sablier:home' %}"{% if request.resolver_match.url_name == 'home' and nav_section == 'sablier' %} class="active" aria-current="page"{% endif %}>Minuteur</a>
+        <a href="{% url 'sablier:audio' %}"{% if request.resolver_match.url_name == 'audio' %} class="active" aria-current="page"{% endif %}>Musiques</a>
+        <a href="{% url 'sablier:playlists' %}"{% if request.resolver_match.url_name == 'playlists' %} class="active" aria-current="page"{% endif %}>Playlists</a>
       </details>
     </nav>
     <div class="sidebar-bottom">
-      <a href="{% url 'notifications:list' %}">Notifications {% if unread_notifications %}<span class="badge">{{ unread_notifications }}</span>{% endif %}</a>
-      <a href="{% url 'accounts:settings' %}">Paramètres</a>
+      <a href="{% url 'notifications:list' %}"{% if nav_section == 'notifications' %} class="active" aria-current="page"{% endif %}>Notifications {% if unread_notifications %}<span class="badge">{{ unread_notifications }}</span>{% endif %}</a>
+      <a href="{% url 'accounts:settings' %}"{% if nav_section == 'settings' %} class="active" aria-current="page"{% endif %}>Paramètres</a>
       {% if user.is_staff %}<a href="{% url 'accounts:invitations' %}">Invitations</a>{% endif %}
       <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button">Déconnexion</button></form>
     </div>
@@ -47,6 +52,7 @@
 {% else %}
     <main class="auth-shell">
 {% endif %}
+      {% if user.is_authenticated %}{% include "core/_breadcrumbs.html" %}{% endif %}
       {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
       {% block content %}{% endblock %}
     </main>

@@ -78,6 +78,47 @@ h2 { font-size:18px; }
 .unread { border-left:3px solid var(--accent); padding-left:12px; }
 .stack-form { display:grid; gap:14px; }
 .stack-form p { margin:0; }
+
+/* Un champ porte son intitulé, son aide et ses erreurs ensemble : l'erreur se lit à côté
+   de ce qu'elle concerne, et non regroupée en haut du formulaire. */
+.field { display:grid; gap:0; }
+.field-help { margin:6px 0 0; color:var(--muted); font-size:12.5px; }
+.field .errorlist { margin-top:6px; }
+.field-invalid input,.field-invalid select,.field-invalid textarea { border-color:var(--danger); }
+.required { color:var(--danger); margin-left:3px; cursor:help; }
+/* « Enregistrer » et « Annuler » toujours au même endroit, dans le même ordre. */
+.form-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:4px; }
+.button.quiet { background:transparent; color:var(--muted); }
+.button.quiet:hover { background:var(--surface); color:var(--text); }
+/* Supprimer reste possible mais ne se présente pas comme une action ordinaire. */
+.secondary-action { margin-top:22px; font-size:13px; }
+
+/* Fil d'Ariane : où l'on est, et comment remonter d'un cran. */
+.breadcrumbs { margin-bottom:16px; font-size:13px; }
+.breadcrumbs ol { list-style:none; display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:0; padding:0; }
+.breadcrumbs li+li::before { content:"›"; color:var(--muted); margin-right:6px; }
+.breadcrumbs a { color:var(--muted); }
+.breadcrumbs a:hover { color:var(--accent); }
+.breadcrumbs [aria-current="page"] { color:var(--text); font-weight:650; }
+
+/* Rubrique active du volet latéral : le repère manquait entièrement. */
+.sidebar nav a.active,.sidebar-bottom a.active { background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--text); }
+.sidebar .nav-group>summary.active { color:var(--text); }
+
+/* Modifier un dossier ou une étiquette depuis la liste, sans passer par sa page. */
+.side-edit { padding:0 6px; color:var(--muted); font-size:13px; line-height:1; border-radius:7px; }
+.side-edit:hover { color:var(--text); background:var(--surface); }
+
+/* Une compétence et ce qui permet de la travailler, groupés. */
+.competency-block { padding:12px 0; border-bottom:1px solid var(--border); }
+.competency-block:last-child { border-bottom:0; }
+.competency-block .list-row { border-bottom:0; padding-top:0; }
+.competency-title { font-weight:700; }
+.competency-meta { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:8px; }
+.competency-resources { display:flex; flex-wrap:wrap; gap:8px; }
+.mastery-state { display:grid; gap:10px; margin-bottom:14px; }
+.chip-link { color:inherit; }
+.chip-link:hover { color:var(--accent); }
 label { display:block; color:var(--muted); font-size:13px; font-weight:650; margin-bottom:6px; }
 input,select,textarea { width:100%; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:11px; padding:11px 13px; outline:none; }
 input:focus,select:focus,textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent); }

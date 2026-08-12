@@ -1,4 +1,69 @@
 {% extends "base.html" %}
 {% block title %}{{ path.title }} · MyENT{% endblock %}
-{% block content %}<header class="page-header"><div><p class="eyebrow">{{ path.training_type|default:"FORMATION"|upper }}</p><h1>{{ path.title }}</h1><p class="muted">{{ path.description }}</p></div><div class="actions"><a class="button primary" href="{% url 'formations:tracking' path.pk %}">Suivi de compétences</a><a class="button" href="{% url 'formations:metric_new' path.pk %}">Métrique</a><a class="button" href="{% url 'formations:period_new' path.pk %}">Période</a><a class="button" href="{% url 'formations:edit' path.pk %}">Modifier</a><a class="button danger" href="{% url 'formations:delete' path.pk %}">Supprimer</a></div></header>{% if path.metric_definitions.all %}<section class="panel"><h2>Colonnes de suivi</h2><div class="chip-row">{% for metric in path.metric_definitions.all %}<span class="chip static"><span class="chip-label">{{ metric.label }}{% if metric.unit_label %} ({{ metric.unit_label }}){% endif %}</span><a class="side-delete" href="{% url 'formations:metric_delete' metric.pk %}" aria-label="Supprimer la colonne {{ metric.label }}">×</a></span>{% endfor %}</div></section>{% endif %}{% for period in path.periods.all %}<section class="panel formation-period"><div class="page-header compact"><h2>{{ period.title }}</h2><div class="actions"><a class="button" href="{% url 'formations:unit_new' period.pk %}">Ajouter un module</a><a class="button danger" href="{% url 'formations:period_delete' period.pk %}">Supprimer la période</a></div></div><div class="content-cards">{% for unit in period.units.all %}<a class="surface-card" href="{% url 'formations:unit' unit.pk %}"><strong>{{ unit.title }}</strong><span class="muted">{{ unit.competencies.count }} compétence{{ unit.competencies.count|pluralize }}</span></a>{% empty %}<div class="empty-state"><p class="empty">Aucun module dans cette période.</p><a class="button" href="{% url 'formations:unit_new' period.pk %}">Ajouter un module</a></div>{% endfor %}</div></section>{% empty %}<section class="panel"><div class="empty-state"><p class="empty">Commencez par créer une période : semestre, année, bloc ou toute autre organisation.</p><a class="button primary" href="{% url 'formations:period_new' path.pk %}">Créer une période</a></div></section>{% endfor %}{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">{{ path.training_type|default:"FORMATION"|upper }}</p>
+    <h1>{{ path.title }}</h1>
+    {% if path.description %}<p class="muted">{{ path.description }}</p>{% endif %}
+  </div>
+  {% comment %}« Modifier » est près du titre de l'objet ; « Supprimer » descend en bas de page.{% endcomment %}
+  <div class="actions">
+    <a class="button primary" href="{% url 'formations:tracking' path.pk %}">Suivi de compétences</a>
+    <a class="button" href="{% url 'formations:period_new' path.pk %}">Ajouter une période</a>
+    <a class="button" href="{% url 'formations:metric_new' path.pk %}">Ajouter une colonne</a>
+    <a class="button" href="{% url 'formations:edit' path.pk %}">Modifier</a>
+  </div>
+</header>
 
+{% if path.metric_definitions.all %}
+  <section class="panel">
+    <h2>Colonnes de suivi</h2>
+    <div class="chip-row">
+      {% for metric in path.metric_definitions.all %}
+        <span class="chip static">
+          <a class="chip-link" href="{% url 'formations:metric_edit' metric.pk %}">{{ metric.label }}{% if metric.unit_label %} ({{ metric.unit_label }}){% endif %}</a>
+          <a class="side-delete" href="{% url 'formations:metric_delete' metric.pk %}" aria-label="Supprimer la colonne {{ metric.label }}">×</a>
+        </span>
+      {% endfor %}
+    </div>
+    <p class="field-help">Cliquer sur une colonne pour changer son intitulé, ses bornes ou ses décimales.</p>
+  </section>
+{% endif %}
+
+{% for period in path.periods.all %}
+  <section class="panel formation-period" id="periode-{{ period.pk }}">
+    <div class="page-header compact">
+      <h2>{{ period.title }}</h2>
+      <div class="actions">
+        <a class="button" href="{% url 'formations:unit_new' period.pk %}">Ajouter une matière</a>
+        <a class="button quiet" href="{% url 'formations:period_edit' period.pk %}">Modifier la période</a>
+      </div>
+    </div>
+    <div class="content-cards">
+      {% for unit in period.units.all %}
+        <a class="surface-card" href="{% url 'formations:unit' unit.pk %}">
+          <strong>{{ unit.title }}</strong>
+          <span class="muted">{{ unit.competencies.count }} compétence{{ unit.competencies.count|pluralize }}</span>
+        </a>
+      {% empty %}
+        <div class="empty-state">
+          <p class="empty">Aucune matière dans cette période.</p>
+          <a class="button" href="{% url 'formations:unit_new' period.pk %}">Ajouter une matière</a>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% empty %}
+  <section class="panel">
+    <div class="empty-state">
+      <p class="empty">Commencez par créer une période : semestre, année, bloc ou toute autre organisation.</p>
+      <a class="button primary" href="{% url 'formations:period_new' path.pk %}">Créer une période</a>
+    </div>
+  </section>
+{% endfor %}
+
+<p class="muted secondary-action">
+  <a class="danger-link" href="{% url 'formations:delete' path.pk %}">Supprimer cette formation</a>
+</p>
+{% endblock %}
