@@ -121,7 +121,17 @@ ul.errorlist { margin:4px 0 0; padding-left:18px; color:var(--danger); font-size
 .chip { display:inline-flex; align-items:center; padding:6px 13px; border:1px solid var(--border); background:var(--surface); border-radius:999px; color:var(--muted); font-size:13px; font-weight:650; white-space:nowrap; }
 .chip:hover { color:var(--text); border-color:var(--accent); }
 .chip.active { background:var(--accent); border-color:transparent; color:white; }
-.chip.static { align-self:start; pointer-events:none; }
+/* `.chip.static` désigne une pastille qui n'est pas un lien. Elle portait
+   `pointer-events:none`, ce qui neutralisait aussi ce qu'elle contient : le « × » de
+   suppression d'une colonne de suivi était affiché mais impossible à cliquer, et
+   l'infobulle d'une pastille « série » ne s'ouvrait jamais. Ce qui doit disparaître,
+   c'est l'effet de survol du lien, pas l'interaction avec les enfants. */
+.chip.static { align-self:start; cursor:default; }
+.chip.static:hover { color:var(--muted); border-color:var(--border); }
+/* Seul le libellé reste inerte : il n'y a rien à y cliquer. */
+.chip-label { pointer-events:none; }
+.chip-row { display:flex; flex-wrap:wrap; gap:8px; }
+.chip .side-delete { margin-left:6px; margin-right:-6px; }
 .search-result { align-items:start; }
 .search-title { font-weight:700; }
 .search-title:hover { color:var(--accent); }

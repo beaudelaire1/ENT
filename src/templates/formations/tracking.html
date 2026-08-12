@@ -25,10 +25,21 @@
   {% csrf_token %}
   {{ formset.management_form }}
   {% if formset.non_form_errors %}<div class="message">{{ formset.non_form_errors }}</div>{% endif %}
-  {% if metric_errors %}
-    <div class="message error">
-      <strong>Rien n’a été enregistré :</strong>
-      <ul class="cascade-list">{% for error in metric_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  {% comment %}
+    Le bandeau n'affirme « rien n'a été enregistré » que parce que c'est vrai :
+    l'enregistrement est indivisible, une seule erreur annule l'ensemble.
+  {% endcomment %}
+  {% if save_failed %}
+    <div class="message error" role="alert">
+      <strong>Rien n’a été enregistré. Vos saisies sont conservées ci-dessous.</strong>
+      {% if metric_errors %}
+        <ul class="cascade-list">{% for error in metric_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% comment %}
+        `formset.errors` est une liste d'un dictionnaire par ligne, vide ou non : elle est
+        toujours vraie. C'est le compte total qu'il faut interroger.
+      {% endcomment %}
+      {% if formset.total_error_count %}<p class="muted">Corrigez aussi les lignes signalées en rouge.</p>{% endif %}
     </div>
   {% endif %}
 
@@ -56,13 +67,19 @@
                 <th scope="rowgroup" class="col-label"><a href="{% url 'formations:unit' unit.unit.pk %}">{{ unit.unit.title }}</a></th>
                 {% for cell in unit.cells %}
                   <td class="col-metric">
-                    <input class="cell-metric" type="number" step="0.5" name="{{ cell.name }}"
-                           value="{{ cell.value|default_if_none:''|floatformat }}"
+                    {% comment %}
+                      `type="text"` et non `number` : le navigateur vide silencieusement un
+                      champ `number` dont la valeur ne lui plaît pas, et la saisie fautive
+                      à corriger disparaîtrait de l'écran. La virgule française est
+                      acceptée, ce qu'un champ `number` refuse aussi.
+                    {% endcomment %}
+                    <input class="cell-metric" type="text" inputmode="decimal" name="{{ cell.name }}"
+                           value="{{ cell.display }}"
                            aria-label="{{ unit.unit.title }} · {{ cell.definition.label }}">
                   </td>
                 {% endfor %}
-                <td class="total">{{ unit.totals.planned|floatformat }}</td>
-                <td class="total">{{ unit.totals.actual|floatformat }}</td>
+                <td class="total">{{ unit.totals.planned|floatformat:"-2" }}</td>
+                <td class="total">{{ unit.totals.actual|floatformat:"-2" }}</td>
                 <td class="muted">{{ unit.totals.percent }} %</td>
                 <td class="col-progress">
                   <div class="progress-bar"><div class="progress-fill" style="width:{{ unit.totals.percent }}%"></div></div>
@@ -99,8 +116,8 @@
             <tfoot>
               <tr>
                 <th class="col-label" colspan="{{ grid.metric_count|add:1 }}">Total {{ period.period.title }}</th>
-                <td class="total">{{ period.totals.planned|floatformat }}</td>
-                <td class="total">{{ period.totals.actual|floatformat }}</td>
+                <td class="total">{{ period.totals.planned|floatformat:"-2" }}</td>
+                <td class="total">{{ period.totals.actual|floatformat:"-2" }}</td>
                 <td>{{ period.totals.percent }} %</td>
                 <td class="col-progress">
                   <div class="progress-bar"><div class="progress-fill" style="width:{{ period.totals.percent }}%"></div></div>

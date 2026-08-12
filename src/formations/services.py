@@ -14,7 +14,10 @@ est toujours la somme de ce qu’elle contient.
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
+from dataclasses import dataclass
+from decimal import Decimal
+
+from django.db import connection, transaction
 
 from .models import Competency, LearningUnit, MetricDefinition, MetricValue, ProgressRecord
 
@@ -71,49 +74,122 @@ def metric_field_name(unit, definition) -> str:
     return f"metric_{unit.pk}_{definition.pk}"
 
 
-def save_metric_values(path, data) -> list[str]:
-    """Enregistre les chiffres saisis dans les lignes de matière de la grille.
+@dataclass(frozen=True)
+class MetricEdit:
+    """Une écriture décidée mais pas encore faite.
 
-    Ils étaient auparavant saisis un par un, chacun sur sa propre page : cinq colonnes
-    pour sept matières faisaient trente-cinq formulaires pour installer un semestre.
-    Ils se remplissent maintenant là où on les lit.
-
-    Une case vidée supprime la valeur : c'est ainsi qu'on distingue « zéro heure de TP »
-    d'une matière où la colonne n'a pas de sens.
+    ``value`` à ``None`` signifie que la case a été vidée : la valeur doit disparaître.
+    C'est ainsi qu'on distingue « zéro heure de TP » d'une matière où la colonne n'a pas
+    de sens.
     """
-    definitions = {definition.pk: definition for definition in MetricDefinition.objects.filter(path=path)}
-    units = {unit.pk: unit for unit in LearningUnit.objects.filter(period__path=path)}
 
-    errors = []
-    for unit in units.values():
-        for definition in definitions.values():
+    definition: MetricDefinition
+    unit: LearningUnit
+    value: Decimal | None
+
+
+def validate_metric_values(path, data) -> tuple[list[MetricEdit], list[str]]:
+    """Lit les cases chiffrées de la grille et n'écrit rien.
+
+    Les chiffres étaient auparavant saisis un par un, chacun sur sa propre page : cinq
+    colonnes pour sept matières faisaient trente-cinq formulaires pour installer un
+    semestre. Ils se remplissent maintenant là où on les lit.
+
+    Cette fonction ne touche pas la base. Elle rend la liste des écritures à faire et la
+    liste des erreurs ; l'appelant n'applique les premières que si la seconde est vide.
+    Auparavant validation et écriture étaient entremêlées : une trente-cinquième case
+    illisible laissait les trente-quatre précédentes enregistrées, sous un bandeau qui
+    affirmait le contraire.
+    """
+    definitions = list(MetricDefinition.objects.filter(path=path))
+    units = list(LearningUnit.objects.filter(period__path=path).select_related("period"))
+
+    edits: list[MetricEdit] = []
+    errors: list[str] = []
+    for unit in units:
+        for definition in definitions:
             name = metric_field_name(unit, definition)
             if name not in data:
                 continue
-            raw = (data.get(name) or "").strip().replace(",", ".")
-            if not raw:
-                MetricValue.objects.filter(definition=definition, unit=unit).delete()
+            value, error = definition.parse(data.get(name) or "")
+            if error:
+                errors.append(f"{unit.title} · {definition.label} : {error}")
                 continue
-            try:
-                value = Decimal(raw)
-            except InvalidOperation:
-                errors.append(f"{unit.title} · {definition.label} : « {raw} » n’est pas un nombre.")
-                continue
-            if not -Decimal("99999999.99") <= value <= Decimal("99999999.99"):
-                errors.append(f"{unit.title} · {definition.label} : valeur hors limites.")
-                continue
+            edits.append(MetricEdit(definition=definition, unit=unit, value=value))
+    return edits, errors
+
+
+def apply_metric_values(path, edits: list[MetricEdit]) -> None:
+    """Écrit les valeurs validées. À appeler dans une transaction.
+
+    Le verrou porte sur toutes les valeurs du parcours : la grille s'enregistre d'un
+    bloc, deux envois simultanés doivent se suivre et non s'entrelacer.
+    """
+    if not edits:
+        return
+    if connection.features.has_select_for_update:
+        # SQLite ne connaît pas SELECT ... FOR UPDATE ; il sérialise déjà les écritures.
+        list(MetricValue.objects.select_for_update().filter(definition__path=path).values_list("pk", flat=True))
+    for edit in edits:
+        if edit.value is None:
+            MetricValue.objects.filter(definition=edit.definition, unit=edit.unit).delete()
+        else:
             MetricValue.objects.update_or_create(
-                definition=definition, unit=unit, defaults={"value": value.quantize(Decimal("0.01"))}
+                definition=edit.definition, unit=edit.unit, defaults={"value": edit.value}
             )
-    return errors
 
 
-def build_tracking_grid(path, formset):
+def save_tracking(path, formset, data) -> tuple[bool, list[str]]:
+    """Enregistre la grille entière — chiffres des matières et progression — ou rien.
+
+    Rend ``(enregistré, erreurs sur les chiffres)``. Le formset porte les siennes.
+
+    Les deux ensembles sont validés avant que l'un des deux soit écrit : une case
+    chiffrée illisible empêche l'enregistrement des niveaux de maîtrise, et un niveau
+    refusé empêche celui des chiffres.
+    """
+    edits, errors = validate_metric_values(path, data)
+    # ``is_valid()`` est appelé même si les chiffres sont déjà fautifs : l'utilisateur
+    # doit voir toutes ses erreurs d'un coup, pas les découvrir l'une après l'autre.
+    formset_ok = formset.is_valid()
+    if errors or not formset_ok:
+        return False, errors
+    with transaction.atomic():
+        apply_metric_values(path, edits)
+        formset.save()
+    return True, []
+
+
+def format_metric(value: Decimal | None) -> str:
+    """Rend la valeur telle qu'elle est stockée, sans arrondi d'affichage.
+
+    ``floatformat`` ramenait 7,25 à « 7,3 » dans la case de saisie : renvoyer le
+    formulaire réécrivait alors la valeur arrondie en base, sans que personne ne l'ait
+    demandé. On écrit donc le chiffre exact, débarrassé de ses seuls zéros inutiles.
+    """
+    if value is None:
+        return ""
+    return format(value.normalize(), "f")
+
+
+def _cell(unit, definition, stored: Decimal | None, submitted) -> dict:
+    name = metric_field_name(unit, definition)
+    display = format_metric(stored)
+    if submitted is not None and name in submitted:
+        display = (submitted.get(name) or "").strip()
+    return {"name": name, "value": stored, "display": display, "definition": definition}
+
+
+def build_tracking_grid(path, formset, submitted=None):
     """Assemble la grille : les colonnes déclarées, puis les lignes par période.
 
     La structure vient de la base et non du formset : une matière sans compétence doit
     quand même apparaître dans la grille, avec ses métriques et une invitation à la
     remplir.
+
+    ``submitted`` est le POST rejeté. Les cases reprennent alors ce qui a été tapé, y
+    compris ce qui était invalide : la corriger suppose de la voir, et recharger la
+    valeur d'origine effacerait tout le travail de saisie.
     """
     definitions = list(MetricDefinition.objects.filter(path=path).order_by("order", "label"))
     metrics = _metrics_by_unit(path)
@@ -134,11 +210,7 @@ def build_tracking_grid(path, formset):
                     "unit": unit,
                     # Alignée sur `definitions` : une case saisissable par colonne.
                     "cells": [
-                        {
-                            "name": metric_field_name(unit, definition),
-                            "value": unit_metrics.get(definition.key),
-                            "definition": definition,
-                        }
+                        _cell(unit, definition, unit_metrics.get(definition.key), submitted)
                         for definition in definitions
                     ],
                     "rows": rows,

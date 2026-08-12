@@ -1,9 +1,11 @@
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from formations.forms import ProgressRowFormSet
 from formations.models import (
     Competency,
     LearningPath,
@@ -34,6 +36,27 @@ class TrackingGridTests(TestCase):
 
     def url(self):
         return reverse("formations:tracking", args=[self.path.pk])
+
+    def payload(self, *, mastery_level="0", planned_hours="0", actual_hours="0", notes="", metrics=None):
+        """Un envoi complet de la grille, tel que le navigateur le produit."""
+        records = list(tracked_records(self.user, self.path))
+        data = {
+            "form-TOTAL_FORMS": str(len(records)),
+            "form-INITIAL_FORMS": str(len(records)),
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        for index, record in enumerate(records):
+            data |= {
+                f"form-{index}-id": str(record.pk),
+                f"form-{index}-planned_hours": planned_hours,
+                f"form-{index}-actual_hours": actual_hours,
+                f"form-{index}-mastery_level": mastery_level,
+                f"form-{index}-notes": notes,
+            }
+        for definition, raw in (metrics or {}).items():
+            data[f"metric_{self.unit.pk}_{definition.pk}"] = raw
+        return data
 
     def test_grid_creates_one_record_per_competency(self):
         response = self.client.get(self.url())
@@ -246,6 +269,147 @@ class TrackingGridTests(TestCase):
         # passe, soit rien, pour que l'utilisateur sache où il en est.
         self.assertEqual(tracked_records(self.user, self.path).first().mastery_level, 0)
         self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("5"))
+
+    def test_a_valid_send_saves_both_sets_together(self):
+        self.client.get(self.url())
+        response = self.client.post(self.url(), self.payload(mastery_level="3", metrics={self.coefficient: "6"}))
+
+        self.assertRedirects(response, self.url())
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("6.00"))
+        for record in ProgressRecord.objects.filter(owner=self.user):
+            self.assertEqual(record.mastery_level, 3)
+
+    def test_one_invalid_metric_cancels_the_metrics_that_precede_it(self):
+        """Le cas qui laissait un état partiel : la première case passait, la seconde non."""
+        stage = MetricDefinition.objects.create(path=self.path, key="stage", label="Jours de stage", order=2)
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(metrics={self.coefficient: "9", stage: "beaucoup"}))
+
+        self.assertEqual(response.status_code, 200)
+        # Le coefficient garde sa valeur d'origine : il n'a pas été écrit « en attendant ».
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("5"))
+        self.assertFalse(MetricValue.objects.filter(definition=stage, unit=self.unit).exists())
+
+    def test_an_emptied_cell_is_not_deleted_when_another_cell_is_invalid(self):
+        """Vider une case supprime la valeur ; encore faut-il que l'envoi aboutisse."""
+        stage = MetricDefinition.objects.create(path=self.path, key="stage", label="Jours de stage", order=2)
+        MetricValue.objects.create(definition=stage, unit=self.unit, value=Decimal("12"))
+        self.client.get(self.url())
+
+        self.client.post(self.url(), self.payload(metrics={self.coefficient: "", stage: "beaucoup"}))
+
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("5"))
+        self.assertEqual(MetricValue.objects.get(definition=stage, unit=self.unit).value, Decimal("12"))
+
+    def test_an_invalid_progress_row_also_cancels_the_metrics(self):
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(mastery_level="9", metrics={self.coefficient: "7"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("5"))
+
+    def test_nothing_is_written_if_the_rows_fail_at_the_last_moment(self):
+        """Garantie « tout ou rien » : les deux écritures partagent une transaction.
+
+        C'est ce qui protège aussi de deux envois simultanés : chacun est indivisible, et
+        les valeurs visées sont verrouillées le temps de l'écrire.
+        """
+        self.client.get(self.url())
+        payload = self.payload(mastery_level="4", metrics={self.coefficient: "8"})
+
+        with mock.patch.object(ProgressRowFormSet, "save", side_effect=RuntimeError("base indisponible")):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.url(), payload)
+
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("5"))
+        self.assertEqual(tracked_records(self.user, self.path).first().mastery_level, 0)
+
+    def test_existing_values_are_locked_while_writing(self):
+        from formations.services import apply_metric_values, validate_metric_values
+
+        edits, errors = validate_metric_values(self.path, {f"metric_{self.unit.pk}_{self.coefficient.pk}": "3"})
+        self.assertEqual(errors, [])
+
+        with mock.patch("formations.services.connection") as fake:
+            fake.features.has_select_for_update = True
+            with mock.patch.object(MetricValue.objects, "select_for_update") as locked:
+                locked.return_value.filter.return_value.values_list.return_value = []
+                apply_metric_values(self.path, edits)
+
+        locked.assert_called_once_with()
+
+    def test_an_invalid_entry_stays_in_the_form(self):
+        """Corriger une saisie suppose de la revoir : la grille ne la remplace pas."""
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(mastery_level="2", metrics={self.coefficient: "12,5,3"}))
+
+        self.assertContains(response, 'value="12,5,3"')
+        self.assertContains(response, "Rien n’a été enregistré")
+        # Aucune ligne n'est fautive ici : ne pas envoyer l'utilisateur en chercher une.
+        self.assertNotContains(response, "lignes signalées en rouge")
+        # Le niveau saisi est lui aussi conservé, alors que la base porte encore 0.
+        self.assertContains(response, '<option value="2" selected>')
+        self.assertEqual(tracked_records(self.user, self.path).first().mastery_level, 0)
+
+    def test_a_stored_value_is_displayed_without_rounding(self):
+        MetricValue.objects.filter(definition=self.coefficient).update(value=Decimal("7.25"))
+        response = self.client.get(self.url())
+        self.assertContains(response, 'value="7.25"')
+
+    def test_hours_are_displayed_without_their_empty_decimals(self):
+        self.client.get(self.url())
+        tracked_records(self.user, self.path).update(planned_hours=Decimal("25.00"), actual_hours=Decimal("1.50"))
+
+        response = self.client.get(self.url())
+
+        self.assertContains(response, 'value="25"')
+        self.assertContains(response, 'value="1,5"')
+        self.assertNotContains(response, 'value="25,00"')
+
+    def test_a_french_decimal_comma_is_accepted(self):
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(planned_hours="10,5", metrics={self.coefficient: "3,5"}))
+
+        self.assertRedirects(response, self.url())
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("3.50"))
+        self.assertEqual(tracked_records(self.user, self.path).first().planned_hours, Decimal("10.5"))
+
+    def test_negative_hours_are_refused_by_the_form(self):
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(planned_hours="-4"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(tracked_records(self.user, self.path).first().planned_hours, Decimal("0"))
+
+    def test_a_metric_below_the_declared_minimum_is_refused(self):
+        MetricDefinition.objects.filter(pk=self.coefficient.pk).update(min_value=Decimal("0"))
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(metrics={self.coefficient: "-2"}))
+
+        self.assertContains(response, "ne peut pas être inférieure à 0")
+        self.assertEqual(MetricValue.objects.get(definition=self.coefficient, unit=self.unit).value, Decimal("5"))
+
+    def test_a_metric_above_the_declared_maximum_is_refused(self):
+        MetricDefinition.objects.filter(pk=self.coefficient.pk).update(max_value=Decimal("10"))
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(metrics={self.coefficient: "11"}))
+
+        self.assertContains(response, "ne peut pas être supérieure à 10")
+
+    def test_a_metric_declared_integer_refuses_decimals(self):
+        MetricDefinition.objects.filter(pk=self.coefficient.pk).update(decimal_places=0)
+        self.client.get(self.url())
+
+        response = self.client.post(self.url(), self.payload(metrics={self.coefficient: "2.5"}))
+
+        self.assertContains(response, "que des nombres entiers")
 
     def test_another_users_path_is_not_reachable(self):
         bob = get_user_model().objects.create_user("bob", password="secret")

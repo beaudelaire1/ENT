@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from core.models import OwnedQuerySet, TimeStampedModel
+
+# Bornes de stockage de MetricValue.value (max_digits=10, decimal_places=2). Une saisie
+# au-delà ne serait pas rejetée par le formulaire mais par la base, en erreur 500.
+METRIC_ABSOLUTE_LIMIT = Decimal("99999999.99")
+# MetricValue stocke deux décimales : une définition ne peut pas en demander plus, sinon
+# la valeur affichée après enregistrement ne serait pas celle qui a été saisie.
+METRIC_MAX_DECIMAL_PLACES = 2
 
 
 class LearningPath(TimeStampedModel):
@@ -85,6 +94,15 @@ class Competency(TimeStampedModel):
 
 
 class MetricDefinition(models.Model):
+    """Une colonne chiffrée de la grille, avec ses règles de saisie facultatives.
+
+    Les bornes sont facultatives et non pas positives par défaut : une métrique
+    personnalisée accepte les valeurs négatives, car certaines mesurent un écart ou un
+    solde. Pour l'interdire sur une colonne donnée, il faut y poser une valeur minimale
+    — le formulaire propose 0 d'emblée, qui est le cas courant (coefficient, ECTS,
+    heures de TD n'ont pas de sens en négatif).
+    """
+
     path = models.ForeignKey(
         LearningPath, verbose_name="formation", on_delete=models.CASCADE, related_name="metric_definitions"
     )
@@ -92,15 +110,91 @@ class MetricDefinition(models.Model):
     label = models.CharField("libellé", max_length=80)
     unit_label = models.CharField("unité", max_length=20, blank=True)
     order = models.PositiveSmallIntegerField("ordre", default=0)
+    min_value = models.DecimalField(
+        "valeur minimale",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Laisser vide pour ne poser aucune limite basse.",
+    )
+    max_value = models.DecimalField(
+        "valeur maximale",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Laisser vide pour ne poser aucune limite haute.",
+    )
+    decimal_places = models.PositiveSmallIntegerField(
+        "décimales",
+        default=METRIC_MAX_DECIMAL_PLACES,
+        validators=[MaxValueValidator(METRIC_MAX_DECIMAL_PLACES)],
+        help_text="0 pour n'accepter que des entiers (ECTS, coefficient).",
+    )
 
     class Meta:
         verbose_name = "colonne de suivi"
         verbose_name_plural = "colonnes de suivi"
         ordering = ["order", "label"]
-        constraints = [models.UniqueConstraint(fields=["path", "key"], name="unique_metric_key_per_path")]
+        constraints = [
+            models.UniqueConstraint(fields=["path", "key"], name="unique_metric_key_per_path"),
+            models.CheckConstraint(
+                condition=models.Q(min_value__isnull=True)
+                | models.Q(max_value__isnull=True)
+                | models.Q(min_value__lte=models.F("max_value")),
+                name="metric_bounds_ordered",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(decimal_places__lte=METRIC_MAX_DECIMAL_PLACES),
+                name="metric_decimal_places_storable",
+            ),
+        ]
 
     def __str__(self):
         return self.label
+
+    def clean(self):
+        if self.min_value is not None and self.max_value is not None and self.min_value > self.max_value:
+            raise ValidationError({"max_value": "La valeur maximale doit être supérieure à la valeur minimale."})
+
+    def parse(self, raw: str) -> tuple[Decimal | None, str | None]:
+        """Convertit une saisie en valeur enregistrable, ou explique pourquoi c'est non.
+
+        Renvoie ``(valeur, None)`` ou ``(None, message)``. Le message est destiné à
+        l'utilisateur et ne mentionne pas la colonne : l'appelant sait de laquelle il
+        s'agit et la nomme lui-même.
+
+        La virgule française est acceptée : c'est ce que produit un pavé numérique
+        configuré en français, et la refuser serait incompréhensible.
+        """
+        text = (raw or "").strip().replace(",", ".")
+        if not text:
+            return None, None
+        try:
+            value = Decimal(text)
+        except InvalidOperation:
+            return None, f"« {raw.strip()} » n’est pas un nombre."
+        if not value.is_finite():
+            return None, f"« {raw.strip()} » n’est pas un nombre."
+        error = self.check_value(value)
+        if error:
+            return None, error
+        return value.quantize(Decimal(1).scaleb(-self.decimal_places)), None
+
+    def check_value(self, value: Decimal) -> str | None:
+        """Vérifie une valeur déjà convertie contre les règles de la colonne."""
+        if not -METRIC_ABSOLUTE_LIMIT <= value <= METRIC_ABSOLUTE_LIMIT:
+            return "valeur hors limites."
+        if self.min_value is not None and value < self.min_value:
+            return f"la valeur ne peut pas être inférieure à {self.min_value:f}."
+        if self.max_value is not None and value > self.max_value:
+            return f"la valeur ne peut pas être supérieure à {self.max_value:f}."
+        if value != value.quantize(Decimal(1).scaleb(-self.decimal_places)):
+            if self.decimal_places == 0:
+                return "cette colonne n’accepte que des nombres entiers."
+            return f"cette colonne n’accepte que {self.decimal_places} décimale(s)."
+        return None
 
 
 class MetricValue(models.Model):
@@ -123,6 +217,10 @@ class MetricValue(models.Model):
     def clean(self):
         if self.definition.path_id != self.unit.period.path_id:
             raise ValidationError("La métrique et l’unité doivent appartenir au même parcours.")
+        if self.value is not None:
+            error = self.definition.check_value(self.value)
+            if error:
+                raise ValidationError({"value": f"{self.definition.label} : {error}"})
 
 
 class ProgressRecord(TimeStampedModel):
@@ -143,14 +241,33 @@ class ProgressRecord(TimeStampedModel):
         default=Mastery.NOT_STARTED,
         validators=[MinValueValidator(0), MaxValueValidator(4)],
     )
-    planned_hours = models.DecimalField("travail personnel estimé (h)", max_digits=7, decimal_places=2, default=0)
-    actual_hours = models.DecimalField("temps réel (h)", max_digits=7, decimal_places=2, default=0)
+    planned_hours = models.DecimalField(
+        "travail personnel estimé (h)",
+        max_digits=7,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
+    actual_hours = models.DecimalField(
+        "temps réel (h)",
+        max_digits=7,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
     notes = models.TextField("commentaires", blank=True)
 
     class Meta:
         verbose_name = "progression"
         verbose_name_plural = "progressions"
-        constraints = [models.UniqueConstraint(fields=["owner", "competency"], name="unique_progress_per_competency")]
+        constraints = [
+            models.UniqueConstraint(fields=["owner", "competency"], name="unique_progress_per_competency"),
+            # Une durée négative n'est pas une saisie maladroite à corriger plus tard :
+            # elle fausse tous les totaux de la grille. La base la refuse aussi, pour que
+            # ni l'admin, ni un script, ni une future vue ne puisse en créer.
+            models.CheckConstraint(condition=models.Q(planned_hours__gte=0), name="progress_planned_hours_positive"),
+            models.CheckConstraint(condition=models.Q(actual_hours__gte=0), name="progress_actual_hours_positive"),
+        ]
 
     @property
     def percent(self) -> int:

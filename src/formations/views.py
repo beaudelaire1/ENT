@@ -17,7 +17,7 @@ from .forms import (
     ProgressRowFormSet,
 )
 from .models import Competency, LearningPath, LearningUnit, MetricDefinition, Period, ProgressRecord
-from .services import build_tracking_grid, ensure_progress_records, save_metric_values, tracked_records
+from .services import build_tracking_grid, ensure_progress_records, save_tracking, tracked_records
 
 
 @login_required
@@ -37,15 +37,18 @@ def path_detail(request, pk):
 
 @login_required
 def path_tracking(request, pk):
-    """Grille de suivi : toutes les compétences du parcours, éditables en place."""
+    """Grille de suivi : toutes les compétences du parcours, éditables en place.
+
+    L'enregistrement est indivisible : ``save_tracking`` valide les chiffres des matières
+    et la progression des compétences avant d'écrire quoi que ce soit.
+    """
     path = get_object_or_404(LearningPath, owner=request.user, pk=pk)
     ensure_progress_records(request.user, path)
     formset = ProgressRowFormSet(request.POST or None, queryset=tracked_records(request.user, path))
     metric_errors = []
-    if request.method == "POST" and formset.is_valid():
-        metric_errors = save_metric_values(path, request.POST)
-        if not metric_errors:
-            formset.save()
+    if request.method == "POST":
+        saved, metric_errors = save_tracking(path, formset, request.POST)
+        if saved:
             messages.success(request, "Suivi enregistré.")
             return redirect("formations:tracking", pk=path.pk)
     return render(
@@ -54,9 +57,11 @@ def path_tracking(request, pk):
         {
             "path": path,
             "formset": formset,
-            "grid": build_tracking_grid(path, formset),
+            # Les cases reprennent la saisie rejetée plutôt que la valeur en base.
+            "grid": build_tracking_grid(path, formset, submitted=request.POST if request.method == "POST" else None),
             "levels": ProgressRecord.Mastery.choices,
             "metric_errors": metric_errors,
+            "save_failed": request.method == "POST",
         },
     )
 
