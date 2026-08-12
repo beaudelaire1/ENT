@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Compétences évaluées · {{ assessment.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">COMPÉTENCES ÉVALUÉES</p>
+    <h1>{{ assessment.title }}</h1>
+    <p class="muted">{% if assessment.unit %}{{ assessment.unit.title }}{% else %}Épreuve transversale{% endif %}</p>
+  </div>
+  <div class="actions"><a class="button" href="{{ back_to }}">Retour à l’évaluation</a></div>
+</header>
+
+<section class="panel">
+  <h2>Évaluées par cette épreuve</h2>
+  {% for competency in attached %}
+    <div class="list-row">
+      <div>
+        <a href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
+        {% if competency.period %}<p class="muted">{{ competency.period.title }}</p>{% endif %}
+      </div>
+      <form method="post" class="inline-form">
+        {% csrf_token %}
+        <button class="button small quiet danger" name="remove" value="{{ competency.pk }}" type="submit">Retirer</button>
+      </form>
+    </div>
+  {% empty %}
+    <p class="empty">Aucune compétence déclarée pour l’instant.</p>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Ajouter des compétences</h2>
+  {% comment %}
+    Sans recherche, seules les compétences de la matière de l'épreuve sont proposées :
+    c'est presque toujours là qu'on cherche, et une formation en compte des centaines.
+  {% endcomment %}
+  <form method="get" class="filter-form" role="search">
+    <div class="field">
+      <label for="q">Chercher dans toute la formation</label>
+      <input id="q" type="search" name="q" value="{{ query }}" placeholder="compacité, Fubini, régression…">
+    </div>
+    <div class="form-actions">
+      <button class="button" type="submit">Filtrer</button>
+      {% if query %}<a class="button quiet" href="{{ request.path }}">Effacer</a>{% endif %}
+    </div>
+  </form>
+
+  <form method="post">
+    {% csrf_token %}
+    <p class="muted">
+      {{ total }} compétence{{ total|pluralize }} proposée{{ total|pluralize }}{% if not query and assessment.unit %} dans {{ assessment.unit.title }}{% endif %}{% if truncated %}, dont {{ truncated }} non affichée{{ truncated|pluralize }} : précisez la recherche{% endif %}.
+    </p>
+    {% for competency in candidates %}
+      <label class="pick-row">
+        <input type="checkbox" name="competencies" value="{{ competency.pk }}">
+        <span>
+          <strong>{{ competency.title }}</strong>
+          <span class="muted">{% if competency.period %}{{ competency.period.title }}{% else %}Transversale{% endif %}</span>
+        </span>
+      </label>
+    {% empty %}
+      <p class="empty">{% if query %}Aucune compétence ne correspond.{% else %}Toutes les compétences proposées sont déjà déclarées.{% endif %}</p>
+    {% endfor %}
+    {% if candidates %}
+      <div class="form-actions"><button class="button primary" type="submit">Ajouter</button></div>
+    {% endif %}
+  </form>
+</section>
+{% endblock %}

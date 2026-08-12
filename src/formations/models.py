@@ -30,6 +30,18 @@ class LearningPath(TimeStampedModel):
     level_label = models.CharField("niveau", max_length=120, blank=True)
     description = models.TextField("description", blank=True)
     status = models.CharField("état", max_length=12, choices=Status.choices, default=Status.ACTIVE)
+    weight_metric = models.ForeignKey(
+        "formations.MetricDefinition",
+        verbose_name="colonne de pondération",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="weighting_for",
+        help_text=(
+            "La colonne qui porte le poids des matières — ECTS, coefficient. "
+            "Nécessaire pour calculer une moyenne de période ; laissez vide si cela n'a pas de sens."
+        ),
+    )
     objects = OwnedQuerySet.as_manager()
 
     class Meta:
@@ -176,6 +188,169 @@ class Competency(TimeStampedModel):
     def clean(self):
         if self.period_id and self.period.path_id != self.path_id:
             raise ValidationError({"period": "Cette période appartient à une autre formation."})
+
+
+class Assessment(TimeStampedModel):
+    """Un devoir, un partiel, un oral : ce qui est évalué et quand.
+
+    Séparé de son résultat, même dans un espace strictement personnel. On prépare un
+    examen avant de connaître sa note : l'évaluation doit exister — avec sa date, ses
+    compétences visées et ses ressources de révision — pendant tout le temps où il n'y a
+    précisément rien à y inscrire.
+    """
+
+    class Kind(models.TextChoices):
+        HOMEWORK = "homework", "Devoir maison"
+        TEST = "test", "Contrôle"
+        MIDTERM = "midterm", "Partiel"
+        ORAL = "oral", "Oral"
+        PROJECT = "project", "Projet"
+        EXAM = "exam", "Examen"
+        OTHER = "other", "Autre"
+
+    class Status(models.TextChoices):
+        PLANNED = "planned", "Prévue"
+        TAKEN = "taken", "Passée"
+        MARKED = "marked", "Corrigée"
+        CANCELLED = "cancelled", "Annulée"
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assessments")
+    period = models.ForeignKey(
+        Period, verbose_name="période", null=True, blank=True, on_delete=models.SET_NULL, related_name="assessments"
+    )
+    unit = models.ForeignKey(
+        LearningUnit,
+        verbose_name="matière",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assessments",
+        help_text="Facultatif : un examen transversal n'en concerne aucune en particulier.",
+    )
+    title = models.CharField("intitulé", max_length=200)
+    kind = models.CharField("type", max_length=10, choices=Kind.choices, default=Kind.TEST)
+    scheduled_for = models.DateTimeField("date et heure", null=True, blank=True)
+    coefficient = models.DecimalField(
+        "coefficient",
+        max_digits=6,
+        decimal_places=2,
+        default=1,
+        validators=[MinValueValidator(0)],
+        help_text="Poids de l'évaluation dans la moyenne de la matière.",
+    )
+    scale = models.DecimalField(
+        "barème",
+        max_digits=6,
+        decimal_places=2,
+        default=20,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        help_text="La note maximale possible : 20, 100, 5…",
+    )
+    status = models.CharField("état", max_length=10, choices=Status.choices, default=Status.PLANNED)
+    description = models.TextField("description", blank=True)
+    resources = models.ManyToManyField(
+        "library.LibraryItem", verbose_name="ressources de préparation", blank=True, related_name="assessments"
+    )
+    competencies = models.ManyToManyField(
+        Competency, verbose_name="compétences évaluées", blank=True, related_name="assessments"
+    )
+
+    class Meta:
+        verbose_name = "évaluation"
+        verbose_name_plural = "évaluations"
+        ordering = ["-scheduled_for", "-pk"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(coefficient__gte=0), name="assessment_coefficient_positive"),
+            models.CheckConstraint(condition=models.Q(scale__gt=0), name="assessment_scale_positive"),
+        ]
+
+    def __str__(self):
+        return self.title
+
+    def clean(self):
+        if self.unit_id and self.unit.period.path.owner_id != self.owner_id:
+            raise ValidationError({"unit": "Cette matière appartient à un autre utilisateur."})
+        if self.period_id and self.period.path.owner_id != self.owner_id:
+            raise ValidationError({"period": "Cette période appartient à un autre utilisateur."})
+
+    @property
+    def is_upcoming(self) -> bool:
+        return bool(self.scheduled_for and self.status == self.Status.PLANNED and self.scheduled_for >= timezone.now())
+
+    @property
+    def days_left(self) -> int | None:
+        if not self.scheduled_for:
+            return None
+        return (self.scheduled_for.date() - timezone.localdate()).days
+
+
+class AssessmentResult(TimeStampedModel):
+    """La note obtenue, séparée de l'évaluation qui l'a produite.
+
+    Le barème est recopié au moment du résultat : changer le barème d'une évaluation
+    passée ne doit pas réécrire une note déjà obtenue.
+    """
+
+    assessment = models.OneToOneField(
+        Assessment, verbose_name="évaluation", on_delete=models.CASCADE, related_name="result"
+    )
+    score = models.DecimalField(
+        "note obtenue",
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Laissez vide en cas d'absence.",
+    )
+    scale = models.DecimalField(
+        "barème appliqué",
+        max_digits=6,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        help_text="Repris de l'évaluation ; modifiable si le barème réel a différé.",
+    )
+    absent = models.BooleanField("absence", default=False)
+    comment = models.TextField("commentaire du correcteur", blank=True)
+    published_on = models.DateField("publiée le", null=True, blank=True)
+    self_review = models.TextField(
+        "mon appréciation",
+        blank=True,
+        help_text="Ce que vous en retenez : ce qui a manqué, ce qui a bien marché.",
+    )
+
+    class Meta:
+        verbose_name = "résultat"
+        verbose_name_plural = "résultats"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(score__isnull=True) | models.Q(score__gte=0), name="result_score_positive"
+            ),
+            models.CheckConstraint(condition=models.Q(scale__gt=0), name="result_scale_positive"),
+        ]
+
+    def __str__(self):
+        if self.absent or self.score is None:
+            return f"{self.assessment} · absent"
+        return f"{self.assessment} · {self.score:f}/{self.scale:f}"
+
+    def clean(self):
+        if self.absent and self.score is not None:
+            raise ValidationError({"score": "Une absence n'a pas de note. Décochez l'absence ou videz la note."})
+        if self.score is not None and self.scale and self.score > self.scale:
+            raise ValidationError({"score": f"La note dépasse le barème ({self.scale:f})."})
+
+    @property
+    def ratio(self) -> Decimal | None:
+        """La note ramenée à une fraction de 1, ou ``None`` si elle n'existe pas."""
+        if self.absent or self.score is None or not self.scale:
+            return None
+        return (self.score / self.scale).quantize(Decimal("0.0001"))
+
+    @property
+    def out_of_twenty(self) -> Decimal | None:
+        ratio = self.ratio
+        return None if ratio is None else (ratio * 20).quantize(Decimal("0.01"))
 
 
 class UnitCompetency(models.Model):

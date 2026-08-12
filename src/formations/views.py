@@ -11,7 +11,10 @@ from core.deletion import confirm_delete
 from core.editing import form_page
 from library.models import LibraryItem
 
+from .academics import struggling_competencies, unit_average
 from .forms import (
+    AssessmentForm,
+    AssessmentResultForm,
     CompetencyForm,
     LearningGroupForm,
     LearningPathForm,
@@ -23,6 +26,7 @@ from .forms import (
     UnitCompetencyForm,
 )
 from .models import (
+    Assessment,
     Competency,
     LearningGroup,
     LearningPath,
@@ -546,4 +550,177 @@ def metric_definition_delete(request, pk):
         metric,
         redirect_to=reverse("formations:detail", args=[metric.path_id]),
         title="Supprimer cette colonne",
+    )
+
+
+# ----------------------------------------------------------------------- évaluations
+
+
+@login_required
+def assessment_list(request):
+    """Les évaluations, à venir d'abord : c'est ce qui se prépare qui compte."""
+    assessments = (
+        Assessment.objects.filter(owner=request.user)
+        .select_related("unit__period__path", "period", "result")
+        .prefetch_related("competencies")
+    )
+    upcoming = sorted((a for a in assessments if a.is_upcoming), key=lambda a: a.scheduled_for)
+    past = [a for a in assessments if not a.is_upcoming]
+    return render(
+        request,
+        "formations/assessments.html",
+        {
+            "upcoming": upcoming,
+            "past": past,
+            "breadcrumbs": [{"label": "Évaluations", "url": None}],
+        },
+    )
+
+
+@login_required
+def assessment_edit(request, pk=None):
+    assessment = get_object_or_404(Assessment, owner=request.user, pk=pk) if pk else None
+    return _form_page(
+        request,
+        form=AssessmentForm(
+            request.POST or None, instance=assessment, user=request.user, scope={"owner": request.user}
+        ),
+        eyebrow="ÉVALUATIONS",
+        title="Modifier l’évaluation" if assessment else "Nouvelle évaluation",
+        breadcrumbs=[
+            {"label": "Évaluations", "url": reverse("formations:assessments")},
+            {"label": assessment.title if assessment else "Nouvelle évaluation", "url": None},
+        ],
+        fallback=lambda obj: reverse("formations:assessment", args=[obj.pk]),
+        default_back=reverse("formations:assessments"),
+        delete_url=reverse("formations:assessment_delete", args=[assessment.pk]) if assessment else None,
+        delete_label="cette évaluation",
+    )
+
+
+@login_required
+def assessment_detail(request, pk):
+    """Une évaluation : ce qu'elle couvre, et quoi en faire — avant comme après.
+
+    Avant, l'écran sert à réviser : temps restant, compétences visées, celles qui ne sont
+    pas acquises, et leurs ressources. Après, il sert à décider quoi reprendre.
+    """
+    assessment = get_object_or_404(
+        Assessment.objects.select_related("unit__period__path", "period", "result").prefetch_related(
+            "competencies", "resources"
+        ),
+        owner=request.user,
+        pk=pk,
+    )
+    weak = struggling_competencies(request.user, assessment)
+    resources = LibraryItem.objects.filter(competencies__in=assessment.competencies.all()).distinct()
+    return render(
+        request,
+        "formations/assessment.html",
+        {
+            "assessment": assessment,
+            "result": getattr(assessment, "result", None),
+            "weak": weak,
+            "competency_resources": group_by_purpose(resources),
+            "average": unit_average(request.user, assessment.unit) if assessment.unit_id else None,
+            "breadcrumbs": [
+                {"label": "Évaluations", "url": reverse("formations:assessments")},
+                {"label": assessment.title, "url": None},
+            ],
+        },
+    )
+
+
+@login_required
+def assessment_delete(request, pk):
+    assessment = get_object_or_404(Assessment, owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        assessment,
+        redirect_to=reverse("formations:assessments"),
+        title="Supprimer cette évaluation",
+        back_to=reverse("formations:assessment", args=[assessment.pk]),
+    )
+
+
+@login_required
+def result_edit(request, pk):
+    """Saisir ou corriger le résultat d'une évaluation.
+
+    Le barème part de celui de l'évaluation, puis vit sa vie : changer le barème d'une
+    épreuve à venir ne doit pas réécrire une note déjà obtenue.
+    """
+    assessment = get_object_or_404(Assessment, owner=request.user, pk=pk)
+    result = getattr(assessment, "result", None)
+    initial = {} if result else {"scale": assessment.scale}
+
+    def mark_as_corrected(saved):
+        if assessment.status in {Assessment.Status.PLANNED, Assessment.Status.TAKEN}:
+            assessment.status = Assessment.Status.MARKED
+            assessment.save(update_fields=["status", "updated_at"])
+
+    return _form_page(
+        request,
+        form=AssessmentResultForm(
+            request.POST or None, instance=result, initial=initial, scope={"assessment": assessment}
+        ),
+        eyebrow="RÉSULTAT",
+        title="Modifier le résultat" if result else "Saisir le résultat",
+        subtitle=assessment.title,
+        breadcrumbs=[
+            {"label": "Évaluations", "url": reverse("formations:assessments")},
+            {"label": assessment.title, "url": reverse("formations:assessment", args=[assessment.pk])},
+            {"label": "Résultat", "url": None},
+        ],
+        fallback=lambda obj: reverse("formations:assessment", args=[assessment.pk]),
+        default_back=reverse("formations:assessment", args=[assessment.pk]),
+        after_save=mark_as_corrected,
+    )
+
+
+@login_required
+def assessment_competencies(request, pk):
+    """Déclarer ce que l'évaluation évalue, par recherche dans la formation."""
+    assessment = get_object_or_404(Assessment, owner=request.user, pk=pk)
+    if request.method == "POST":
+        removed = request.POST.get("remove")
+        chosen = request.POST.getlist("competencies")
+        if removed:
+            competency = get_object_or_404(Competency, path__owner=request.user, pk=removed)
+            assessment.competencies.remove(competency)
+            messages.success(request, f"« {competency.title} » n’est plus évaluée ici.")
+        elif chosen:
+            competencies = list(Competency.objects.filter(path__owner=request.user, pk__in=chosen))
+            assessment.competencies.add(*competencies)
+            messages.success(request, f"{len(competencies)} compétence(s) ajoutée(s).")
+        else:
+            messages.error(request, "Aucune compétence sélectionnée.")
+        return redirect(request.get_full_path())
+
+    query = request.GET.get("q", "").strip()
+    candidates = Competency.objects.filter(path__owner=request.user).exclude(assessments=assessment)
+    if query:
+        candidates = candidates.filter(title__icontains=query)
+    elif assessment.unit_id:
+        # Sans recherche, la matière de l'évaluation d'abord : c'est presque toujours là.
+        candidates = candidates.filter(units=assessment.unit)
+    candidates = candidates.select_related("period", "path").order_by("period__order", "order", "title")
+    total = candidates.count()
+    return render(
+        request,
+        "formations/assessment_competencies.html",
+        {
+            "assessment": assessment,
+            "attached": assessment.competencies.select_related("period"),
+            "candidates": candidates[:RESOURCE_RESULT_LIMIT],
+            "total": total,
+            "truncated": max(0, total - RESOURCE_RESULT_LIMIT),
+            "query": query,
+            "breadcrumbs": [
+                {"label": "Évaluations", "url": reverse("formations:assessments")},
+                {"label": assessment.title, "url": reverse("formations:assessment", args=[assessment.pk])},
+                {"label": "Compétences évaluées", "url": None},
+            ],
+            "back_to": reverse("formations:assessment", args=[assessment.pk]),
+        },
     )

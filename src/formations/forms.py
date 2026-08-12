@@ -5,6 +5,8 @@ from django import forms
 from core.forms import ScopedModelForm
 
 from .models import (
+    Assessment,
+    AssessmentResult,
     Competency,
     LearningGroup,
     LearningPath,
@@ -249,3 +251,74 @@ class ProgressRowForm(forms.ModelForm):
 
 
 ProgressRowFormSet = forms.modelformset_factory(ProgressRecord, form=ProgressRowForm, extra=0)
+
+
+class AssessmentForm(ScopedModelForm):
+    """Une évaluation : ce qui est évalué, quand, et avec quel poids.
+
+    Les compétences évaluées ne se choisissent pas ici mais sur un écran dédié : une
+    formation en compte plusieurs centaines, et une liste de cases n'y serait pas
+    utilisable.
+    """
+
+    class Meta:
+        model = Assessment
+        fields = ["title", "kind", "period", "unit", "scheduled_for", "coefficient", "scale", "status", "description"]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "scheduled_for": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["period"].queryset = Period.objects.filter(path__owner=user).select_related("path")
+        self.fields["unit"].queryset = LearningUnit.objects.filter(period__path__owner=user).select_related("period")
+        self.fields["scheduled_for"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"]
+        annotate(
+            self,
+            {
+                "unit": "La matière concernée. Laissez vide pour une épreuve transversale.",
+                "coefficient": "Poids dans la moyenne de la matière. 0 pour une évaluation qui ne compte pas.",
+                "scale": "La note maximale : 20, 100, 5…",
+                "status": "« Prévue » tant que l’épreuve n’a pas eu lieu.",
+                "scheduled_for": "Sert à décompter les jours restants et à préparer la révision.",
+            },
+            {"title": "Partiel de topologie"},
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        unit, period = cleaned.get("unit"), cleaned.get("period")
+        if unit and period and unit.period_id != period.pk:
+            # Deux rattachements qui se contredisent produiraient une évaluation
+            # introuvable : ni dans la période affichée, ni dans celle de la matière.
+            self.add_error("period", "Cette matière appartient à une autre période.")
+        if unit and not period:
+            cleaned["period"] = unit.period
+            self.instance.period = unit.period
+        return cleaned
+
+
+class AssessmentResultForm(ScopedModelForm):
+    """Le résultat, saisi séparément de l'évaluation qu'il conclut."""
+
+    class Meta:
+        model = AssessmentResult
+        fields = ["score", "scale", "absent", "published_on", "comment", "self_review"]
+        widgets = {
+            "comment": forms.Textarea(attrs={"rows": 2}),
+            "self_review": forms.Textarea(attrs={"rows": 3}),
+            "published_on": forms.DateInput(attrs={"type": "date"}),
+        }
+        localized_fields = ("score", "scale")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        annotate(
+            self,
+            {
+                "score": "Laissez vide en cas d’absence : elle ne sera jamais comptée comme un zéro.",
+                "scale": "Repris de l’évaluation ; corrigez-le si le barème réel a différé.",
+                "self_review": "Ce que vous en retenez. C’est ce qui servira à décider quoi reprendre.",
+            },
+        )

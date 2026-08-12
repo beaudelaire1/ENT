@@ -33,4 +33,13 @@ urlpatterns = [
     path("competencies/<int:pk>/edit/", views.competency_edit, name="competency_edit"),
     path("competencies/<int:pk>/delete/", views.competency_delete, name="competency_delete"),
     path("competencies/<int:competency_pk>/progress/", views.progress_edit, name="progress"),
+    # Les évaluations vivent au niveau du compte : une épreuve peut être transversale, et
+    # la liste sert d'abord à voir ce qui arrive, toutes formations confondues.
+    path("evaluations/", views.assessment_list, name="assessments"),
+    path("evaluations/new/", views.assessment_edit, name="assessment_new"),
+    path("evaluations/<int:pk>/", views.assessment_detail, name="assessment"),
+    path("evaluations/<int:pk>/edit/", views.assessment_edit, name="assessment_edit"),
+    path("evaluations/<int:pk>/delete/", views.assessment_delete, name="assessment_delete"),
+    path("evaluations/<int:pk>/result/", views.result_edit, name="result_edit"),
+    path("evaluations/<int:pk>/competencies/", views.assessment_competencies, name="assessment_competencies"),
 ]

@@ -249,3 +249,12 @@ ul.errorlist { margin:4px 0 0; padding-left:18px; color:var(--danger); font-size
   .library-layout { grid-template-columns:1fr; }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+
+/* Évaluations : le temps restant et la note se lisent avant tout le reste. */
+.countdown { text-align:center; padding:18px; }
+.countdown h2 { margin:0 0 4px; font-size:22px; }
+.result-score { font-size:22px; margin:0 0 12px; }
+.result-score strong { font-size:30px; }
+.chip.static.urgent { color:white; background:var(--danger); border-color:transparent; }
+/* Un avertissement de calcul n'est pas une erreur : il dit ce que le chiffre ne couvre pas. */
+.field-help.warning { color:var(--danger); }

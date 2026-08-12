@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Évaluations · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">ÉVALUATIONS</p>
+    <h1>Évaluations</h1>
+    <p class="muted">Ce qui arrive, puis ce qui est passé.</p>
+  </div>
+  <div class="actions">
+    <a class="button primary" href="{% url 'formations:assessment_new' %}">Nouvelle évaluation</a>
+  </div>
+</header>
+
+<section class="panel">
+  <h2>À venir</h2>
+  {% comment %}
+    Le temps restant est la première information utile : c'est lui qui décide s'il faut
+    réviser aujourd'hui.
+  {% endcomment %}
+  {% for assessment in upcoming %}
+    <div class="list-row">
+      <div>
+        <a href="{% url 'formations:assessment' assessment.pk %}">{{ assessment.title }}</a>
+        <p class="muted">
+          {{ assessment.get_kind_display }}
+          {% if assessment.unit %} · {{ assessment.unit.title }}{% endif %}
+          {% if assessment.competencies.count %} · {{ assessment.competencies.count }} compétence{{ assessment.competencies.count|pluralize }}{% endif %}
+        </p>
+      </div>
+      <div>
+        <time>{{ assessment.scheduled_for|date:"d/m/Y H:i" }}</time>
+        {% if assessment.days_left == 0 %}
+          <span class="chip static urgent"><span class="chip-label">aujourd’hui</span></span>
+        {% elif assessment.days_left == 1 %}
+          <span class="chip static urgent"><span class="chip-label">demain</span></span>
+        {% else %}
+          <span class="muted">dans {{ assessment.days_left }} jours</span>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <div class="empty-state">
+      <p class="empty">Aucune évaluation prévue.</p>
+      <a class="button" href="{% url 'formations:assessment_new' %}">En ajouter une</a>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Passées</h2>
+  {% for assessment in past %}
+    <div class="list-row">
+      <div>
+        <a href="{% url 'formations:assessment' assessment.pk %}">{{ assessment.title }}</a>
+        <p class="muted">
+          {{ assessment.get_status_display }}
+          {% if assessment.unit %} · {{ assessment.unit.title }}{% endif %}
+          {% if assessment.scheduled_for %} · {{ assessment.scheduled_for|date:"d/m/Y" }}{% endif %}
+        </p>
+      </div>
+      <div>
+        {% if assessment.result %}
+          {% if assessment.result.absent %}
+            <span class="muted">absent</span>
+          {% else %}
+            <strong>{{ assessment.result.score|floatformat:"-2" }} / {{ assessment.result.scale|floatformat:"-2" }}</strong>
+          {% endif %}
+        {% else %}
+          <a class="button small quiet" href="{% url 'formations:result_edit' assessment.pk %}">Saisir la note</a>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <p class="empty">Aucune évaluation passée.</p>
+  {% endfor %}
+</section>
+{% endblock %}

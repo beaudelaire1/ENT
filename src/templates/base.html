@@ -45,6 +45,7 @@
       <details class="nav-group"{% if nav_section == 'formations' %} open{% endif %}>
         <summary{% if nav_section == 'formations' %} class="active"{% endif %}>Formations</summary>
         <a href="{% url 'formations:list' %}"{% if nav_section == 'formations' and request.resolver_match.url_name == 'list' %} class="active" aria-current="page"{% endif %}>Toutes mes formations</a>
+        <a href="{% url 'formations:assessments' %}"{% if request.resolver_match.url_name == 'assessments' %} class="active" aria-current="page"{% endif %}>Évaluations</a>
         {% for path in nav_paths %}
           <a href="{% url 'formations:detail' path.pk %}" class="nav-sub{% if nav_path_id == path.pk %} active{% endif %}">{{ path.title }}</a>
         {% endfor %}

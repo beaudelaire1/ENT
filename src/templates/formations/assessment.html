@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ assessment.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">{{ assessment.get_kind_display|upper }} · {{ assessment.get_status_display|upper }}</p>
+    <h1>{{ assessment.title }}</h1>
+    <p class="muted">
+      {% if assessment.unit %}<a href="{% url 'formations:unit' assessment.unit.pk %}">{{ assessment.unit.title }}</a>{% else %}Épreuve transversale{% endif %}
+      {% if assessment.scheduled_for %} · {{ assessment.scheduled_for|date:"l d F Y à H:i" }}{% endif %}
+    </p>
+  </div>
+  <div class="actions">
+    {% if result %}
+      <a class="button" href="{% url 'formations:result_edit' assessment.pk %}">Modifier le résultat</a>
+    {% else %}
+      <a class="button primary" href="{% url 'formations:result_edit' assessment.pk %}">Saisir le résultat</a>
+    {% endif %}
+    <a class="button" href="{% url 'formations:assessment_competencies' assessment.pk %}">Compétences évaluées</a>
+    <a class="button" href="{% url 'formations:assessment_edit' assessment.pk %}">Modifier</a>
+  </div>
+</header>
+
+{% if assessment.is_upcoming %}
+  <section class="panel countdown">
+    {% comment %}Avant l'épreuve, l'écran sert à réviser : le temps restant, puis quoi travailler.{% endcomment %}
+    <h2>
+      {% if assessment.days_left == 0 %}C’est aujourd’hui
+      {% elif assessment.days_left == 1 %}C’est demain
+      {% else %}Dans {{ assessment.days_left }} jours{% endif %}
+    </h2>
+    <p class="muted">Coefficient {{ assessment.coefficient|floatformat:"-2" }} · barème sur {{ assessment.scale|floatformat:"-2" }}</p>
+  </section>
+{% endif %}
+
+<div class="two-columns">
+  <section class="panel">
+    {% if result %}
+      <h2>Résultat</h2>
+      {% if result.absent %}
+        <p><strong>Absent</strong> — aucune note. Une absence n’est jamais comptée comme un zéro.</p>
+      {% else %}
+        <p class="result-score">
+          <strong>{{ result.score|floatformat:"-2" }}</strong> / {{ result.scale|floatformat:"-2" }}
+          {% comment %}
+            L'équivalent sur 20 n'est utile que si le barème en diffère : « 7,5/20 soit
+            7,5/20 » ne renseigne personne.
+          {% endcomment %}
+          {% if result.scale != 20 and result.out_of_twenty %}
+            <span class="muted">soit {{ result.out_of_twenty|floatformat:"-2" }}/20</span>
+          {% endif %}
+        </p>
+      {% endif %}
+      {% if result.published_on %}<div class="list-row"><span>Publiée le</span><time>{{ result.published_on|date:"d/m/Y" }}</time></div>{% endif %}
+      {% if result.comment %}<div class="list-row"><span>Correcteur</span><span>{{ result.comment }}</span></div>{% endif %}
+      {% if result.self_review %}
+        <h2>Ce que j’en retiens</h2>
+        <p class="muted">{{ result.self_review|linebreaksbr }}</p>
+      {% endif %}
+    {% else %}
+      <h2>Pas encore de résultat</h2>
+      <p class="empty">L’évaluation existe avant sa note : c’est ce qui permet de la préparer.</p>
+    {% endif %}
+
+    {% if assessment.description %}
+      <h2>Description</h2>
+      <p class="muted">{{ assessment.description|linebreaksbr }}</p>
+    {% endif %}
+
+    {% if average %}
+      <h2>Moyenne de la matière</h2>
+      {% comment %}
+        La méthode accompagne toujours le chiffre : une moyenne sans sa règle de calcul ne
+        peut être ni vérifiée ni contestée.
+      {% endcomment %}
+      {% if average.exists %}
+        <p class="result-score"><strong>{{ average.value|floatformat:"-2" }}</strong> / 20</p>
+      {% else %}
+        <p class="empty">Pas calculable pour l’instant.</p>
+      {% endif %}
+      <p class="field-help">{{ average.method }}</p>
+      {% for warning in average.warnings %}<p class="field-help warning">{{ warning }}</p>{% endfor %}
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Compétences évaluées</h2>
+    {% for competency in assessment.competencies.all %}
+      <div class="list-row">
+        <a href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
+      </div>
+    {% empty %}
+      <div class="empty-state">
+        <p class="empty">Aucune compétence déclarée. Sans elles, impossible de savoir quoi réviser.</p>
+        <a class="button" href="{% url 'formations:assessment_competencies' assessment.pk %}">Les déclarer</a>
+      </div>
+    {% endfor %}
+
+    {% if weak %}
+      <h2>{% if result %}À reprendre{% else %}À travailler d’abord{% endif %}</h2>
+      <p class="field-help">
+        Les compétences que vous n’avez pas déclarées acquises. Le niveau vient de vous :
+        rien n’est déduit de la note.
+      </p>
+      {% for row in weak %}
+        <div class="list-row">
+          <div>
+            <a href="{% url 'formations:competency' row.competency.pk %}">{{ row.competency.title }}</a>
+            {% if row.record %}
+              <p class="muted">{{ row.record.mastery_level }} - {{ row.record.get_mastery_level_display }}</p>
+            {% endif %}
+          </div>
+          <div class="actions">
+            <a class="button small quiet" href="{% url 'sablier:home' %}?competency={{ row.competency.pk }}">Sablier</a>
+            <a class="button small quiet" href="{% url 'formations:progress' row.competency.pk %}">Où j’en suis</a>
+          </div>
+        </div>
+      {% endfor %}
+    {% elif assessment.competencies.exists %}
+      <p class="empty">Toutes les compétences évaluées sont déclarées acquises.</p>
+    {% endif %}
+
+    <h2>De quoi réviser</h2>
+    {% for group in competency_resources %}
+      <h3 class="resource-group">{{ group.label }}</h3>
+      {% for resource in group.items %}
+        <div class="list-row"><a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a></div>
+      {% endfor %}
+    {% empty %}
+      <p class="empty">Aucune ressource n’est associée aux compétences évaluées.</p>
+    {% endfor %}
+
+    <h2>Préparer</h2>
+    <div class="actions">
+      <a class="button" href="{% url 'planner:task_new' %}?next={{ request.path|urlencode }}">Créer une tâche de révision</a>
+      <a class="button" href="{% url 'planner:event_new' %}?next={{ request.path|urlencode }}">Réserver un créneau</a>
+    </div>
+  </section>
+</div>
+
+<p class="muted secondary-action">
+  <a class="danger-link" href="{% url 'formations:assessment_delete' assessment.pk %}">Supprimer cette évaluation</a>
+</p>
+{% endblock %}
