@@ -21,6 +21,17 @@ def env_list(name: str, default: str = "") -> list[str]:
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-insecure-key-change-me")
 DEBUG = env_bool("DJANGO_DEBUG", True)
+# La suite de tests s'exécute avec les réglages de production en intégration continue.
+# Deux d'entre eux n'ont pourtant aucun sens sous `manage.py test`, où rien n'est servi
+# à personne : ils sont neutralisés ici plutôt qu'un par un.
+RUNNING_TESTS = "test" in sys.argv
+
+# Commandes qui n'ouvrent aucune base. Elles s'exécutent pendant la construction de
+# l'image Docker, avec DJANGO_DEBUG=false et sans DATABASE_URL — aucun secret de base
+# n'existe encore à ce moment-là. Exiger la base ici ferait échouer la construction
+# elle-même, bien avant qu'il soit question de servir quoi que ce soit.
+DATABASE_FREE_COMMANDS = {"collectstatic", "generate_chime", "makemessages", "compilemessages"}
+BUILDING_IMAGE = bool(DATABASE_FREE_COMMANDS.intersection(sys.argv))
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 CSP_EXTERNAL_MEDIA_SOURCES = env_list("CSP_EXTERNAL_MEDIA_SOURCES")
@@ -111,7 +122,7 @@ def database_from_url(url: str) -> dict[str, object]:
     }
 
 
-def database_config(url: str | None, *, debug: bool) -> dict[str, object]:
+def database_config(url: str | None, *, debug: bool, allow_fallback: bool = False) -> dict[str, object]:
     """La base à utiliser, et le refus de démarrer sans elle en production.
 
     Sans `DATABASE_URL`, le repli SQLite écrit dans `src/data/`, un répertoire créé par
@@ -123,7 +134,7 @@ def database_config(url: str | None, *, debug: bool) -> dict[str, object]:
     """
     if url:
         return database_from_url(url)
-    if not debug:
+    if not debug and not allow_fallback:
         raise ImproperlyConfigured(
             "DATABASE_URL PostgreSQL est obligatoire hors débogage : "
             "le repli SQLite n'est pas persisté et serait perdu au redéploiement."
@@ -132,7 +143,9 @@ def database_config(url: str | None, *, debug: bool) -> dict[str, object]:
     return {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "data" / "db.sqlite3"}
 
 
-DATABASES = {"default": database_config(os.getenv("DATABASE_URL"), debug=DEBUG)}
+DATABASES = {
+    "default": database_config(os.getenv("DATABASE_URL"), debug=DEBUG, allow_fallback=RUNNING_TESTS or BUILDING_IMAGE)
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -143,7 +156,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # La suite de tests crée des comptes en permanence ; le hachage par défaut, volontairement
 # coûteux, y domine le temps d'exécution sans rien protéger. Uniquement sous `manage.py test`.
-if "test" in sys.argv:
+if RUNNING_TESTS:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 LANGUAGE_CODE = "fr-fr"
@@ -165,9 +178,14 @@ MEDIA_INTERNAL_LOCATION = os.getenv("MEDIA_INTERNAL_LOCATION", "")
 USE_S3 = env_bool("USE_S3", False)
 STORAGES = {
     "staticfiles": {
+        # Le stockage à manifeste renomme chaque fichier avec l'empreinte de son contenu.
+        # Sous les tests, cela rendrait `sablier/decor.js` sous la forme
+        # `sablier/decor.5871027460a5.js` : les vérifications qui s'assurent qu'aucune
+        # ressource n'est chargée depuis un CDN échouaient sur le nom, sans que rien ne
+        # soit cassé. La suite dépendait en outre d'un `collectstatic` préalable.
         "BACKEND": (
             "django.contrib.staticfiles.storage.StaticFilesStorage"
-            if DEBUG
+            if DEBUG or RUNNING_TESTS
             else "whitenoise.storage.CompressedManifestStaticFilesStorage"
         )
     },
@@ -258,7 +276,25 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = not DEBUG
+
+
+def redirect_to_https(debug: bool, running_tests: bool) -> bool:
+    """La redirection HTTPS, sauf sous `manage.py test`.
+
+    Le client de test parle en clair. Avec la redirection active, `SecurityMiddleware`
+    répondait 301 avant que la requête n'atteigne la vue : ni en-tête de sécurité, ni
+    identifiant de requête, ni contexte de gabarit, et `/healthz/` rendait une page de
+    redirection au lieu de son JSON. La suite entière échouait — mais uniquement en
+    intégration continue, seul endroit où elle tourne avec `DJANGO_DEBUG=false`, ce qui
+    laissait le défaut invisible en local.
+
+    Neutraliser le réglage plutôt que faire parler les tests en HTTPS : la redirection
+    n'est pas ce qu'ils vérifient, et `check --deploy` continue de l'exiger en production.
+    """
+    return not debug and not running_tests
+
+
+SECURE_SSL_REDIRECT = redirect_to_https(DEBUG, RUNNING_TESTS)
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True

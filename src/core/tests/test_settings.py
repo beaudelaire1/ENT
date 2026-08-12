@@ -1,9 +1,11 @@
 """Réglages dont une erreur ne se voit pas à l'exécution."""
 
+from pathlib import Path
+
 from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
-from config.settings import build_middleware, database_config
+from config.settings import DATABASE_FREE_COMMANDS, build_middleware, database_config, redirect_to_https
 
 WHITENOISE = "whitenoise.middleware.WhiteNoiseMiddleware"
 POSTGRES_URL = "postgresql://myent:secret@postgres:5432/myent"
@@ -45,3 +47,38 @@ class DatabaseConfigurationTests(SimpleTestCase):
             database_config(None, debug=False)
         with self.assertRaises(ImproperlyConfigured):
             database_config("", debug=False)
+
+    def test_the_fallback_is_allowed_where_nothing_is_served(self):
+        """Tests et construction de l'image : `collectstatic` tourne sans base, avant tout secret.
+
+        Sans cette dérogation, le garde-fou ferait échouer la construction de l'image
+        Docker elle-même — bien avant qu'il soit question de servir quoi que ce soit.
+        """
+        config = database_config(None, debug=False, allow_fallback=True)
+        self.assertEqual(config["ENGINE"], "django.db.backends.sqlite3")
+
+    def test_the_database_free_commands_cover_the_image_build(self):
+        """Les commandes de la dérogation sont bien celles que le Dockerfile exécute."""
+        dockerfile = (Path(__file__).resolve().parents[3] / "Dockerfile").read_text(encoding="utf-8")
+        for command in ("generate_chime", "collectstatic"):
+            self.assertIn(command, dockerfile)
+            self.assertIn(command, DATABASE_FREE_COMMANDS)
+
+
+class HttpsRedirectTests(SimpleTestCase):
+    """La redirection HTTPS est exigée en production et interdite sous les tests.
+
+    Le client de test parle en clair : avec la redirection active, chaque requête
+    recevait un 301 avant d'atteindre sa vue, et la suite entière tombait — mais
+    seulement en intégration continue, où `DJANGO_DEBUG` vaut false.
+    """
+
+    def test_production_redirects(self):
+        self.assertTrue(redirect_to_https(debug=False, running_tests=False))
+
+    def test_development_does_not(self):
+        self.assertFalse(redirect_to_https(debug=True, running_tests=False))
+
+    def test_the_test_suite_never_redirects(self):
+        self.assertFalse(redirect_to_https(debug=False, running_tests=True))
+        self.assertFalse(redirect_to_https(debug=True, running_tests=True))
