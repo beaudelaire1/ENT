@@ -26,7 +26,14 @@ def dispatch_due_reminders():
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 4})
 def deliver_reminder(self, reminder_id: int):
     with transaction.atomic():
-        reminder = Reminder.objects.select_for_update().select_related("owner", "task", "event").get(pk=reminder_id)
+        # Seul `owner` est préchargé. `task` et `event` sont facultatifs : les précharger
+        # produisait des jointures externes, et PostgreSQL refuse de poser un verrou sur
+        # le côté nullable d'une telle jointure — « FOR UPDATE cannot be applied to the
+        # nullable side of an outer join ». La remise des rappels échouait donc à chaque
+        # fois en production, sans que rien ne le montre : SQLite ignore purement et
+        # simplement `select_for_update`, et c'est sur SQLite que tournaient les tests.
+        # La cible est lue juste après, hors du verrou, pour une requête de plus.
+        reminder = Reminder.objects.select_for_update().select_related("owner").get(pk=reminder_id)
         if reminder.status == Reminder.Status.SENT:
             return "already-sent"
         reminder.status = Reminder.Status.PROCESSING
