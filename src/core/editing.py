@@ -37,6 +37,7 @@ def form_page(
     multipart: bool = False,
     template: str = "core/_form_page.html",
     extra: dict | None = None,
+    after_save=None,
 ):
     """Affiche le formulaire, l'enregistre, et ramène là d'où l'on vient.
 
@@ -46,6 +47,10 @@ def form_page(
     """
     if request.method == "POST" and form.is_valid():
         obj = form.save()
+        # ``after_save`` sert aux rattachements que le formulaire ne porte pas : créer une
+        # compétence depuis une matière doit aussi créer le lien entre les deux.
+        if after_save is not None:
+            after_save(obj)
         messages.success(request, f"« {obj} » enregistré.")
         return redirect(safe_next(request, fallback(obj)))
     context = {

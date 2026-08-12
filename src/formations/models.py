@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from core.models import OwnedQuerySet, TimeStampedModel
 
@@ -55,8 +56,48 @@ class Period(TimeStampedModel):
         return self.title
 
 
+class LearningGroup(TimeStampedModel):
+    """Un regroupement de matières à l'intérieur d'une période : UE, bloc, domaine.
+
+    Facultatif, et c'est le point. Une licence universitaire organise ses matières en
+    unités d'enseignement ; une formation courte n'a que des périodes et des matières.
+    Rendre l'UE obligatoire aurait imposé la structure de l'Université de Guyane à toute
+    formation ; ne pas la prévoir aurait obligé à la simuler dans les intitulés.
+
+    Le type est un texte libre plutôt qu'une liste fermée : personne ne peut énumérer
+    d'avance les découpages de toutes les formations. Des exemples sont proposés à la
+    saisie.
+    """
+
+    KIND_SUGGESTIONS = ("UE", "Bloc", "Domaine", "Parcours", "Option")
+
+    period = models.ForeignKey(Period, verbose_name="période", on_delete=models.CASCADE, related_name="groups")
+    title = models.CharField("intitulé", max_length=180)
+    code = models.CharField("code", max_length=40, blank=True, help_text="Référence de la maquette, si elle en a une.")
+    kind = models.CharField("type", max_length=40, blank=True, help_text="UE, bloc, domaine… Laissez vide si inutile.")
+    order = models.PositiveSmallIntegerField("ordre", default=0)
+
+    class Meta:
+        verbose_name = "regroupement"
+        verbose_name_plural = "regroupements"
+        ordering = ["order", "title"]
+        constraints = [models.UniqueConstraint(fields=["period", "title"], name="unique_group_per_period")]
+
+    def __str__(self):
+        return f"{self.code} · {self.title}" if self.code else self.title
+
+
 class LearningUnit(TimeStampedModel):
     period = models.ForeignKey(Period, verbose_name="période", on_delete=models.CASCADE, related_name="units")
+    group = models.ForeignKey(
+        LearningGroup,
+        verbose_name="regroupement",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="units",
+        help_text="Facultatif : une formation sans UE laisse ce champ vide.",
+    )
     title = models.CharField("intitulé", max_length=180)
     description = models.TextField("description", blank=True)
     order = models.PositiveSmallIntegerField("ordre", default=0)
@@ -75,7 +116,37 @@ class LearningUnit(TimeStampedModel):
 
 
 class Competency(TimeStampedModel):
-    unit = models.ForeignKey(LearningUnit, verbose_name="module", on_delete=models.CASCADE, related_name="competencies")
+    """Ce qui doit être maîtrisé. Rattaché au parcours, travaillé dans une ou plusieurs matières.
+
+    Le rattachement exclusif à une matière rendait impossible ce qui est courant : une
+    même compétence travaillée dans deux matières. « Rédiger une démonstration au
+    tableau » est un seul savoir-faire, exercé aux deux semestres ; le modèle en faisait
+    deux compétences distinctes, avec deux suivis à tenir en parallèle et aucun moyen de
+    savoir qu'il s'agissait de la même chose.
+
+    La période reste facultative : elle situe une compétence dans le temps quand cela a
+    un sens, sans l'y enfermer.
+    """
+
+    path = models.ForeignKey(
+        LearningPath, verbose_name="formation", on_delete=models.CASCADE, related_name="competencies"
+    )
+    period = models.ForeignKey(
+        Period,
+        verbose_name="période",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="competencies",
+        help_text="Facultatif : une compétence peut traverser plusieurs périodes.",
+    )
+    units = models.ManyToManyField(
+        LearningUnit,
+        verbose_name="matières",
+        through="UnitCompetency",
+        related_name="competencies",
+        blank=True,
+    )
     title = models.CharField("intitulé", max_length=220)
     description = models.TextField("description", blank=True)
     order = models.PositiveSmallIntegerField("ordre", default=0)
@@ -87,10 +158,65 @@ class Competency(TimeStampedModel):
         verbose_name = "compétence"
         verbose_name_plural = "compétences"
         ordering = ["order", "title"]
-        constraints = [models.UniqueConstraint(fields=["unit", "title"], name="unique_competency_per_unit")]
+        constraints = [models.UniqueConstraint(fields=["path", "title"], name="unique_competency_per_path")]
 
     def __str__(self):
         return self.title
+
+    @property
+    def primary_unit(self):
+        """La matière où la compétence se travaille d'abord, s'il y en a une.
+
+        Sert à la placer dans la grille de suivi : une compétence partagée n'y apparaît
+        qu'une fois en saisie, sous cette matière, et se lit ailleurs.
+        """
+        link = self.unit_links.order_by("-is_primary", "unit__period__order", "order", "pk").first()
+        return link.unit if link else None
+
+    def clean(self):
+        if self.period_id and self.period.path_id != self.path_id:
+            raise ValidationError({"period": "Cette période appartient à une autre formation."})
+
+
+class UnitCompetency(models.Model):
+    """Le lien entre une matière et une compétence, avec ce qui n'appartient qu'au lien.
+
+    L'ordre dans la matière, le caractère principal ou secondaire et l'objectif local
+    dépendent du couple, non de la compétence : « Rédiger une démonstration » est
+    centrale au module d'oraux et secondaire ailleurs.
+    """
+
+    unit = models.ForeignKey(
+        LearningUnit, verbose_name="matière", on_delete=models.CASCADE, related_name="competency_links"
+    )
+    competency = models.ForeignKey(
+        Competency, verbose_name="compétence", on_delete=models.CASCADE, related_name="unit_links"
+    )
+    order = models.PositiveSmallIntegerField("ordre dans la matière", default=0)
+    is_primary = models.BooleanField(
+        "principale dans cette matière",
+        default=True,
+        help_text="Une compétence secondaire est rappelée sans être saisie ici.",
+    )
+    local_objective = models.CharField(
+        "objectif local",
+        max_length=240,
+        blank=True,
+        help_text="Ce qui est attendu dans cette matière en particulier, s'il y a une nuance.",
+    )
+
+    class Meta:
+        verbose_name = "compétence de matière"
+        verbose_name_plural = "compétences de matière"
+        ordering = ["order", "competency__title"]
+        constraints = [models.UniqueConstraint(fields=["unit", "competency"], name="unique_competency_per_unit_link")]
+
+    def __str__(self):
+        return f"{self.unit} · {self.competency}"
+
+    def clean(self):
+        if self.unit.period.path_id != self.competency.path_id:
+            raise ValidationError("La matière et la compétence doivent appartenir à la même formation.")
 
 
 class MetricDefinition(models.Model):
@@ -224,6 +350,27 @@ class MetricValue(models.Model):
 
 
 class ProgressRecord(TimeStampedModel):
+    """La situation d'un étudiant sur une compétence — distincte de la compétence elle-même.
+
+    ``Competency`` décrit ce qui doit être maîtrisé ; cet objet décrit où en est une
+    personne. La séparation est maintenue exprès : la maquette ne change pas parce qu'un
+    étudiant progresse.
+
+    Le niveau n'est jamais déduit du temps travaillé. Avoir passé dix heures sur une notion
+    ne prouve pas qu'on la maîtrise, et l'inverse est vrai aussi ; le calculer
+    automatiquement produirait un chiffre faux dont l'étudiant ne pourrait rien faire.
+    """
+
+    class Origin(models.TextChoices):
+        """D'où vient le niveau affiché.
+
+        Un niveau proposé par l'application — par exemple à partir d'un résultat
+        d'évaluation — ne doit pas se confondre avec celui que l'étudiant a posé lui-même.
+        """
+
+        MANUAL = "manual", "Déclaré par moi"
+        SUGGESTED = "suggested", "Suggéré, à confirmer"
+
     class Mastery(models.IntegerChoices):
         NOT_STARTED = 0, "Non abordé"
         DISCOVERED = 1, "Découvert"
@@ -256,6 +403,28 @@ class ProgressRecord(TimeStampedModel):
         validators=[MinValueValidator(0)],
     )
     notes = models.TextField("commentaires", blank=True)
+    assessed_at = models.DateTimeField(
+        "dernière autoévaluation",
+        null=True,
+        blank=True,
+        help_text="Renseignée automatiquement quand le niveau change.",
+    )
+    level_origin = models.CharField(
+        "origine du niveau",
+        max_length=10,
+        choices=Origin.choices,
+        default=Origin.MANUAL,
+        help_text="Un niveau suggéré reste une proposition tant qu'il n'est pas confirmé.",
+    )
+    target_level = models.PositiveSmallIntegerField(
+        "objectif de maîtrise",
+        null=True,
+        blank=True,
+        choices=Mastery.choices,
+        validators=[MinValueValidator(0), MaxValueValidator(4)],
+        help_text="Le niveau que vous visez, s'il diffère de la maîtrise complète.",
+    )
+    target_date = models.DateField("à atteindre le", null=True, blank=True, help_text="Une date d'examen, par exemple.")
 
     class Meta:
         verbose_name = "progression"
@@ -269,11 +438,42 @@ class ProgressRecord(TimeStampedModel):
             models.CheckConstraint(condition=models.Q(actual_hours__gte=0), name="progress_actual_hours_positive"),
         ]
 
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Retient le niveau lu en base, pour savoir plus tard s'il a changé."""
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_mastery_level = instance.mastery_level
+        return instance
+
+    def save(self, *args, **kwargs):
+        """Horodate l'autoévaluation quand, et seulement quand, le niveau change.
+
+        Une ligne créée d'office par la grille part à « non abordé » : rien n'a été évalué,
+        la date reste vide. Sans cette nuance, toutes les compétences d'une formation
+        paraîtraient évaluées le jour où l'on ouvre la grille pour la première fois.
+        """
+        previous = getattr(self, "_loaded_mastery_level", None)
+        changed = previous != self.mastery_level if previous is not None else bool(self.mastery_level)
+        if changed:
+            self.assessed_at = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None and "assessed_at" not in update_fields:
+                kwargs["update_fields"] = [*update_fields, "assessed_at"]
+        super().save(*args, **kwargs)
+        self._loaded_mastery_level = self.mastery_level
+
     @property
     def percent(self) -> int:
         """Progression affichée : le niveau de maîtrise rapporté à son maximum."""
         return round(self.mastery_level * 100 / 4)
 
+    @property
+    def reaches_target(self) -> bool | None:
+        """L'objectif est-il atteint ? ``None`` quand aucun objectif n'est fixé."""
+        if self.target_level is None:
+            return None
+        return self.mastery_level >= self.target_level
+
     def clean(self):
-        if self.competency.unit.period.path.owner_id != self.owner_id:
+        if self.competency.path.owner_id != self.owner_id:
             raise ValidationError("La progression appartient à un autre utilisateur.")

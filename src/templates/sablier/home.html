@@ -29,7 +29,7 @@
         <label>COMPÉTENCE TRAVAILLÉE
           <select id="session-competency">
             <option value="">Aucune · ne rien reporter</option>
-            {% for competency in competencies %}<option value="{{ competency.pk }}">{{ competency.unit.title }} · {{ competency.title }}</option>{% endfor %}
+            {% for competency in competencies %}<option value="{{ competency.pk }}"{% if selected_competency == competency.pk %} selected{% endif %}>{% firstof competency.primary_unit.title competency.period.title "Transversale" %} · {{ competency.title }}</option>{% endfor %}
           </select>
         </label>
         <p class="shortcut-help">Le temps de la session sera ajouté au temps réel de cette compétence.</p>

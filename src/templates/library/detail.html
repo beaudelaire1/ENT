@@ -57,7 +57,7 @@
     {% for competency in competencies %}
       <div class="list-row">
         <a href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
-        <span class="muted">{{ competency.unit.title }}</span>
+        <span class="muted">{% firstof competency.primary_unit.title competency.period.title "Transversale" %}</span>
       </div>
     {% empty %}
       <p class="empty">Cette ressource n’est reliée à aucune compétence.</p>

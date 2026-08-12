@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from formations.models import Competency, LearningPath, LearningUnit, MetricDefinition, Period
+from formations.tests.factories import competency_in
 
 
 class FormationsScopingTests(TestCase):
@@ -33,12 +34,12 @@ class FormationsScopingTests(TestCase):
         self.assertEqual(LearningUnit.objects.filter(period=self.period, title="Algorithmique").count(), 1)
 
     def test_duplicate_competency_is_a_form_error(self):
-        Competency.objects.create(unit=self.unit, title="Trier une liste")
+        competency_in(self.unit, title="Trier une liste")
         response = self.client.post(
             reverse("formations:competency_new", args=[self.unit.pk]), {"title": "Trier une liste", "order": 0}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(Competency.objects.filter(unit=self.unit, title="Trier une liste").count(), 1)
+        self.assertEqual(Competency.objects.filter(units=self.unit, title="Trier une liste").count(), 1)
 
     def test_duplicate_metric_key_is_a_form_error(self):
         MetricDefinition.objects.create(path=self.path, key="heures", label="Heures")

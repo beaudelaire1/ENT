@@ -28,7 +28,7 @@
       <div class="list-row">
         <div>
           <a href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
-          <p class="muted">{{ competency.unit.title }} · {{ competency.unit.period.title }}</p>
+          <p class="muted">{% firstof competency.primary_unit.title "Transversale" %}{% if competency.period %} · {{ competency.period.title }}{% endif %}</p>
         </div>
         <form method="post" class="inline-form">
           {% csrf_token %}
@@ -49,7 +49,7 @@
           <input type="checkbox" name="chosen" value="{{ competency.pk }}">
           <span>
             <strong>{{ competency.title }}</strong>
-            <span class="muted">{{ competency.unit.title }} · {{ competency.unit.period.path.title }}</span>
+            <span class="muted">{% firstof competency.primary_unit.title "Transversale" %} · {{ competency.path.title }}</span>
           </span>
         </label>
       {% empty %}

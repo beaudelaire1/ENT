@@ -33,6 +33,16 @@ def unit_crumbs(unit) -> list[dict]:
 
 
 def competency_crumbs(competency) -> list[dict]:
-    return unit_crumbs(competency.unit) + [
-        crumb(competency.title, reverse("formations:competency", args=[competency.pk]))
-    ]
+    """Le chemin d'une compétence dépend de ce à quoi elle est rattachée.
+
+    Une compétence transversale n'appartient à aucune matière : son fil s'arrête à la
+    période, ou à la formation. Passer par une matière inexistante aurait échoué.
+    """
+    unit = competency.primary_unit
+    if unit is not None:
+        head = unit_crumbs(unit)
+    elif competency.period_id:
+        head = period_crumbs(competency.period)
+    else:
+        head = path_crumbs(competency.path)
+    return head + [crumb(competency.title, reverse("formations:competency", args=[competency.pk]))]

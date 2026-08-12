@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Compétences · {{ unit.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">COMPÉTENCES DE LA MATIÈRE</p>
+    <h1>{{ unit.title }}</h1>
+    <p class="muted">{{ unit.period.path.title }} · {{ unit.period.title }}</p>
+  </div>
+  <div class="actions">
+    <a class="button" href="{{ back_to }}">Retour</a>
+    <a class="button primary" href="{% url 'formations:competency_new' unit.pk %}">Créer une compétence</a>
+  </div>
+</header>
+
+<section class="panel">
+  <h2>Rattachées à cette matière</h2>
+  {% comment %}
+    Une compétence peut être exercée par plusieurs matières. La détacher d'ici ne la
+    supprime pas : elle reste dans la formation, et dans les autres matières.
+  {% endcomment %}
+  {% for link in links %}
+    <div class="list-row">
+      <div>
+        <a href="{% url 'formations:competency' link.competency.pk %}">{{ link.competency.title }}</a>
+        <p class="muted">
+          {% if link.is_primary %}Principale ici{% else %}Rappelée ici, saisie ailleurs{% endif %}
+          {% if link.local_objective %} · {{ link.local_objective }}{% endif %}
+        </p>
+      </div>
+      <div class="actions">
+        <a class="button small quiet" href="{% url 'formations:link_edit' link.pk %}">Rôle</a>
+        <form method="post" class="inline-form">
+          {% csrf_token %}
+          <button class="button small quiet danger" name="remove" value="{{ link.competency_id }}" type="submit">Détacher</button>
+        </form>
+      </div>
+    </div>
+  {% empty %}
+    <p class="empty">Aucune compétence rattachée à cette matière.</p>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Rattacher une compétence existante</h2>
+  <p class="field-help">Utile pour une compétence transversale : la déclarer une fois, l’exercer dans plusieurs matières.</p>
+  <form method="get" class="filter-form" role="search">
+    <div class="field">
+      <label for="q">Chercher dans les compétences de la formation</label>
+      <input id="q" type="search" name="q" value="{{ query }}" placeholder="démonstration, compacité…">
+    </div>
+    <div class="form-actions">
+      <button class="button" type="submit">Filtrer</button>
+      {% if query %}<a class="button quiet" href="{{ request.path }}">Effacer</a>{% endif %}
+    </div>
+  </form>
+
+  <form method="post">
+    {% csrf_token %}
+    <p class="muted">{{ total }} compétence{{ total|pluralize }} disponible{{ total|pluralize }}{% if truncated %}, dont {{ truncated }} non affichée{{ truncated|pluralize }} : précisez la recherche{% endif %}.</p>
+    {% for competency in candidates %}
+      <label class="pick-row">
+        <input type="checkbox" name="competencies" value="{{ competency.pk }}">
+        <span>
+          <strong>{{ competency.title }}</strong>
+          <span class="muted">{% if competency.period %}{{ competency.period.title }}{% else %}Transversale{% endif %}</span>
+        </span>
+      </label>
+    {% empty %}
+      <p class="empty">{% if query %}Aucune compétence ne correspond.{% else %}Toutes les compétences de la formation sont déjà rattachées ici.{% endif %}</p>
+    {% endfor %}
+    {% if candidates %}
+      <div class="form-actions"><button class="button primary" type="submit">Rattacher</button></div>
+    {% endif %}
+  </form>
+</section>
+{% endblock %}

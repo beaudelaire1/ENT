@@ -62,7 +62,20 @@
             </tr>
           </thead>
           <tbody>
-            {% for unit in period.units %}
+            {% for bucket in period.groups %}
+              {% if bucket.group %}
+                {% comment %}
+                  Bandeau d'UE : présent seulement si la formation déclare des
+                  regroupements. Une formation courte n'en voit jamais.
+                {% endcomment %}
+                <tr class="group-row">
+                  <th class="col-label" colspan="{{ grid.column_count }}">
+                    {% if bucket.group.code %}<span class="group-code">{{ bucket.group.code }}</span>{% endif %}
+                    {{ bucket.group.title }}{% if bucket.group.kind %} <span class="muted">({{ bucket.group.kind }})</span>{% endif %}
+                  </th>
+                </tr>
+              {% endif %}
+            {% for unit in bucket.units %}
               <tr class="unit-row">
                 <th scope="rowgroup" class="col-label"><a href="{% url 'formations:unit' unit.unit.pk %}">{{ unit.unit.title }}</a></th>
                 {% for cell in unit.cells %}
@@ -87,20 +100,7 @@
                 <td class="col-notes"></td>
               </tr>
               {% for row in unit.rows %}
-                <tr class="competency-row">
-                  <td class="col-label competency">{{ row.competency.title }}</td>
-                  {% if grid.metric_count %}<td colspan="{{ grid.metric_count }}" class="spacer"></td>{% endif %}
-                  <td>{{ row.form.id }}{{ row.form.planned_hours }}</td>
-                  <td>{{ row.form.actual_hours }}</td>
-                  <td>{{ row.form.mastery_level }}</td>
-                  <td class="col-progress">
-                    <div class="progress-bar" data-progress-for="{{ row.form.mastery_level.id_for_label }}">
-                      <div class="progress-fill level-{{ row.form.instance.mastery_level }}" style="width:{{ row.form.instance.percent }}%"></div>
-                    </div>
-                  </td>
-                  <td class="col-notes">{{ row.form.notes }}</td>
-                </tr>
-                {% if row.form.errors %}<tr class="row-errors"><td colspan="{{ grid.column_count }}">{{ row.form.errors }}</td></tr>{% endif %}
+                {% include "formations/_tracking_row.html" %}
               {% empty %}
                 <tr class="competency-row">
                   <td class="col-label competency muted" colspan="{{ grid.column_count }}">
@@ -108,9 +108,20 @@
                   </td>
                 </tr>
               {% endfor %}
+            {% endfor %}
             {% empty %}
               <tr><td colspan="{{ grid.column_count }}" class="empty">Aucune matière dans cette période. <a href="{% url 'formations:unit_new' period.period.pk %}">En ajouter une</a>.</td></tr>
             {% endfor %}
+            {% if period.loose %}
+              {% comment %}
+                Compétences rattachées à la période sans appartenir à une matière : elles
+                doivent rester saisissables, sinon elles disparaissent de l'écran.
+              {% endcomment %}
+              <tr class="unit-row">
+                <th scope="rowgroup" class="col-label" colspan="{{ grid.column_count }}">Sans matière rattachée</th>
+              </tr>
+              {% for row in period.loose %}{% include "formations/_tracking_row.html" %}{% endfor %}
+            {% endif %}
           </tbody>
           {% if period.units %}
             <tfoot>
@@ -132,6 +143,47 @@
   {% empty %}
     <section class="panel"><p class="empty">Cette formation n’a pas encore de période. <a href="{% url 'formations:period_new' path.pk %}">En créer une</a>.</p></section>
   {% endfor %}
+
+  {% if grid.orphans %}
+    {% comment %}
+      Compétences du parcours sans période ni matière : transversales à toute la
+      formation. Elles se saisissent ici plutôt que nulle part.
+    {% endcomment %}
+    <section class="tracking-period">
+      <h2 class="period-banner">Compétences transversales</h2>
+      <p class="field-help">Rattachées à la formation entière, sans période ni matière particulière.</p>
+      <div class="table-scroll">
+        <table class="tracking-table">
+          <thead>
+            <tr>
+              <th class="col-label">Compétence</th>
+              {% for definition in grid.definitions %}<th class="col-metric">{{ definition.label }}</th>{% endfor %}
+              <th>Travail personnel estimé (h)</th>
+              <th>Temps réel (h)</th>
+              <th>Niveau de maîtrise</th>
+              <th class="col-progress">Progression</th>
+              <th class="col-notes">Commentaires</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in grid.orphans %}{% include "formations/_tracking_row.html" %}{% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th class="col-label" colspan="{{ grid.metric_count|add:1 }}">Total transversal</th>
+              <td class="total">{{ grid.orphan_totals.planned|floatformat:"-2" }}</td>
+              <td class="total">{{ grid.orphan_totals.actual|floatformat:"-2" }}</td>
+              <td>{{ grid.orphan_totals.percent }} %</td>
+              <td class="col-progress">
+                <div class="progress-bar"><div class="progress-fill" style="width:{{ grid.orphan_totals.percent }}%"></div></div>
+              </td>
+              <td class="col-notes"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  {% endif %}
 
   {% if grid.periods %}
     <div class="tracking-actions">

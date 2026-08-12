@@ -77,20 +77,37 @@ SOURCES: dict[str, SearchSource] = {
         url=lambda o: reverse("formations:detail", args=[o.pk]),
     ),
     "unit": SearchSource(
-        label="Modules",
+        label="Matières",
         model_label="formations.LearningUnit",
         owner=lambda o: o.period.path.owner,
         title=lambda o: o.title,
-        body=lambda o: _joined(o.description, o.period.title, o.period.path.title),
+        body=lambda o: _joined(o.description, o.period.title, o.period.path.title, o.group.title if o.group else ""),
         url=lambda o: reverse("formations:unit", args=[o.pk]),
     ),
     "competency": SearchSource(
         label="Compétences",
         model_label="formations.Competency",
-        owner=lambda o: o.unit.period.path.owner,
+        owner=lambda o: o.path.owner,
         title=lambda o: o.title,
-        body=lambda o: _joined(o.description, o.unit.title),
-        url=lambda o: reverse("formations:unit", args=[o.unit_id]),
+        # Les matières où elle se travaille entrent dans le corps : chercher « topologie »
+        # doit ramener ses compétences, même si l'intitulé ne contient pas le mot.
+        body=lambda o: _joined(
+            o.description,
+            o.period.title if o.period_id else "",
+            o.path.title,
+            *[link.unit.title for link in o.unit_links.select_related("unit")],
+        ),
+        # La compétence a sa propre page : la recherche y mène directement, au lieu de
+        # renvoyer vers sa matière et de laisser l'utilisateur la retrouver dans une liste.
+        url=lambda o: reverse("formations:competency", args=[o.pk]),
+    ),
+    "group": SearchSource(
+        label="Regroupements",
+        model_label="formations.LearningGroup",
+        owner=lambda o: o.period.path.owner,
+        title=lambda o: str(o),
+        body=lambda o: _joined(o.kind, o.period.title, o.period.path.title),
+        url=lambda o: f"{reverse('formations:detail', args=[o.period.path_id])}#periode-{o.period_id}",
     ),
 }
 

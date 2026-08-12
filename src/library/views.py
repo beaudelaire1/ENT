@@ -69,7 +69,7 @@ def item_detail(request, pk):
             "item": item,
             # Les relations inverses : à quoi la ressource sert, et non seulement ce
             # qu'elle est.
-            "competencies": item.competencies.select_related("unit__period__path"),
+            "competencies": item.competencies.select_related("path", "period").prefetch_related("unit_links__unit"),
             "units": item.learning_units.select_related("period__path"),
             "breadcrumbs": item_crumbs(item),
         },
@@ -93,11 +93,7 @@ def item_links(request, pk):
         removed = request.POST.get("remove")
         chosen = request.POST.getlist("chosen")
         model = Competency if target == "competency" else LearningUnit
-        scope = (
-            {"unit__period__path__owner": request.user}
-            if target == "competency"
-            else {"period__path__owner": request.user}
-        )
+        scope = {"path__owner": request.user} if target == "competency" else {"period__path__owner": request.user}
         if removed:
             holder = get_object_or_404(model, pk=removed, **scope)
             holder.resources.remove(item)
@@ -112,21 +108,19 @@ def item_links(request, pk):
         return redirect(request.get_full_path())
 
     query = request.GET.get("q", "").strip()
-    competencies = Competency.objects.filter(unit__period__path__owner=request.user).select_related(
-        "unit__period__path"
-    )
+    competencies = Competency.objects.filter(path__owner=request.user).select_related("path", "period")
     units = LearningUnit.objects.filter(period__path__owner=request.user).select_related("period__path")
     if query:
-        competencies = competencies.filter(Q(title__icontains=query) | Q(unit__title__icontains=query))
+        competencies = competencies.filter(Q(title__icontains=query) | Q(units__title__icontains=query)).distinct()
         units = units.filter(Q(title__icontains=query) | Q(period__title__icontains=query))
-    free_competencies = competencies.exclude(resources=item).order_by("unit__title", "order", "title")
+    free_competencies = competencies.exclude(resources=item).order_by("period__order", "order", "title")
     free_units = units.exclude(resources=item).order_by("period__order", "order", "title")
     return render(
         request,
         "library/links.html",
         {
             "item": item,
-            "attached_competencies": item.competencies.select_related("unit__period__path"),
+            "attached_competencies": item.competencies.select_related("path", "period"),
             "attached_units": item.learning_units.select_related("period__path"),
             "competencies": free_competencies[:LINK_RESULT_LIMIT],
             "units": free_units[:LINK_RESULT_LIMIT],

@@ -13,14 +13,25 @@ from library.models import LibraryItem
 
 from .forms import (
     CompetencyForm,
+    LearningGroupForm,
     LearningPathForm,
     LearningUnitForm,
     MetricDefinitionForm,
     PeriodForm,
     ProgressForm,
     ProgressRowFormSet,
+    UnitCompetencyForm,
 )
-from .models import Competency, LearningPath, LearningUnit, MetricDefinition, Period, ProgressRecord
+from .models import (
+    Competency,
+    LearningGroup,
+    LearningPath,
+    LearningUnit,
+    MetricDefinition,
+    Period,
+    ProgressRecord,
+    UnitCompetency,
+)
 from .navigation import competency_crumbs, path_crumbs, period_crumbs, unit_crumbs
 from .services import build_tracking_grid, ensure_progress_records, save_tracking, tracked_records
 
@@ -124,7 +135,9 @@ def unit_edit(request, period_pk=None, pk=None):
     period = unit.period if unit else get_object_or_404(Period, path__owner=request.user, pk=period_pk)
     return _form_page(
         request,
-        form=LearningUnitForm(request.POST or None, instance=unit, user=request.user, scope={"period": period}),
+        form=LearningUnitForm(
+            request.POST or None, instance=unit, user=request.user, period=period, scope={"period": period}
+        ),
         title="Modifier la matière" if unit else "Nouvelle matière",
         subtitle=f"{period.path.title} · {period.title}",
         breadcrumbs=(
@@ -135,6 +148,106 @@ def unit_edit(request, period_pk=None, pk=None):
         fallback=lambda obj: reverse("formations:unit", args=[obj.pk]),
         delete_url=reverse("formations:unit_delete", args=[unit.pk]) if unit else None,
         delete_label="cette matière",
+    )
+
+
+@login_required
+def group_edit(request, period_pk=None, pk=None):
+    """Un regroupement — UE, bloc, domaine — à l'intérieur d'une période."""
+    group = get_object_or_404(LearningGroup, period__path__owner=request.user, pk=pk) if pk else None
+    period = group.period if group else get_object_or_404(Period, path__owner=request.user, pk=period_pk)
+    return _form_page(
+        request,
+        form=LearningGroupForm(request.POST or None, instance=group, scope={"period": period}),
+        title="Modifier le regroupement" if group else "Nouveau regroupement",
+        subtitle=f"{period.path.title} · {period.title}",
+        breadcrumbs=period_crumbs(period) + [{"label": group.title if group else "Nouveau regroupement", "url": None}],
+        fallback=lambda obj: reverse("formations:detail", args=[period.path_id]),
+        delete_url=reverse("formations:group_delete", args=[group.pk]) if group else None,
+        delete_label="ce regroupement",
+    )
+
+
+@login_required
+def group_delete(request, pk):
+    group = get_object_or_404(LearningGroup, period__path__owner=request.user, pk=pk)
+    return confirm_delete(
+        request,
+        group,
+        redirect_to=reverse("formations:detail", args=[group.period.path_id]),
+        title="Supprimer ce regroupement",
+    )
+
+
+@login_required
+def unit_competencies(request, pk):
+    """Rattacher à une matière des compétences qui existent déjà dans la formation.
+
+    C'est ce qui rend la transversalité utilisable : « Rédiger une démonstration au
+    tableau » se déclare une fois, puis se rattache à chaque matière qui l'exerce, au lieu
+    d'être ressaisie et suivie deux fois.
+    """
+    unit = get_object_or_404(
+        LearningUnit.objects.select_related("period__path"), period__path__owner=request.user, pk=pk
+    )
+    if request.method == "POST":
+        removed = request.POST.get("remove")
+        chosen = request.POST.getlist("competencies")
+        if removed:
+            link = get_object_or_404(UnitCompetency, unit=unit, competency_id=removed)
+            label = link.competency.title
+            link.delete()
+            messages.success(
+                request, f"« {label} » n’est plus rattachée à cette matière. La compétence reste dans la formation."
+            )
+        elif chosen:
+            competencies = list(Competency.objects.filter(path=unit.period.path, pk__in=chosen))
+            for competency in competencies:
+                UnitCompetency.objects.get_or_create(
+                    unit=unit, competency=competency, defaults={"order": competency.order, "is_primary": False}
+                )
+            messages.success(request, f"{len(competencies)} compétence(s) rattachée(s).")
+        else:
+            messages.error(request, "Aucune compétence sélectionnée.")
+        return redirect(request.get_full_path())
+
+    query = request.GET.get("q", "").strip()
+    candidates = Competency.objects.filter(path=unit.period.path).exclude(units=unit)
+    if query:
+        candidates = candidates.filter(title__icontains=query)
+    candidates = candidates.select_related("period").order_by("period__order", "order", "title")
+    total = candidates.count()
+    return render(
+        request,
+        "formations/unit_competencies.html",
+        {
+            "unit": unit,
+            "links": unit.competency_links.select_related("competency__period").order_by("-is_primary", "order"),
+            "candidates": candidates[:RESOURCE_RESULT_LIMIT],
+            "total": total,
+            "truncated": max(0, total - RESOURCE_RESULT_LIMIT),
+            "query": query,
+            "breadcrumbs": unit_crumbs(unit) + [{"label": "Compétences", "url": None}],
+            "back_to": reverse("formations:unit", args=[unit.pk]),
+        },
+    )
+
+
+@login_required
+def link_edit(request, pk):
+    """Régler ce qui n'appartient qu'au lien : ordre, caractère principal, objectif local."""
+    link = get_object_or_404(
+        UnitCompetency.objects.select_related("unit__period__path", "competency"),
+        unit__period__path__owner=request.user,
+        pk=pk,
+    )
+    return _form_page(
+        request,
+        form=UnitCompetencyForm(request.POST or None, instance=link),
+        title="Rôle dans la matière",
+        subtitle=f"{link.competency.title} · {link.unit.title}",
+        breadcrumbs=unit_crumbs(link.unit) + [{"label": link.competency.title, "url": None}],
+        fallback=lambda obj: reverse("formations:unit_competencies", args=[link.unit_id]),
     )
 
 
@@ -153,11 +266,16 @@ def unit_detail(request, pk):
     # ne garantirait qu'il s'agit bien de celle du propriétaire connecté.
     progress = {
         record.competency_id: record
-        for record in ProgressRecord.objects.filter(owner=request.user, competency__unit=unit)
+        for record in ProgressRecord.objects.filter(owner=request.user, competency__units=unit)
     }
     rows = [
-        {"competency": competency, "progress": progress.get(competency.pk), "resources": competency.resources.all()}
-        for competency in unit.competencies.all()
+        {
+            "competency": link.competency,
+            "link": link,
+            "progress": progress.get(link.competency_id),
+            "resources": link.competency.resources.all(),
+        }
+        for link in unit.competency_links.select_related("competency").prefetch_related("competency__resources")
     ]
     return render(request, "formations/unit.html", {"unit": unit, "rows": rows, "breadcrumbs": unit_crumbs(unit)})
 
@@ -246,7 +364,9 @@ def _resource_picker(request, *, holder, subtitle, breadcrumbs, back_to):
 @login_required
 def competency_resources(request, pk):
     competency = get_object_or_404(
-        Competency.objects.select_related("unit__period__path"), unit__period__path__owner=request.user, pk=pk
+        Competency.objects.select_related("path", "period").prefetch_related("unit_links__unit__period"),
+        path__owner=request.user,
+        pk=pk,
     )
     return _resource_picker(
         request,
@@ -280,8 +400,8 @@ def competency_detail(request, pk):
     fallait la retrouver dans une liste.
     """
     competency = get_object_or_404(
-        Competency.objects.select_related("unit__period__path").prefetch_related("resources"),
-        unit__period__path__owner=request.user,
+        Competency.objects.select_related("path", "period").prefetch_related("resources", "unit_links__unit__period"),
+        path__owner=request.user,
         pk=pk,
     )
     progress, _ = ProgressRecord.objects.get_or_create(owner=request.user, competency=competency)
@@ -291,7 +411,9 @@ def competency_detail(request, pk):
         {
             "competency": competency,
             "progress": progress,
-            "unit": competency.unit,
+            # Une compétence peut se travailler dans plusieurs matières : le lien porte son
+            # ordre, son caractère principal et son objectif local.
+            "links": competency.unit_links.select_related("unit__period").order_by("-is_primary", "order"),
             "resource_groups": group_by_purpose(competency.resources.all()),
             "sessions": competency.focus_sessions.filter(owner=request.user)[:8],
             "breadcrumbs": competency_crumbs(competency),
@@ -301,15 +423,30 @@ def competency_detail(request, pk):
 
 @login_required
 def competency_edit(request, unit_pk=None, pk=None):
-    competency = get_object_or_404(Competency, unit__period__path__owner=request.user, pk=pk) if pk else None
-    unit = (
-        competency.unit if competency else get_object_or_404(LearningUnit, period__path__owner=request.user, pk=unit_pk)
-    )
+    """Une compétence appartient à la formation ; la matière d'où on la crée la reçoit.
+
+    Créer depuis une matière reste le geste courant, mais ne l'y enferme plus : le lien
+    créé au passage peut ensuite être complété par d'autres matières.
+    """
+    competency = get_object_or_404(Competency, path__owner=request.user, pk=pk) if pk else None
+    unit = None if competency else get_object_or_404(LearningUnit, period__path__owner=request.user, pk=unit_pk)
+    path = competency.path if competency else unit.period.path
+    scope = {"path": path}
+    if unit is not None:
+        # La période de la matière sert de valeur de départ ; elle reste modifiable.
+        scope["period"] = unit.period
+
+    def attach(created):
+        if unit is not None:
+            UnitCompetency.objects.get_or_create(
+                unit=unit, competency=created, defaults={"order": created.order, "is_primary": True}
+            )
+
     return _form_page(
         request,
-        form=CompetencyForm(request.POST or None, instance=competency, user=request.user, scope={"unit": unit}),
+        form=CompetencyForm(request.POST or None, instance=competency, path=path, scope=scope),
         title="Modifier la compétence" if competency else "Nouvelle compétence",
-        subtitle=unit.title,
+        subtitle=unit.title if unit else path.title,
         breadcrumbs=(
             competency_crumbs(competency) + [{"label": "Modifier", "url": None}]
             if competency
@@ -318,12 +455,13 @@ def competency_edit(request, unit_pk=None, pk=None):
         fallback=lambda obj: reverse("formations:competency", args=[obj.pk]),
         delete_url=reverse("formations:competency_delete", args=[competency.pk]) if competency else None,
         delete_label="cette compétence",
+        after_save=attach,
     )
 
 
 @login_required
 def progress_edit(request, competency_pk):
-    competency = get_object_or_404(Competency, unit__period__path__owner=request.user, pk=competency_pk)
+    competency = get_object_or_404(Competency, path__owner=request.user, pk=competency_pk)
     progress, _ = ProgressRecord.objects.get_or_create(owner=request.user, competency=competency)
     return _form_page(
         request,
@@ -390,7 +528,7 @@ def unit_delete(request, pk):
 
 @login_required
 def competency_delete(request, pk):
-    competency = get_object_or_404(Competency, unit__period__path__owner=request.user, pk=pk)
+    competency = get_object_or_404(Competency, path__owner=request.user, pk=pk)
     return confirm_delete(
         request,
         competency,

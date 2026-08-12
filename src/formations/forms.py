@@ -4,7 +4,16 @@ from django import forms
 
 from core.forms import ScopedModelForm
 
-from .models import Competency, LearningPath, LearningUnit, MetricDefinition, Period, ProgressRecord
+from .models import (
+    Competency,
+    LearningGroup,
+    LearningPath,
+    LearningUnit,
+    MetricDefinition,
+    Period,
+    ProgressRecord,
+    UnitCompetency,
+)
 
 
 def annotate(form, helps: dict[str, str], placeholders: dict[str, str] | None = None) -> None:
@@ -66,33 +75,80 @@ class PeriodForm(ScopedModelForm):
 class LearningUnitForm(ScopedModelForm):
     class Meta:
         model = LearningUnit
-        fields = ["title", "description", "order"]
+        fields = ["title", "description", "group", "order"]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, period=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if period is not None:
+            # Seuls les regroupements de la même période : une UE du semestre 6 n'a rien à
+            # faire dans la liste d'une matière du semestre 5.
+            self.fields["group"].queryset = LearningGroup.objects.filter(period=period)
         annotate(
             self,
-            {"order": "Position dans la période, pour retrouver l’ordre de la maquette."},
+            {
+                "order": "Position dans la période, pour retrouver l’ordre de la maquette.",
+                "group": "UE, bloc ou domaine auquel la matière appartient. Facultatif.",
+            },
             {"title": "Topologie"},
         )
 
 
+class LearningGroupForm(ScopedModelForm):
+    class Meta:
+        model = LearningGroup
+        fields = ["title", "code", "kind", "order"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        annotate(
+            self,
+            {
+                "title": "L’intitulé du regroupement, tel qu’il figure sur la maquette.",
+                "kind": "Exemples : " + ", ".join(LearningGroup.KIND_SUGGESTIONS) + ".",
+            },
+            {"title": "UEO Mathématiques 5", "code": "UEO5", "kind": "UE"},
+        )
+
+
 class CompetencyForm(ScopedModelForm):
+    """Une compétence appartient à la formation ; la période est facultative."""
+
     class Meta:
         model = Competency
-        fields = ["title", "description", "order"]
+        fields = ["title", "description", "period", "order"]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, path=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if path is not None:
+            self.fields["period"].queryset = Period.objects.filter(path=path)
         annotate(
             self,
             {
                 "title": "Ce qui doit être maîtrisé, formulé comme un savoir-faire.",
                 "description": "Ce que vous devez savoir faire précisément. Utile pour vous relire dans six mois.",
+                "period": "Laissez vide pour une compétence qui traverse plusieurs périodes.",
             },
             {"title": "Déterminer si un espace est compact"},
+        )
+
+
+class UnitCompetencyForm(ScopedModelForm):
+    """Le lien entre une matière et une compétence, et ce qui n'appartient qu'au lien."""
+
+    class Meta:
+        model = UnitCompetency
+        fields = ["order", "is_primary", "local_objective"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        annotate(
+            self,
+            {
+                "is_primary": "Décochez si la compétence est seulement rappelée ici : "
+                "elle se saisira alors dans la matière où elle est principale.",
+            },
         )
 
 
@@ -145,7 +201,7 @@ class HoursInput(forms.TextInput):
 class ProgressForm(ScopedModelForm):
     class Meta:
         model = ProgressRecord
-        fields = ["mastery_level", "planned_hours", "actual_hours", "notes"]
+        fields = ["mastery_level", "target_level", "target_date", "planned_hours", "actual_hours", "notes"]
         localized_fields = ("planned_hours", "actual_hours")
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3}),
@@ -162,6 +218,8 @@ class ProgressForm(ScopedModelForm):
                 "planned_hours": "Le temps que vous pensez devoir y consacrer, en heures. La virgule est acceptée.",
                 "actual_hours": "Le temps déjà passé dessus.",
                 "notes": "Ce qui bloque, ce qu’il reste à revoir, un renvoi vers un exercice.",
+                "target_level": "Le niveau visé. Toutes les compétences ne demandent pas la maîtrise complète.",
+                "target_date": "Une date d’examen, par exemple.",
             },
         )
 

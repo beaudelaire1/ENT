@@ -7,7 +7,6 @@ from django.urls import reverse
 
 from formations.forms import ProgressRowFormSet
 from formations.models import (
-    Competency,
     LearningPath,
     LearningUnit,
     MetricDefinition,
@@ -16,6 +15,7 @@ from formations.models import (
     ProgressRecord,
 )
 from formations.services import build_tracking_grid, ensure_progress_records, tracked_records
+from formations.tests.factories import competency_in
 
 
 class TrackingGridTests(TestCase):
@@ -26,8 +26,8 @@ class TrackingGridTests(TestCase):
         self.period = Period.objects.create(path=self.path, title="Semestre 5", order=5)
         self.unit = LearningUnit.objects.create(period=self.period, title="TOPOLOGIE", order=1)
         self.competencies = [
-            Competency.objects.create(unit=self.unit, title="Espaces métriques et topologiques", order=1),
-            Competency.objects.create(unit=self.unit, title="Compacité et connexité", order=2),
+            competency_in(self.unit, title="Espaces métriques et topologiques", order=1),
+            competency_in(self.unit, title="Compacité et connexité", order=2),
         ]
         self.coefficient = MetricDefinition.objects.create(
             path=self.path, key="coefficient", label="Coefficient", order=1
@@ -180,7 +180,7 @@ class TrackingGridTests(TestCase):
 
     def test_the_grid_follows_the_declared_order_not_the_alphabet(self):
         LearningUnit.objects.create(period=self.period, title="ALGÈBRE", order=2)
-        Competency.objects.create(unit=self.unit, title="Axiomes", order=3)
+        competency_in(self.unit, title="Axiomes", order=3)
 
         response = self.client.get(self.url())
         grid = build_tracking_grid(self.path, response.context["formset"])

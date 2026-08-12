@@ -20,6 +20,7 @@ from formations.models import (
     Period,
     ProgressRecord,
 )
+from formations.tests.factories import competency_in
 from library.models import LibraryItem
 
 
@@ -30,7 +31,7 @@ class EditingTests(TestCase):
         self.path = LearningPath.objects.create(owner=self.user, title="L3 Mathématiques")
         self.period = Period.objects.create(path=self.path, title="Semestre 5", order=5)
         self.unit = LearningUnit.objects.create(period=self.period, title="TOPOLOGIE", order=1)
-        self.competency = Competency.objects.create(unit=self.unit, title="Compacité", order=1)
+        self.competency = competency_in(self.unit, title="Compacité", order=1)
         self.metric = MetricDefinition.objects.create(path=self.path, key="ects", label="ECTS")
 
     # ------------------------------------------------------------------ périodes
@@ -48,7 +49,7 @@ class EditingTests(TestCase):
         self.client.post(reverse("formations:period_edit", args=[self.period.pk]), {"title": "Semestre 6", "order": 6})
 
         self.assertEqual(LearningUnit.objects.filter(period=self.period).count(), 1)
-        self.assertEqual(Competency.objects.filter(unit=self.unit).count(), 1)
+        self.assertEqual(Competency.objects.filter(units=self.unit).count(), 1)
         self.assertEqual(ProgressRecord.objects.get(competency=self.competency).mastery_level, 3)
 
     def test_a_duplicate_period_title_is_a_form_error_not_a_crash(self):
@@ -137,7 +138,7 @@ class EditingTests(TestCase):
         foreign_path = LearningPath.objects.create(owner=bob, title="Privé")
         foreign_period = Period.objects.create(path=foreign_path, title="Bloc")
         foreign_unit = LearningUnit.objects.create(period=foreign_period, title="Unité")
-        foreign_competency = Competency.objects.create(unit=foreign_unit, title="Compétence")
+        foreign_competency = competency_in(foreign_unit, title="Compétence")
         foreign_metric = MetricDefinition.objects.create(path=foreign_path, key="k", label="K")
 
         for url in (

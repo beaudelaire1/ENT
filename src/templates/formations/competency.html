@@ -34,11 +34,27 @@
       <h2>Commentaire</h2>
       <p class="muted">{{ progress.notes|linebreaksbr }}</p>
     {% endif %}
+    <h2>Matières où elle se travaille</h2>
+    {% for link in links %}
+      <div class="list-row">
+        <div>
+          <a href="{% url 'formations:unit' link.unit.pk %}">{{ link.unit.title }}</a>
+          <p class="muted">
+            {{ link.unit.period.title }}{% if not link.is_primary %} · rappelée ici{% endif %}
+            {% if link.local_objective %} · {{ link.local_objective }}{% endif %}
+          </p>
+        </div>
+        <a class="button small quiet" href="{% url 'formations:link_edit' link.pk %}">Rôle</a>
+      </div>
+    {% empty %}
+      <p class="empty">Compétence transversale : rattachée à aucune matière en particulier.</p>
+    {% endfor %}
     <h2>Rattachement</h2>
-    <div class="list-row"><span>Matière</span><a href="{% url 'formations:unit' unit.pk %}">{{ unit.title }}</a></div>
-    <div class="list-row"><span>Période</span><span>{{ unit.period.title }}</span></div>
+    {% if competency.period %}
+      <div class="list-row"><span>Période</span><span>{{ competency.period.title }}</span></div>
+    {% endif %}
     <div class="list-row">
-      <span>Formation</span><a href="{% url 'formations:detail' unit.period.path_id %}">{{ unit.period.path.title }}</a>
+      <span>Formation</span><a href="{% url 'formations:detail' competency.path_id %}">{{ competency.path.title }}</a>
     </div>
   </section>
 

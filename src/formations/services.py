@@ -19,7 +19,7 @@ from decimal import Decimal
 
 from django.db import connection, transaction
 
-from .models import Competency, LearningUnit, MetricDefinition, MetricValue, ProgressRecord
+from .models import Competency, LearningUnit, MetricDefinition, MetricValue, ProgressRecord, UnitCompetency
 
 # Colonnes présentes quelle que soit la formation : intitulé, travail estimé, temps réel,
 # niveau de maîtrise, progression, commentaires.
@@ -28,7 +28,7 @@ FIXED_COLUMNS = 6
 
 def ensure_progress_records(user, path) -> None:
     """Garantit une ligne de suivi par compétence du parcours."""
-    competencies = Competency.objects.filter(unit__period__path=path)
+    competencies = Competency.objects.filter(path=path)
     tracked = set(
         ProgressRecord.objects.filter(owner=user, competency__in=competencies).values_list("competency_id", flat=True)
     )
@@ -40,14 +40,18 @@ def ensure_progress_records(user, path) -> None:
 
 
 def tracked_records(user, path):
+    """Les lignes de suivi du parcours, une par compétence.
+
+    L'ordre suit la période puis l'ordre déclaré de la compétence. Il ne passe plus par la
+    matière : une compétence peut en concerner plusieurs, et trier par un rattachement
+    devenu multiple n'aurait plus de sens. La grille se charge du placement.
+    """
     return (
-        ProgressRecord.objects.filter(owner=user, competency__unit__period__path=path)
-        .select_related("competency__unit__period")
+        ProgressRecord.objects.filter(owner=user, competency__path=path)
+        .select_related("competency__period")
         .order_by(
-            "competency__unit__period__order",
-            "competency__unit__period__title",
-            "competency__unit__order",
-            "competency__unit__title",
+            "competency__period__order",
+            "competency__period__title",
             "competency__order",
             "competency__title",
         )
@@ -180,12 +184,50 @@ def _cell(unit, definition, stored: Decimal | None, submitted) -> dict:
     return {"name": name, "value": stored, "display": display, "definition": definition}
 
 
+def _primary_unit_by_competency(path) -> dict[int, int]:
+    """Où chaque compétence est saisie dans la grille.
+
+    Une compétence partagée entre deux matières ne peut pas être saisie deux fois : il n'y
+    a qu'une ligne de suivi, et deux formulaires pour la même ligne s'écraseraient l'un
+    l'autre. Elle est donc saisissable sous une seule matière — la première où elle est
+    déclarée principale — et rappelée en lecture sous les autres.
+    """
+    chosen: dict[int, int] = {}
+    links = (
+        UnitCompetency.objects.filter(unit__period__path=path)
+        .select_related("unit__period")
+        .order_by("-is_primary", "unit__period__order", "unit__order", "order", "pk")
+    )
+    for link in links:
+        chosen.setdefault(link.competency_id, link.unit_id)
+    return chosen
+
+
+def _row(link, form, *, editable: bool, others: list, primary_label: str = "") -> dict:
+    return {
+        "competency": link.competency,
+        "link": link,
+        "form": form,
+        "editable": editable,
+        # Les autres matières où la compétence se travaille, pour le dire là où elle est
+        # affichée en lecture seule.
+        "shared_with": others,
+        # Où elle se saisit, quand ce n'est pas ici : sans cette indication, une ligne en
+        # lecture seule ressemble à un bogue.
+        "primary_label": primary_label,
+    }
+
+
 def build_tracking_grid(path, formset, submitted=None):
     """Assemble la grille : les colonnes déclarées, puis les lignes par période.
 
     La structure vient de la base et non du formset : une matière sans compétence doit
     quand même apparaître dans la grille, avec ses métriques et une invitation à la
     remplir.
+
+    Les matières sont regroupées par UE quand la formation en déclare, et une compétence
+    transversale — rattachée au parcours sans matière — apparaît dans une section à part
+    plutôt que de disparaître de l'écran.
 
     ``submitted`` est le POST rejeté. Les cases reprennent alors ce qui a été tapé, y
     compris ce qui était invalide : la corriger suppose de la voir, et recharger la
@@ -194,35 +236,106 @@ def build_tracking_grid(path, formset, submitted=None):
     definitions = list(MetricDefinition.objects.filter(path=path).order_by("order", "label"))
     metrics = _metrics_by_unit(path)
     forms_by_competency = {form.instance.competency_id: form for form in formset}
+    primary = _primary_unit_by_competency(path)
+
+    links_by_unit: dict[int, list] = {}
+    units_by_competency: dict[int, list] = {}
+    unit_titles: dict[int, str] = {}
+    for link in (
+        UnitCompetency.objects.filter(unit__period__path=path)
+        .select_related("competency", "unit__period")
+        .order_by("order", "competency__order", "competency__title")
+    ):
+        links_by_unit.setdefault(link.unit_id, []).append(link)
+        units_by_competency.setdefault(link.competency_id, []).append(link.unit)
+        # La période fait partie du repère : deux matières peuvent porter le même
+        # intitulé — « Oraux de mathématiques » existe aux deux semestres — et « se
+        # saisit sous Oraux de mathématiques » ne dirait alors pas laquelle.
+        unit_titles[link.unit_id] = f"{link.unit.title} ({link.unit.period.title})"
 
     periods = []
-    for period in path.periods.prefetch_related("units__competencies"):
-        units = []
+    linked = set(units_by_competency)
+    for period in path.periods.prefetch_related("units__group", "groups"):
+        groups: dict[int | None, dict] = {}
         for unit in period.units.all():
-            rows = [
-                {"competency": competency, "form": forms_by_competency[competency.pk]}
-                for competency in unit.competencies.all()
-                if competency.pk in forms_by_competency
-            ]
+            rows = []
+            for link in links_by_unit.get(unit.pk, []):
+                form = forms_by_competency.get(link.competency_id)
+                if form is None:
+                    continue
+                others = [
+                    unit_titles[other.pk] for other in units_by_competency[link.competency_id] if other.pk != unit.pk
+                ]
+                owner_unit = primary.get(link.competency_id)
+                rows.append(
+                    _row(
+                        link,
+                        form,
+                        editable=owner_unit == unit.pk,
+                        others=others,
+                        primary_label=unit_titles.get(owner_unit, ""),
+                    )
+                )
             unit_metrics = metrics.get(unit.pk, {})
-            units.append(
-                {
-                    "unit": unit,
-                    # Alignée sur `definitions` : une case saisissable par colonne.
-                    "cells": [
-                        _cell(unit, definition, unit_metrics.get(definition.key), submitted)
-                        for definition in definitions
-                    ],
-                    "rows": rows,
-                    "totals": _totals(rows),
-                }
-            )
-        all_rows = [row for unit in units for row in unit["rows"]]
-        periods.append({"period": period, "units": units, "totals": _totals(all_rows)})
+            entry = {
+                "unit": unit,
+                # Alignée sur `definitions` : une case saisissable par colonne.
+                "cells": [
+                    _cell(unit, definition, unit_metrics.get(definition.key), submitted) for definition in definitions
+                ],
+                "rows": rows,
+                # Les totaux ne comptent qu'une fois une compétence partagée : sinon un
+                # même travail serait additionné dans deux matières.
+                "totals": _totals([row for row in rows if row["editable"]]),
+            }
+            bucket = groups.setdefault(unit.group_id, {"group": unit.group, "units": []})
+            bucket["units"].append(entry)
+
+        ordered_groups = sorted(
+            groups.values(),
+            key=lambda bucket: (bucket["group"].order, bucket["group"].title) if bucket["group"] else (-1, ""),
+        )
+        units = [entry for bucket in ordered_groups for entry in bucket["units"]]
+        # Compétences de la période qui ne sont rattachées à aucune matière.
+        loose = [
+            _row_from_competency(record, forms_by_competency)
+            for record in period.competencies.all()
+            if record.pk not in linked and record.pk in forms_by_competency
+        ]
+        periods.append(
+            {
+                "period": period,
+                "groups": ordered_groups,
+                "units": units,
+                "loose": loose,
+                "totals": _totals([row for row in units for row in row["rows"] if row["editable"]] + loose),
+            }
+        )
+
+    # Compétences du parcours sans période ni matière : elles existent, elles doivent se
+    # saisir quelque part.
+    orphans = [
+        _row_from_competency(record, forms_by_competency)
+        for record in Competency.objects.filter(path=path, period__isnull=True).order_by("order", "title")
+        if record.pk not in linked and record.pk in forms_by_competency
+    ]
 
     return {
         "definitions": definitions,
         "periods": periods,
+        "orphans": orphans,
+        "orphan_totals": _totals(orphans),
         "metric_count": len(definitions),
         "column_count": len(definitions) + FIXED_COLUMNS,
+    }
+
+
+def _row_from_competency(competency, forms_by_competency) -> dict:
+    """Ligne d'une compétence sans matière : saisissable, sans lien ni partage."""
+    return {
+        "competency": competency,
+        "link": None,
+        "form": forms_by_competency[competency.pk],
+        "editable": True,
+        "shared_with": [],
     }

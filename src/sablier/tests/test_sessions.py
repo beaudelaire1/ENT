@@ -6,7 +6,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from formations.models import Competency, LearningPath, LearningUnit, Period, ProgressRecord
+from formations.models import LearningPath, LearningUnit, Period, ProgressRecord
+from formations.tests.factories import competency_in
 from sablier.models import FocusSession
 from sablier.services import record_session
 
@@ -18,7 +19,7 @@ class FocusSessionTests(TestCase):
         path = LearningPath.objects.create(owner=self.user, title="L3")
         period = Period.objects.create(path=path, title="Semestre 5")
         unit = LearningUnit.objects.create(period=period, title="TOPOLOGIE")
-        self.competency = Competency.objects.create(unit=unit, title="Compacité")
+        self.competency = competency_in(unit, title="Compacité")
 
     def test_a_session_without_competency_is_only_logged(self):
         session = record_session(self.user, seconds=1800, started_at=timezone.now())
@@ -69,7 +70,7 @@ class FocusSessionTests(TestCase):
         other_path = LearningPath.objects.create(owner=bob, title="Privé")
         other_period = Period.objects.create(path=other_path, title="S1")
         other_unit = LearningUnit.objects.create(period=other_period, title="Module")
-        foreign = Competency.objects.create(unit=other_unit, title="Interdit")
+        foreign = competency_in(other_unit, title="Interdit")
 
         response = self.client.post(
             reverse("sablier:log_session"),

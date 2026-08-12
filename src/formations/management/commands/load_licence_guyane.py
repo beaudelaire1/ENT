@@ -41,12 +41,14 @@ from django.db import transaction
 
 from formations.models import (
     Competency,
+    LearningGroup,
     LearningPath,
     LearningUnit,
     MetricDefinition,
     MetricValue,
     Period,
     ProgressRecord,
+    UnitCompetency,
 )
 
 FONDAMENTAL, APPLIQUE, PROJET, LANGUE = "fondamental", "appliqué", "projet", "langue"
@@ -521,15 +523,16 @@ COLONNES = [
 
 
 # Une durée se lit avant de s'additionner : « 2 h 30 » se retient, « 2 h 21 » ne veut rien
-# dire. Le temps par compétence est donc arrondi au quart d'heure supérieur. Le total
-# dépasse alors l'estimation du module — c'est assumé, et annoncé dans la sortie.
-QUARTER_HOUR = Decimal("0.25")
+# dire, et « 2,25 h » se lit de travers : on y voit 2 h 25 là où il s'agit de 2 h 15. Le
+# temps par compétence tombe donc sur l'heure ou la demi-heure, arrondi au-dessus. Le
+# total dépasse l'estimation du module — c'est assumé, et annoncé dans la sortie.
+HALF_HOUR = Decimal("0.5")
 
 
 def readable_share(hours: Decimal, count: int) -> Decimal:
-    """Part par compétence, arrondie au quart d'heure supérieur."""
+    """Part par compétence, arrondie à la demi-heure supérieure."""
     exact = hours / count
-    return (exact / QUARTER_HOUR).to_integral_value(rounding="ROUND_CEILING") * QUARTER_HOUR
+    return (exact / HALF_HOUR).to_integral_value(rounding="ROUND_CEILING") * HALF_HOUR
 
 
 def expected_titles() -> dict[str, set[str]]:
@@ -541,6 +544,16 @@ def expected_titles() -> dict[str, set[str]]:
     return titles
 
 
+def declared_titles() -> set[str]:
+    """Tous les intitulés de la maquette, sans distinction de matière.
+
+    Une compétence peut être déclarée par plusieurs matières — les oraux reviennent aux
+    deux semestres. Elle n'appartient donc plus à une seule, et sa légitimité s'apprécie
+    au niveau de la maquette entière.
+    """
+    return {title for titles in expected_titles().values() for title in titles}
+
+
 def prune_obsolete(path, owner) -> int:
     """Supprime les compétences d'un ancien découpage sur lesquelles rien n'a été fait.
 
@@ -549,21 +562,20 @@ def prune_obsolete(path, owner) -> int:
     la maquette, car c'est l'étudiant qui l'a fait vivre. Le reste n'est qu'un intitulé
     laissé par un chargement précédent.
     """
-    expected = expected_titles()
+    declared = declared_titles()
     removable = []
-    queryset = Competency.objects.filter(unit__period__path=path).select_related("unit").prefetch_related("resources")
+    queryset = Competency.objects.filter(path=path).prefetch_related("resources", "progress_records")
     for competency in queryset:
-        if competency.title in expected.get(competency.unit.title, set()):
+        if competency.title in declared:
             continue
         if competency.resources.exists() or competency.focus_sessions.exists():
             continue
-        records = competency.progress_records.all()
-        if any(r.mastery_level or r.actual_hours or r.notes.strip() for r in records):
+        if any(r.mastery_level or r.actual_hours or r.notes.strip() for r in competency.progress_records.all()):
             continue
         removable.append(competency.pk)
     if not removable:
         return 0
-    deleted, _ = Competency.objects.filter(pk__in=removable).delete()
+    Competency.objects.filter(pk__in=removable).delete()
     return len(removable)
 
 
@@ -595,44 +607,77 @@ class Command(BaseCommand):
         )
 
     @staticmethod
-    def sync_competencies(unit, titles: list[str], *, owner, part: Decimal, reset: bool) -> int:
-        """Aligne les compétences d'une matière sur la maquette, en écritures groupées.
+    def ensure_group(period, title, order):
+        """L'UE déclarée par la maquette, créée à la demande.
 
-        Une compétence existante n'est jamais recréée : l'intitulé sert de clé, si bien
-        que relancer la commande complète le découpage sans toucher à la progression
-        déjà saisie. Le traitement est groupé parce que la maquette compte plus de trois
-        cents compétences : une requête par ligne en faisait un millier.
+        Les intitulés d'UE vivaient dans la description de la matière, faute de modèle pour
+        les porter. Ils deviennent des regroupements, ce qui les rend visibles dans la
+        grille et modifiables.
         """
-        existing = {competency.title: competency for competency in unit.competencies.all()}
-        missing = []
-        reordered = []
-        for order, title in enumerate(titles, start=1):
+        group, _ = LearningGroup.objects.get_or_create(
+            period=period, title=title, defaults={"kind": "UE", "order": order}
+        )
+        return group
+
+    @staticmethod
+    def sync_competencies(path, plan: dict, *, owner, reset: bool) -> int:
+        """Cree les competences du parcours et les rattache a leurs matieres.
+
+        Une competence appartient a la formation, pas a une matiere : un intitule declare
+        par deux modules — les oraux reviennent aux deux semestres — donne une seule
+        competence liee aux deux, et non deux suivis paralleles du meme savoir-faire. Sa
+        periode reste vide dans ce cas : elle traverse la formation.
+
+        Le traitement est groupe parce que la maquette compte plus de trois cents
+        competences ; une requete par ligne en faisait un millier.
+        """
+        existing = {competency.title: competency for competency in Competency.objects.filter(path=path)}
+        missing, reordered = [], []
+        for order, (title, entry) in enumerate(plan.items(), start=1):
+            period = entry["period"]
             competency = existing.get(title)
             if competency is None:
-                missing.append(Competency(unit=unit, title=title, order=order))
-            elif competency.order != order:
+                missing.append(Competency(path=path, period=period, title=title, order=order))
+            elif competency.order != order or competency.period_id != (period.pk if period else None):
                 competency.order = order
+                competency.period = period
                 reordered.append(competency)
         if missing:
             Competency.objects.bulk_create(missing)
         if reordered:
-            Competency.objects.bulk_update(reordered, ["order"])
+            Competency.objects.bulk_update(reordered, ["order", "period"])
 
-        competencies = list(unit.competencies.all())
-        records = {
-            record.competency_id: record
-            for record in ProgressRecord.objects.filter(owner=owner, competency__in=competencies)
+        competencies = {competency.title: competency for competency in Competency.objects.filter(path=path)}
+
+        # Liens de matiere : une competence peut en avoir plusieurs.
+        wanted = {
+            (unit.pk, competencies[title].pk): order for title, entry in plan.items() for order, unit in entry["units"]
         }
-        fresh = [
-            ProgressRecord(owner=owner, competency=competency, planned_hours=part)
-            for competency in competencies
-            if competency.pk not in records
+        present = {
+            (link.unit_id, link.competency_id) for link in UnitCompetency.objects.filter(unit__period__path=path)
+        }
+        new_links = [
+            UnitCompetency(unit_id=unit_id, competency_id=competency_id, order=order, is_primary=True)
+            for (unit_id, competency_id), order in wanted.items()
+            if (unit_id, competency_id) not in present
         ]
+        if new_links:
+            UnitCompetency.objects.bulk_create(new_links)
+
+        records = {
+            record.competency_id: record for record in ProgressRecord.objects.filter(owner=owner, competency__path=path)
+        }
+        fresh, rewritten = [], []
+        for title, entry in plan.items():
+            competency = competencies[title]
+            record = records.get(competency.pk)
+            if record is None:
+                fresh.append(ProgressRecord(owner=owner, competency=competency, planned_hours=entry["hours"]))
+            elif reset or not record.planned_hours:
+                record.planned_hours = entry["hours"]
+                rewritten.append(record)
         if fresh:
             ProgressRecord.objects.bulk_create(fresh)
-        rewritten = [record for record in records.values() if reset or not record.planned_hours]
-        for record in rewritten:
-            record.planned_hours = part
         if rewritten:
             ProgressRecord.objects.bulk_update(rewritten, ["planned_hours", "updated_at"])
         return len(missing)
@@ -659,8 +704,9 @@ class Command(BaseCommand):
         }
 
         total_perso = Decimal(0)
-        distributed = Decimal(0)
-        added = 0
+        # Le plan rassemble, par intitule de competence, les matieres qui la declarent, le
+        # temps cumule et la periode — vide des qu'elle en traverse plusieurs.
+        plan: dict[str, dict] = {}
         for period_order, (period_title, matieres) in enumerate(PROGRAMME.items(), start=5):
             period, _ = Period.objects.update_or_create(path=path, title=period_title, defaults={"order": period_order})
             for unit_order, (titre, ue, encadre, ects, nature, competences) in enumerate(matieres, start=1):
@@ -669,23 +715,35 @@ class Command(BaseCommand):
                 unit, _ = LearningUnit.objects.update_or_create(
                     period=period,
                     title=titre,
-                    defaults={"order": unit_order, "description": f"{ue} · {nature}"},
+                    defaults={
+                        "order": unit_order,
+                        "group": self.ensure_group(period, ue, unit_order),
+                        "description": nature,
+                    },
                 )
                 for key, value in (("ects", ects), ("encadre", encadre), ("perso", perso)):
                     MetricValue.objects.update_or_create(
                         definition=metrics[key], unit=unit, defaults={"value": Decimal(value)}
                     )
-                # Le travail personnel se répartit également entre les compétences, au quart
-                # d'heure supérieur : c'est une estimation de départ que la grille de suivi
-                # permet d'ajuster, et une durée qu'on doit pouvoir lire d'un coup d'œil.
+                # Le travail personnel se repartit egalement entre les competences, au quart
+                # d'heure superieur : c'est une estimation de depart que la grille de suivi
+                # permet d'ajuster, et une duree qu'on doit pouvoir lire d'un coup d'oeil.
                 part = readable_share(perso, len(competences))
-                distributed += part * len(competences)
-                added += self.sync_competencies(unit, competences, owner=owner, part=part, reset=options["reset_hours"])
+                for order, title in enumerate(competences, start=1):
+                    entry = plan.setdefault(title, {"units": [], "hours": Decimal(0), "period": period})
+                    entry["units"].append((order, unit))
+                    entry["hours"] += part
+                    if entry["period"] is not None and entry["period"].pk != period.pk:
+                        # Declaree dans deux periodes : elle devient transversale.
+                        entry["period"] = None
+
+        distributed = sum((entry["hours"] for entry in plan.values()), Decimal(0))
+        added = self.sync_competencies(path, plan, owner=owner, reset=options["reset_hours"])
 
         pruned = prune_obsolete(path, owner) if options["prune"] else 0
 
         encadre_total = sum(m[2] for matieres in PROGRAMME.values() for m in matieres)
-        total = Competency.objects.filter(unit__period__path=path).count()
+        total = Competency.objects.filter(path=path).count()
         units = LearningUnit.objects.filter(period__path=path).count()
         self.stdout.write(
             self.style.SUCCESS(
@@ -695,7 +753,7 @@ class Command(BaseCommand):
             )
         )
         self.stdout.write(
-            f"Réparti par quart d'heure : {distributed.normalize():f} h au total, soit "
+            f"Réparti par demi-heures : {distributed.normalize():f} h au total, soit "
             f"{(distributed - total_perso).normalize():+f} h par rapport à l'estimation. "
             "Une durée lisible vaut mieux qu'une division exacte."
         )

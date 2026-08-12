@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from .models import Competency, LearningPath, LearningUnit, MetricDefinition, MetricValue, Period, ProgressRecord
+from .models import (
+    Competency,
+    LearningGroup,
+    LearningPath,
+    LearningUnit,
+    MetricDefinition,
+    MetricValue,
+    Period,
+    ProgressRecord,
+    UnitCompetency,
+)
 
 
 @admin.register(LearningPath)
@@ -17,18 +27,39 @@ class PeriodAdmin(admin.ModelAdmin):
     search_fields = ("title",)
 
 
+@admin.register(LearningGroup)
+class LearningGroupAdmin(admin.ModelAdmin):
+    list_display = ("title", "code", "kind", "period", "order")
+    list_filter = ("period__path", "kind")
+    search_fields = ("title", "code")
+
+
 @admin.register(LearningUnit)
 class LearningUnitAdmin(admin.ModelAdmin):
-    list_display = ("title", "period", "order")
+    list_display = ("title", "period", "group", "order")
     list_filter = ("period__path",)
     search_fields = ("title",)
 
 
+class UnitCompetencyInline(admin.TabularInline):
+    model = UnitCompetency
+    extra = 0
+    autocomplete_fields = ("unit",)
+
+
 @admin.register(Competency)
 class CompetencyAdmin(admin.ModelAdmin):
-    list_display = ("title", "unit", "order")
-    list_filter = ("unit__period__path",)
+    list_display = ("title", "path", "period", "order")
+    list_filter = ("path",)
     search_fields = ("title",)
+    inlines = (UnitCompetencyInline,)
+
+
+@admin.register(UnitCompetency)
+class UnitCompetencyAdmin(admin.ModelAdmin):
+    list_display = ("competency", "unit", "is_primary", "order")
+    list_filter = ("is_primary", "unit__period__path")
+    search_fields = ("competency__title", "unit__title")
 
 
 @admin.register(MetricDefinition)

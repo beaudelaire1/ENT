@@ -1,0 +1,45 @@
+{% comment %}
+  Une ligne de compétence dans la grille.
+
+  Une compétence partagée entre deux matières n'a qu'une ligne de suivi : elle ne peut
+  donc être saisie qu'à un seul endroit, sinon deux formulaires écriraient sur la même
+  ligne et le dernier envoyé écraserait l'autre. Sous les autres matières, elle est
+  rappelée en lecture, avec un lien vers l'endroit où elle se saisit.
+{% endcomment %}
+<tr class="competency-row{% if not row.editable %} competency-echo{% endif %}">
+  <td class="col-label competency">
+    <a href="{% url 'formations:competency' row.competency.pk %}">{{ row.competency.title }}</a>
+    {% if row.link.local_objective %}<span class="muted"> — {{ row.link.local_objective }}</span>{% endif %}
+    {% if row.link and not row.link.is_primary %}<span class="chip static"><span class="chip-label">secondaire</span></span>{% endif %}
+    {% if row.shared_with %}
+      <span class="muted shared-note">
+        Aussi en {% for other in row.shared_with %}{{ other }}{% if not forloop.last %}, {% endif %}{% endfor %}
+      </span>
+    {% endif %}
+  </td>
+  {% if grid.metric_count %}<td colspan="{{ grid.metric_count }}" class="spacer"></td>{% endif %}
+  {% if row.editable %}
+    <td>{{ row.form.id }}{{ row.form.planned_hours }}</td>
+    <td>{{ row.form.actual_hours }}</td>
+    <td>{{ row.form.mastery_level }}</td>
+    <td class="col-progress">
+      <div class="progress-bar" data-progress-for="{{ row.form.mastery_level.id_for_label }}">
+        <div class="progress-fill level-{{ row.form.instance.mastery_level }}" style="width:{{ row.form.instance.percent }}%"></div>
+      </div>
+    </td>
+    <td class="col-notes">{{ row.form.notes }}</td>
+  {% else %}
+    <td class="total">{{ row.form.instance.planned_hours|floatformat:"-2" }}</td>
+    <td class="total">{{ row.form.instance.actual_hours|floatformat:"-2" }}</td>
+    <td class="muted">{{ row.form.instance.mastery_level }} - {{ row.form.instance.get_mastery_level_display }}</td>
+    <td class="col-progress">
+      <div class="progress-bar" role="img" aria-label="{{ row.form.instance.get_mastery_level_display }}">
+        <div class="progress-fill level-{{ row.form.instance.mastery_level }}" style="width:{{ row.form.instance.percent }}%"></div>
+      </div>
+    </td>
+    <td class="col-notes muted">Se saisit sous {{ row.primary_label|default:"une autre matière" }}</td>
+  {% endif %}
+</tr>
+{% if row.editable and row.form.errors %}
+  <tr class="row-errors"><td colspan="{{ grid.column_count }}">{{ row.form.errors }}</td></tr>
+{% endif %}

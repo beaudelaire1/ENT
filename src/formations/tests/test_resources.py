@@ -9,7 +9,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from formations.models import Competency, LearningPath, LearningUnit, Period
+from formations.models import LearningPath, LearningUnit, Period
+from formations.tests.factories import competency_in
 from library.models import LibraryItem, Tag
 
 
@@ -20,7 +21,7 @@ class ResourcePickerTests(TestCase):
         self.path = LearningPath.objects.create(owner=self.user, title="L3 Mathématiques")
         self.period = Period.objects.create(path=self.path, title="Semestre 5", order=5)
         self.unit = LearningUnit.objects.create(period=self.period, title="Topologie", order=1)
-        self.competency = Competency.objects.create(unit=self.unit, title="Établir la compacité", order=1)
+        self.competency = competency_in(self.unit, title="Établir la compacité", order=1)
         self.annale = self.resource("Annale 2023", purpose=LibraryItem.Purpose.PAST_PAPER, provider="Université")
         self.cours = self.resource("Polycopié de topologie", purpose=LibraryItem.Purpose.COURSE)
 
@@ -138,7 +139,7 @@ class ResourcePickerTests(TestCase):
         foreign_path = LearningPath.objects.create(owner=bob, title="Privé")
         foreign_period = Period.objects.create(path=foreign_path, title="Bloc")
         foreign_unit = LearningUnit.objects.create(period=foreign_period, title="Unité")
-        foreign = Competency.objects.create(unit=foreign_unit, title="Compétence")
+        foreign = competency_in(foreign_unit, title="Compétence")
         url = reverse("formations:competency_resources", args=[foreign.pk])
         self.assertEqual(self.client.get(url).status_code, 404)
 
@@ -172,7 +173,7 @@ class LibrarySideLinkTests(TestCase):
         self.path = LearningPath.objects.create(owner=self.user, title="L3 Mathématiques")
         self.period = Period.objects.create(path=self.path, title="Semestre 5", order=5)
         self.unit = LearningUnit.objects.create(period=self.period, title="Topologie", order=1)
-        self.competency = Competency.objects.create(unit=self.unit, title="Établir la compacité", order=1)
+        self.competency = competency_in(self.unit, title="Établir la compacité", order=1)
         self.item = LibraryItem.objects.create(
             owner=self.user,
             kind=LibraryItem.Kind.NOTE,
@@ -218,14 +219,14 @@ class LibrarySideLinkTests(TestCase):
         foreign_path = LearningPath.objects.create(owner=bob, title="Privé")
         foreign_period = Period.objects.create(path=foreign_path, title="Bloc")
         foreign_unit = LearningUnit.objects.create(period=foreign_period, title="Unité")
-        foreign = Competency.objects.create(unit=foreign_unit, title="Compétence")
+        foreign = competency_in(foreign_unit, title="Compétence")
 
         self.client.post(self.url(), {"target": "competency", "chosen": [foreign.pk]})
 
         self.assertFalse(foreign.resources.exists())
 
     def test_the_search_narrows_the_candidates(self):
-        Competency.objects.create(unit=self.unit, title="Déterminer une adhérence", order=2)
+        competency_in(self.unit, title="Déterminer une adhérence", order=2)
         response = self.client.get(self.url(), {"q": "compacité"})
         titles = [c.title for c in response.context["competencies"]]
         self.assertEqual(titles, ["Établir la compacité"])

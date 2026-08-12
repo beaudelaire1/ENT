@@ -9,6 +9,7 @@
   </div>
   <div class="actions">
     <a class="button primary" href="{% url 'formations:competency_new' unit.pk %}">Ajouter une compétence</a>
+    <a class="button" href="{% url 'formations:unit_competencies' unit.pk %}">Rattacher une compétence</a>
     <a class="button" href="{% url 'formations:tracking' unit.period.path_id %}">Grille de suivi</a>
     <a class="button" href="{% url 'formations:unit_edit' unit.pk %}">Modifier</a>
   </div>
@@ -22,11 +23,13 @@
       repère celle qui bloque, et qu'on part la travailler sans détour.
     {% endcomment %}
     {% for row in rows %}
-      {% with competency=row.competency progress=row.progress %}
+      {% with competency=row.competency progress=row.progress link=row.link %}
         <article class="competency-block">
           <div class="list-row">
             <div>
               <a class="competency-title" href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
+              {% if not link.is_primary %}<span class="chip static"><span class="chip-label">rappelée ici</span></span>{% endif %}
+              {% if link.local_objective %}<p class="muted">{{ link.local_objective }}</p>{% endif %}
               {% if competency.description %}<p class="muted">{{ competency.description }}</p>{% endif %}
             </div>
             <div class="actions">
@@ -82,6 +85,14 @@
     <div class="actions">
       <a class="button small" href="{% url 'formations:unit_resources' unit.pk %}">Associer une ressource</a>
     </div>
+
+    {% if unit.group %}
+      <h2>Regroupement</h2>
+      <div class="list-row">
+        <span>{{ unit.group.kind|default:"Regroupement" }}</span>
+        <a href="{% url 'formations:group_edit' unit.group.pk %}">{{ unit.group }}</a>
+      </div>
+    {% endif %}
 
     <h2>Structure</h2>
     <div class="list-row">

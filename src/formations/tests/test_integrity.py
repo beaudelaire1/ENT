@@ -14,7 +14,6 @@ from django.test import TestCase
 from django.urls import reverse
 
 from formations.models import (
-    Competency,
     LearningPath,
     LearningUnit,
     MetricDefinition,
@@ -22,6 +21,7 @@ from formations.models import (
     Period,
     ProgressRecord,
 )
+from formations.tests.factories import competency_in
 
 
 class IntegrityTests(TestCase):
@@ -31,7 +31,7 @@ class IntegrityTests(TestCase):
         self.path = LearningPath.objects.create(owner=self.user, title="L3 Mathématiques")
         self.period = Period.objects.create(path=self.path, title="Semestre 5", order=5)
         self.unit = LearningUnit.objects.create(period=self.period, title="TOPOLOGIE", order=1)
-        self.competency = Competency.objects.create(unit=self.unit, title="Compacité", order=1)
+        self.competency = competency_in(self.unit, title="Compacité", order=1)
         self.coefficient = MetricDefinition.objects.create(path=self.path, key="coefficient", label="Coefficient")
 
     def record(self, **kwargs):

@@ -68,8 +68,10 @@ def home(request):
     ]
     # Rattacher une session à une compétence reste facultatif : Sablier fonctionne
     # entièrement sans le module Formations.
-    competencies = Competency.objects.filter(unit__period__path__owner=request.user).select_related(
-        "unit__period__path"
+    competencies = (
+        Competency.objects.filter(path__owner=request.user)
+        .select_related("path", "period")
+        .prefetch_related("unit_links__unit")
     )
     return render(
         request,
@@ -258,7 +260,7 @@ def log_session(request):
 
     competency = None
     if competency_id:
-        competency = Competency.objects.filter(pk=competency_id, unit__period__path__owner=request.user).first()
+        competency = Competency.objects.filter(pk=competency_id, path__owner=request.user).first()
         if competency is None:
             return JsonResponse({"error": "Compétence inconnue."}, status=400)
 

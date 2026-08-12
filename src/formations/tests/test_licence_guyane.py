@@ -7,8 +7,14 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 
-from formations.management.commands.load_licence_guyane import PROGRAMME, expected_titles, readable_share
+from formations.management.commands.load_licence_guyane import (
+    PROGRAMME,
+    declared_titles,
+    expected_titles,
+    readable_share,
+)
 from formations.models import Competency, LearningPath, LearningUnit, ProgressRecord
+from formations.tests.factories import competency_in
 from library.models import LibraryItem
 
 
@@ -50,20 +56,20 @@ class ProgrammeShapeTests(TestCase):
 
 
 class ReadableShareTests(TestCase):
-    """« 2 h 30 » se retient, « 2 h 21 » ne veut rien dire.
+    """« 2 h 30 » se retient ; « 2,25 h » se lit même de travers, comme 2 h 25.
 
     Le total dépasse alors l'estimation du module, et c'est le compromis voulu : une durée
     qu'on lit d'un coup d'œil vaut mieux qu'une division exacte au centième d'heure.
     """
 
-    def test_a_share_is_rounded_up_to_the_quarter_hour(self):
-        self.assertEqual(readable_share(Decimal("47"), 20), Decimal("2.50"))  # 2 h 21 → 2 h 30
-        self.assertEqual(readable_share(Decimal("75"), 34), Decimal("2.25"))  # 2 h 12 → 2 h 15
-        self.assertEqual(readable_share(Decimal("75"), 29), Decimal("2.75"))  # 2 h 35 → 2 h 45
-        self.assertEqual(readable_share(Decimal("9"), 8), Decimal("1.25"))  # 1 h 07 → 1 h 15
+    def test_a_share_is_rounded_up_to_the_half_hour(self):
+        self.assertEqual(readable_share(Decimal("47"), 20), Decimal("2.5"))  # 2 h 21 → 2 h 30
+        self.assertEqual(readable_share(Decimal("75"), 34), Decimal("2.5"))  # 2 h 12 → 2 h 30
+        self.assertEqual(readable_share(Decimal("75"), 29), Decimal("3"))  # 2 h 35 → 3 h
+        self.assertEqual(readable_share(Decimal("9"), 8), Decimal("1.5"))  # 1 h 07 → 1 h 30
 
-    def test_an_exact_quarter_is_left_alone(self):
-        self.assertEqual(readable_share(Decimal("10"), 8), Decimal("1.25"))
+    def test_an_exact_half_hour_is_left_alone(self):
+        self.assertEqual(readable_share(Decimal("12"), 8), Decimal("1.5"))
         self.assertEqual(readable_share(Decimal("12"), 4), Decimal("3"))
 
     def test_a_share_is_never_rounded_down(self):
@@ -88,9 +94,33 @@ class LoadCommandTests(TestCase):
         topology = LearningUnit.objects.get(period__path=path, title="Topologie")
         self.assertGreaterEqual(topology.competencies.count(), 10)
         self.assertEqual(
-            Competency.objects.filter(unit__period__path=path).count(),
-            sum(len(c) for matieres in PROGRAMME.values() for *_, c in matieres),
+            Competency.objects.filter(path=path).count(),
+            # Un intitulé déclaré par deux modules ne compte qu'une fois : c'est le
+            # principe même de la compétence transversale.
+            len(declared_titles()),
         )
+
+    def test_a_competency_declared_by_two_modules_exists_once(self):
+        """Les oraux reviennent aux deux semestres : un seul savoir-faire, deux matières."""
+        self.load()
+        shared = Competency.objects.get(title="Rédiger une démonstration au tableau, lisiblement")
+
+        self.assertEqual(shared.units.count(), 2)
+        self.assertEqual(sorted(unit.period.title for unit in shared.units.all()), ["Semestre 5", "Semestre 6"])
+        # Transversale : elle n'est enfermée dans aucune période.
+        self.assertIsNone(shared.period)
+
+    def test_a_shared_competency_has_a_single_progress_record(self):
+        self.load()
+        shared = Competency.objects.get(title="Construire un plan progressif")
+        self.assertEqual(ProgressRecord.objects.filter(owner=self.user, competency=shared).count(), 1)
+
+    def test_the_units_carry_the_declared_unit_of_teaching(self):
+        self.load()
+        topology = LearningUnit.objects.get(title="Topologie")
+        self.assertIsNotNone(topology.group)
+        self.assertEqual(topology.group.title, "UEO Mathématiques 5")
+        self.assertEqual(topology.group.kind, "UE")
 
     def test_loading_twice_does_not_duplicate_anything(self):
         self.load()
@@ -100,7 +130,7 @@ class LoadCommandTests(TestCase):
 
     def test_loading_again_keeps_the_progress_already_entered(self):
         self.load()
-        competency = Competency.objects.filter(unit__title="Topologie").first()
+        competency = Competency.objects.filter(units__title="Topologie").first()
         ProgressRecord.objects.filter(owner=self.user, competency=competency).update(
             mastery_level=3, actual_hours=Decimal("7.5"), notes="Revoir Heine"
         )
@@ -118,7 +148,7 @@ class LoadCommandTests(TestCase):
     def test_without_prune_an_older_breakdown_survives(self):
         self.load()
         unit = LearningUnit.objects.get(title="Topologie")
-        Competency.objects.create(unit=unit, title="Ancien chapitre", order=99)
+        competency_in(unit, title="Ancien chapitre", order=99)
 
         self.load()
 
@@ -127,7 +157,7 @@ class LoadCommandTests(TestCase):
     def test_prune_removes_a_competency_absent_from_the_programme(self):
         self.load()
         unit = LearningUnit.objects.get(title="Topologie")
-        Competency.objects.create(unit=unit, title="Ancien chapitre", order=99)
+        competency_in(unit, title="Ancien chapitre", order=99)
 
         output = self.load(prune=True)
 
@@ -137,7 +167,7 @@ class LoadCommandTests(TestCase):
     def test_prune_keeps_a_competency_where_work_was_recorded(self):
         self.load()
         unit = LearningUnit.objects.get(title="Topologie")
-        worked = Competency.objects.create(unit=unit, title="Chapitre travaillé", order=98)
+        worked = competency_in(unit, title="Chapitre travaillé", order=98)
         ProgressRecord.objects.create(owner=self.user, competency=worked, mastery_level=2)
 
         self.load(prune=True)
@@ -147,7 +177,7 @@ class LoadCommandTests(TestCase):
     def test_prune_keeps_a_competency_with_a_linked_resource(self):
         self.load()
         unit = LearningUnit.objects.get(title="Topologie")
-        kept = Competency.objects.create(unit=unit, title="Chapitre documenté", order=97)
+        kept = competency_in(unit, title="Chapitre documenté", order=97)
         resource = LibraryItem.objects.create(owner=self.user, kind=LibraryItem.Kind.NOTE, title="Fiche", note_text="x")
         kept.resources.add(resource)
 
@@ -158,7 +188,7 @@ class LoadCommandTests(TestCase):
     def test_prune_keeps_a_competency_carrying_only_a_comment(self):
         self.load()
         unit = LearningUnit.objects.get(title="Topologie")
-        kept = Competency.objects.create(unit=unit, title="Chapitre annoté", order=96)
+        kept = competency_in(unit, title="Chapitre annoté", order=96)
         ProgressRecord.objects.create(owner=self.user, competency=kept, notes="à revoir avant le partiel")
 
         self.load(prune=True)
@@ -172,25 +202,25 @@ class LoadCommandTests(TestCase):
         for unit in LearningUnit.objects.all():
             for title in expected[unit.title]:
                 with self.subTest(unit=unit.title, title=title):
-                    self.assertTrue(Competency.objects.filter(unit=unit, title=title).exists())
+                    self.assertTrue(Competency.objects.filter(units=unit, title=title).exists())
 
     def test_personal_hours_are_spread_over_every_competency(self):
         self.load()
         unit = LearningUnit.objects.get(title="Topologie")
-        records = ProgressRecord.objects.filter(owner=self.user, competency__unit=unit)
+        records = ProgressRecord.objects.filter(owner=self.user, competency__units=unit)
         self.assertEqual(records.count(), unit.competencies.count())
         for record in records:
             self.assertGreater(record.planned_hours, 0)
 
-    def test_every_estimate_falls_on_a_readable_quarter_hour(self):
+    def test_every_estimate_falls_on_a_readable_half_hour(self):
         self.load()
         for record in ProgressRecord.objects.filter(owner=self.user):
             with self.subTest(competency=record.competency.title):
-                self.assertEqual(record.planned_hours % Decimal("0.25"), 0)
+                self.assertEqual(record.planned_hours % Decimal("0.5"), 0)
 
     def test_the_output_admits_the_redistribution_exceeds_the_estimate(self):
         output = self.load()
-        self.assertIn("Réparti par quart d’heure", output.replace("'", "’"))
+        self.assertIn("Réparti par demi-heures", output)
 
     def test_an_estimate_already_present_is_kept_by_default(self):
         self.load()

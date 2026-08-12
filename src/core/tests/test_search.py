@@ -6,7 +6,8 @@ from django.utils import timezone
 
 from core.models import SearchEntry
 from core.search import reindex_all, search
-from formations.models import Competency, LearningPath, LearningUnit, Period
+from formations.models import LearningPath, LearningUnit, Period
+from formations.tests.factories import competency_in
 from library.models import LibraryItem
 from planner.models import CalendarEvent, Task
 
@@ -46,7 +47,7 @@ class SearchIndexTests(TestCase):
         path = LearningPath.objects.create(owner=self.alice, title="Licence")
         period = Period.objects.create(path=path, title="Semestre")
         unit = LearningUnit.objects.create(period=period, title="Module")
-        competency = Competency.objects.create(unit=unit, title="Démontrer une récurrence")
+        competency = competency_in(unit, title="Démontrer une récurrence")
         entry = SearchEntry.objects.get(object_type="competency", object_id=competency.pk)
         self.assertEqual(entry.owner, self.alice)
 

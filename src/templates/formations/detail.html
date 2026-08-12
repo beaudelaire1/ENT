@@ -37,14 +37,26 @@
       <h2>{{ period.title }}</h2>
       <div class="actions">
         <a class="button" href="{% url 'formations:unit_new' period.pk %}">Ajouter une matière</a>
+        <a class="button" href="{% url 'formations:group_new' period.pk %}">Ajouter un regroupement</a>
         <a class="button quiet" href="{% url 'formations:period_edit' period.pk %}">Modifier la période</a>
       </div>
     </div>
+    {% if period.groups.all %}
+      <div class="chip-row">
+        {% for group in period.groups.all %}
+          <span class="chip static">
+            <a class="chip-link" href="{% url 'formations:group_edit' group.pk %}">{{ group }}{% if group.kind %} ({{ group.kind }}){% endif %}</a>
+          </span>
+        {% endfor %}
+      </div>
+    {% endif %}
     <div class="content-cards">
       {% for unit in period.units.all %}
         <a class="surface-card" href="{% url 'formations:unit' unit.pk %}">
           <strong>{{ unit.title }}</strong>
-          <span class="muted">{{ unit.competencies.count }} compétence{{ unit.competencies.count|pluralize }}</span>
+          <span class="muted">
+            {{ unit.competencies.count }} compétence{{ unit.competencies.count|pluralize }}{% if unit.group %} · {{ unit.group }}{% endif %}
+          </span>
         </a>
       {% empty %}
         <div class="empty-state">

@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from core.deletion import cascade_summary
 from formations.models import Competency, LearningPath, LearningUnit, Period, ProgressRecord
+from formations.tests.factories import competency_in
 from library.models import Folder, LibraryItem, Tag
 from planner.models import Task
 
@@ -16,7 +17,7 @@ class CascadeSummaryTests(TestCase):
         period = Period.objects.create(path=self.path, title="Semestre 5")
         unit = LearningUnit.objects.create(period=period, title="TOPOLOGIE")
         for title in ("Compacité", "Connexité"):
-            competency = Competency.objects.create(unit=unit, title=title)
+            competency = competency_in(unit, title=title)
             ProgressRecord.objects.create(owner=self.user, competency=competency)
 
     def test_the_summary_counts_what_will_disappear(self):
@@ -77,7 +78,7 @@ class DeletionViewTests(TestCase):
         path = LearningPath.objects.create(owner=self.alice, title="L3")
         period = Period.objects.create(path=path, title="S5")
         unit = LearningUnit.objects.create(period=period, title="Module")
-        Competency.objects.create(unit=unit, title="Compétence")
+        competency_in(unit, title="Compétence")
 
         self.client.post(reverse("formations:delete", args=[path.pk]))
 
