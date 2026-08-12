@@ -51,7 +51,8 @@
       <div class="visual-wrap" id="visual-wrap" data-mode="{{ preference.mode }}">
         <canvas id="timer-canvas" aria-hidden="true"></canvas>
         <div class="digital-visual"><strong id="digital-time">05:00</strong><span>COMPTE À REBOURS</span><i id="digital-progress"></i></div>
-        <div class="zen-visual"><div class="zen-rings"><div><strong id="zen-time">05:00</strong><span id="breath-label">CENTREZ-VOUS</span></div></div><p>Respirez · gardez votre rythme</p></div>
+        {# L'arc porte le temps restant. `<i>` et non `<div>` : `.zen-rings>div` désigne le disque central. #}
+        <div class="zen-visual"><div class="zen-rings"><i class="zen-progress" id="zen-progress" aria-hidden="true"></i><div><strong id="zen-time">05:00</strong><span id="breath-label">CENTREZ-VOUS</span></div></div><p>Respirez · gardez votre rythme</p></div>
         <div class="canvas-time"><strong id="canvas-time">05:00</strong><span id="canvas-label">ÉCOULEMENT RÉEL</span></div>
       </div>
       <div class="stage-message" id="stage-message">ESPACE POUR DÉMARRER</div>

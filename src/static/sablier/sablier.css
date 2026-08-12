@@ -110,6 +110,12 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 .zen-rings::before { inset:9%; }
 .zen-rings::after { inset:22%;border-color:color-mix(in srgb,var(--focus-text) 9%,transparent); }
 .zen-rings>div { position:relative;z-index:1;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--focus-text) 9%,transparent),0 0 45px color-mix(in srgb,var(--focus-accent) 12%,transparent); }
+/* Le temps restant, montré sans être compté : un arc qui se referme sur l'anneau
+   extérieur, sans graduation ni repère. Zen était la seule visualisation à ne rien dire
+   du temps qui passe — les anneaux respiraient sur un cycle fixe, identique à la première
+   et à la dernière minute. Le masque radial ne garde du disque que son bord : un
+   `conic-gradient` plein remplirait toute la surface et écraserait la scène. */
+.zen-progress { position:absolute;inset:0;border-radius:50%;opacity:.55;background:conic-gradient(from -90deg,var(--focus-accent) calc(var(--progress,1) * 360deg),transparent 0);-webkit-mask:radial-gradient(closest-side,transparent 95%,#000 95.6%);mask:radial-gradient(closest-side,transparent 95%,#000 95.6%); }
 .canvas-time strong { font-variant-numeric:tabular-nums lining-nums;text-shadow:0 3px 24px color-mix(in srgb,var(--focus-bg) 72%,transparent); }
 .canvas-time strong,.digital-visual strong { font-size:clamp(44px,6vw,64px); }
 @media(max-width:700px){ .visual-wrap { min-height:min(58vh,460px); } }
