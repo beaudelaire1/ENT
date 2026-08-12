@@ -139,11 +139,19 @@ def period_average(user, period) -> Average:
     label = path.weight_metric.label
     warnings: list[str] = []
     parts: list[tuple[str, Decimal, Decimal]] = []
+    # Les moyennes sont calculées une fois et retenues : la liste des matières notées, plus
+    # bas, les redemandait toutes, ce qui doublait le nombre de requêtes d'un écran affiché
+    # à chaque ouverture du tableau de bord.
+    averages = {unit.pk: unit_average(user, unit) for unit in units}
+    # Les poids arrivent en une requête plutôt qu'une par matière.
+    weights = dict(
+        MetricValue.objects.filter(definition_id=path.weight_metric_id, unit__in=units).values_list("unit_id", "value")
+    )
     for unit in units:
-        average = unit_average(user, unit)
+        average = averages[unit.pk]
         if not average.exists:
             continue
-        weight = weight_for_unit(path, unit)
+        weight = weights.get(unit.pk)
         if weight is None:
             warnings.append(f"{unit.title} : aucun {label} renseigné, la matière est écartée.")
             continue
@@ -152,7 +160,7 @@ def period_average(user, period) -> Average:
             continue
         parts.append((unit.title, average.value, weight))
 
-    graded_units = [unit for unit in units if unit_average(user, unit).exists]
+    graded_units = [unit for unit in units if averages[unit.pk].exists]
     if not parts:
         return Average(
             value=None,

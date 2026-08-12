@@ -3,7 +3,6 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import F
 from django.utils import timezone
 
 
@@ -29,11 +28,12 @@ def record_session(user, *, seconds: int, started_at, intention: str = "", compe
     if competency is None:
         return session
 
-    record, _ = ProgressRecord.objects.get_or_create(owner=user, competency=competency)
-    ProgressRecord.objects.filter(pk=record.pk).update(
-        session_hours=F("session_hours") + session.hours,
-        actual_hours=F("actual_hours") + session.hours,
-    )
+    ProgressRecord.objects.get_or_create(owner=user, competency=competency)
+    # L'écriture passe par l'instance et non par un `update()` de queryset : c'est
+    # `ProgressRecord.save()` qui recalcule le total et laisse le temps proposer un
+    # palier de maîtrise. Un `update()` écrivait les heures sans jamais déclencher cela,
+    # et c'est pourtant ici — une session terminée — que le palier a le plus de sens.
+    _adjust_competency_time(user, competency, session.hours)
     session.counted_at = timezone.now()
     session.save(update_fields=["counted_at", "updated_at"])
     return session
@@ -43,7 +43,7 @@ def _adjust_competency_time(owner, competency, delta: Decimal) -> None:
     from formations.models import ProgressRecord
 
     record, _ = ProgressRecord.objects.get_or_create(owner=owner, competency=competency)
-    record = ProgressRecord.objects.select_for_update().get(pk=record.pk)
+    record = ProgressRecord.objects.select_for_update().select_related("competency__path").get(pk=record.pk)
     record.session_hours = max(Decimal(0), record.session_hours + delta)
     record.actual_hours = record.manual_hours + record.session_hours
     record.save(update_fields=["session_hours", "actual_hours"])

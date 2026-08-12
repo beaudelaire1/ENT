@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 
 from django import forms
@@ -16,6 +17,48 @@ from .models import (
     ProgressRecord,
     UnitCompetency,
 )
+
+
+class FormationTemplateForm(forms.Form):
+    title = forms.CharField(label="Titre de votre formation", max_length=180)
+    academic_year = forms.CharField(label="Année universitaire", max_length=20, required=False)
+
+    def __init__(self, *args, initial_title="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["title"].initial = initial_title
+        self.fields["academic_year"].widget.attrs["placeholder"] = "2026-2027"
+
+
+class FormationImportForm(forms.Form):
+    catalog = forms.FileField(
+        label="Fichier de formation (.json)",
+        help_text="Export MyENT au format JSON, 2 Mo au maximum.",
+    )
+
+    def clean_catalog(self):
+        uploaded = self.cleaned_data["catalog"]
+        if uploaded.size > 2 * 1024 * 1024:
+            raise forms.ValidationError("Ce fichier dépasse la limite de 2 Mo.")
+        try:
+            return json.loads(uploaded.read().decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise forms.ValidationError("Ce fichier n'est pas un document JSON valide.") from exc
+
+
+class FormationImportConfirmForm(forms.Form):
+    payload = forms.CharField(widget=forms.HiddenInput)
+    title = forms.CharField(label="Titre de votre formation", max_length=180)
+    academic_year = forms.CharField(label="Année universitaire", max_length=20, required=False)
+
+    def clean_payload(self):
+        try:
+            return json.loads(self.cleaned_data["payload"])
+        except json.JSONDecodeError as exc:
+            raise forms.ValidationError("L'aperçu a expiré : sélectionnez de nouveau le fichier.") from exc
+
+
+class FormationDuplicateForm(forms.Form):
+    title = forms.CharField(label="Titre de la copie", max_length=180)
 
 
 def annotate(form, helps: dict[str, str], placeholders: dict[str, str] | None = None) -> None:
@@ -37,22 +80,43 @@ class LearningPathForm(ScopedModelForm):
     class Meta:
         model = LearningPath
         # Ordonnés par intention : ce qu'est la formation, puis comment elle se présente.
-        fields = ["title", "level_label", "training_type", "description", "status"]
+        fields = [
+            "title",
+            "level_label",
+            "training_type",
+            "academic_year",
+            "current_period",
+            "description",
+            "status",
+            "time_suggests_level",
+        ]
         widgets = {"description": forms.Textarea(attrs={"rows": 4})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["current_period"].queryset = (
+            Period.objects.filter(path=self.instance).order_by("order", "title")
+            if self.instance.pk
+            else Period.objects.none()
+        )
         annotate(
             self,
             {
                 "level_label": "Le niveau tel que vous le nommez : L3, Master 1, BTS 2e année…",
                 "training_type": "Universitaire, professionnelle, autoformation… Laissez vide si cela n’a pas de sens.",
+                "academic_year": "L’année de référence, au format 2026-2027. Facultative.",
+                "current_period": "La période affichée en priorité. Vous pourrez la choisir après avoir créé les périodes.",
                 "status": "Une formation en pause ou terminée reste consultable et sort du premier plan.",
+                "time_suggests_level": (
+                    "Décochez si l’estimation horaire n’a pas de sens dans cette formation : "
+                    "aucun niveau ne sera plus proposé à partir du temps travaillé."
+                ),
             },
             {
                 "title": "Licence 3 Mathématiques",
                 "level_label": "L3",
                 "training_type": "Universitaire",
+                "academic_year": "2026-2027",
             },
         )
 
@@ -203,22 +267,24 @@ class HoursInput(forms.TextInput):
 class ProgressForm(ScopedModelForm):
     class Meta:
         model = ProgressRecord
-        fields = ["mastery_level", "target_level", "target_date", "planned_hours", "actual_hours", "notes"]
-        localized_fields = ("planned_hours", "actual_hours")
+        fields = ["mastery_level", "target_level", "target_date", "planned_hours", "manual_hours", "notes"]
+        localized_fields = ("planned_hours", "manual_hours")
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3}),
             "planned_hours": HoursInput(attrs=HOURS_WIDGET_ATTRS),
-            "actual_hours": HoursInput(attrs=HOURS_WIDGET_ATTRS),
+            "manual_hours": HoursInput(attrs=HOURS_WIDGET_ATTRS),
         }
 
     def __init__(self, *args, **kwargs):
+        args, kwargs = _accept_legacy_actual_hours(args, kwargs)
         super().__init__(*args, **kwargs)
+        _repair_legacy_time_initial(self)
         annotate(
             self,
             {
                 "mastery_level": "Votre appréciation, pas une note : elle sert à repérer ce qui reste à travailler.",
                 "planned_hours": "Le temps que vous pensez devoir y consacrer, en heures. La virgule est acceptée.",
-                "actual_hours": "Le temps déjà passé dessus.",
+                "manual_hours": "Le temps saisi par vous. Les sessions Sablier sont comptées séparément.",
                 "notes": "Ce qui bloque, ce qu’il reste à revoir, un renvoi vers un exercice.",
                 "target_level": "Le niveau visé. Toutes les compétences ne demandent pas la maîtrise complète.",
                 "target_date": "Une date d’examen, par exemple.",
@@ -231,23 +297,52 @@ class ProgressRowForm(forms.ModelForm):
 
     class Meta:
         model = ProgressRecord
-        fields = ["planned_hours", "actual_hours", "mastery_level", "notes"]
-        localized_fields = ("planned_hours", "actual_hours")
+        fields = ["planned_hours", "manual_hours", "mastery_level", "notes"]
+        localized_fields = ("planned_hours", "manual_hours")
         widgets = {
             "planned_hours": HoursInput(attrs=HOURS_WIDGET_ATTRS),
-            "actual_hours": HoursInput(attrs=HOURS_WIDGET_ATTRS),
+            "manual_hours": HoursInput(attrs=HOURS_WIDGET_ATTRS),
             "mastery_level": forms.Select(attrs={"class": "cell-level", "data-level-select": ""}),
             "notes": forms.TextInput(attrs={"placeholder": "Notes…", "class": "cell-notes"}),
         }
 
     def __init__(self, *args, **kwargs):
+        args, kwargs = _accept_legacy_actual_hours(args, kwargs)
         super().__init__(*args, **kwargs)
+        _repair_legacy_time_initial(self)
         # Le numéro reste visible dans le sélecteur : c’est lui qu’on lit en diagonale.
         self.fields["mastery_level"].choices = [
             (value, f"{value} - {label}") for value, label in ProgressRecord.Mastery.choices
         ]
         for field in self.fields.values():
             field.label = ""
+
+
+def _accept_legacy_actual_hours(args, kwargs):
+    """Transition douce des anciens POST ``actual_hours`` vers ``manual_hours``."""
+    data = args[0] if args else kwargs.get("data")
+    if data is None:
+        return args, kwargs
+    prefix = kwargs.get("prefix")
+    old_name = f"{prefix}-actual_hours" if prefix else "actual_hours"
+    new_name = f"{prefix}-manual_hours" if prefix else "manual_hours"
+    if old_name not in data or new_name in data:
+        return args, kwargs
+    copied = data.copy()
+    copied[new_name] = data.get(old_name)
+    if args:
+        args = (copied, *args[1:])
+    else:
+        kwargs["data"] = copied
+    return args, kwargs
+
+
+def _repair_legacy_time_initial(form):
+    """Rend lisible une ligne écrite par un ancien ``QuerySet.update(actual_hours=…)``."""
+    instance = form.instance
+    expected = instance.manual_hours + instance.session_hours
+    if instance.actual_hours != expected and instance.actual_hours >= instance.session_hours:
+        form.initial["manual_hours"] = instance.actual_hours - instance.session_hours
 
 
 ProgressRowFormSet = forms.modelformset_factory(ProgressRecord, form=ProgressRowForm, extra=0)

@@ -20,8 +20,27 @@
   {% if grid.metric_count %}<td colspan="{{ grid.metric_count }}" class="spacer"></td>{% endif %}
   {% if row.editable %}
     <td>{{ row.form.id }}{{ row.form.planned_hours }}</td>
-    <td>{{ row.form.actual_hours }}</td>
-    <td>{{ row.form.mastery_level }}</td>
+    <td>
+      {{ row.form.manual_hours }}
+      {% if row.form.instance.session_hours %}<span class="muted time-source">+ {{ row.form.instance.session_hours|floatformat:"-2" }} h Sablier</span>{% endif %}
+    </td>
+    {% comment %}
+      La grille entière est un seul formulaire : un bouton d'adoption ici imbriquerait un
+      formulaire dans un autre. Le palier s'y signale donc, et s'adopte sur la fiche de la
+      compétence, où la phrase a la place d'être écrite en entier.
+    {% endcomment %}
+    <td>
+      {{ row.form.mastery_level }}
+      {% if row.form.instance.is_suggested %}
+        <a class="chip static suggested" href="{% url 'formations:competency' row.competency.pk %}" title="Niveau proposé par le temps travaillé, à confirmer">
+          <span class="chip-label">suggéré</span>
+        </a>
+      {% elif row.form.instance.pending_level is not None %}
+        <a class="chip static pending" href="{% url 'formations:competency' row.competency.pk %}" title="Le temps travaillé suggère : {{ row.form.instance.pending_level_label }}">
+          <span class="chip-label">→ {{ row.form.instance.pending_level }}</span>
+        </a>
+      {% endif %}
+    </td>
     <td class="col-progress">
       <div class="progress-bar" data-progress-for="{{ row.form.mastery_level.id_for_label }}">
         <div class="progress-fill level-{{ row.form.instance.mastery_level }}" style="width:{{ row.form.instance.percent }}%"></div>
@@ -30,7 +49,7 @@
     <td class="col-notes">{{ row.form.notes }}</td>
   {% else %}
     <td class="total">{{ row.form.instance.planned_hours|floatformat:"-2" }}</td>
-    <td class="total">{{ row.form.instance.actual_hours|floatformat:"-2" }}</td>
+    <td class="total">{{ row.form.instance.actual_hours|floatformat:"-2" }}{% if row.form.instance.session_hours %}<span class="muted time-source">dont {{ row.form.instance.session_hours|floatformat:"-2" }} h Sablier</span>{% endif %}</td>
     <td class="muted">{{ row.form.instance.mastery_level }} - {{ row.form.instance.get_mastery_level_display }}</td>
     <td class="col-progress">
       <div class="progress-bar" role="img" aria-label="{{ row.form.instance.get_mastery_level_display }}">

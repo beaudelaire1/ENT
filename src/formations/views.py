@@ -1,21 +1,31 @@
 from __future__ import annotations
 
+import json
 from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from core.deletion import confirm_delete
 from core.editing import form_page
+from core.navigation import safe_next
 from library.models import LibraryItem
 
 from .academics import struggling_competencies, unit_average
+from .catalog import CatalogError, export_catalog, get_template, import_catalog, templates, validate_catalog
+from .curated_resources import ROLE_LABELS, recommendations_for
 from .forms import (
     AssessmentForm,
     AssessmentResultForm,
     CompetencyForm,
+    FormationDuplicateForm,
+    FormationImportConfirmForm,
+    FormationImportForm,
+    FormationTemplateForm,
     LearningGroupForm,
     LearningPathForm,
     LearningUnitForm,
@@ -25,6 +35,7 @@ from .forms import (
     ProgressRowFormSet,
     UnitCompetencyForm,
 )
+from .history import level_timeline, sparkline
 from .models import (
     Assessment,
     Competency,
@@ -37,6 +48,9 @@ from .models import (
     UnitCompetency,
 )
 from .navigation import competency_crumbs, path_crumbs, period_crumbs, unit_crumbs
+from .progression import MASTERY_DESCRIPTIONS
+from .resource_services import attach_curated_recommendations
+from .revision import suggest_from_result
 from .services import build_tracking_grid, ensure_progress_records, save_tracking, tracked_records
 
 
@@ -62,11 +76,147 @@ def path_list(request):
 @login_required
 def path_detail(request, pk):
     path = get_object_or_404(
-        LearningPath.objects.prefetch_related("periods__units__competencies", "metric_definitions"),
+        LearningPath.objects.select_related("current_period", "weight_metric").prefetch_related(
+            "periods__units__competencies", "metric_definitions"
+        ),
         owner=request.user,
         pk=pk,
     )
     return render(request, "formations/detail.html", {"path": path, "breadcrumbs": path_crumbs(path)})
+
+
+@login_required
+def path_templates(request):
+    return render(
+        request,
+        "formations/templates.html",
+        {
+            "templates": templates(),
+            "breadcrumbs": [
+                {"label": "Formations", "url": reverse("formations:list")},
+                {"label": "Modèles", "url": None},
+            ],
+        },
+    )
+
+
+@login_required
+def path_template_preview(request, slug):
+    try:
+        template = get_template(slug)
+    except CatalogError:
+        return redirect("formations:templates")
+    data = template["data"]
+    form = FormationTemplateForm(
+        request.POST or None,
+        initial_title=data["formation"]["title"],
+        initial={"title": data["formation"]["title"]},
+    )
+    if request.method == "POST" and form.is_valid():
+        path = import_catalog(
+            data,
+            owner=request.user,
+            title=form.cleaned_data["title"],
+            academic_year=form.cleaned_data["academic_year"],
+        )
+        messages.success(request, f"« {path.title} » a été créée depuis le modèle. Tout reste modifiable.")
+        return redirect("formations:detail", pk=path.pk)
+    return render(
+        request,
+        "formations/template_preview.html",
+        {
+            "template": template,
+            "form": form,
+            "breadcrumbs": [
+                {"label": "Formations", "url": reverse("formations:list")},
+                {"label": "Modèles", "url": reverse("formations:templates")},
+                {"label": template["preview"]["title"], "url": None},
+            ],
+        },
+    )
+
+
+@login_required
+def path_import(request):
+    upload_form = FormationImportForm()
+    confirm_form = None
+    preview = None
+    if request.method == "POST" and "confirm" in request.POST:
+        confirm_form = FormationImportConfirmForm(request.POST)
+        if confirm_form.is_valid():
+            try:
+                data = confirm_form.cleaned_data["payload"]
+                validate_catalog(data)
+                path = import_catalog(
+                    data,
+                    owner=request.user,
+                    title=confirm_form.cleaned_data["title"],
+                    academic_year=confirm_form.cleaned_data["academic_year"],
+                )
+            except CatalogError as exc:
+                confirm_form.add_error("payload", str(exc))
+            else:
+                messages.success(request, f"« {path.title} » a été importée.")
+                return redirect("formations:detail", pk=path.pk)
+    elif request.method == "POST":
+        upload_form = FormationImportForm(request.POST, request.FILES)
+        if upload_form.is_valid():
+            data = upload_form.cleaned_data["catalog"]
+            try:
+                preview = validate_catalog(data)
+            except CatalogError as exc:
+                upload_form.add_error("catalog", str(exc))
+            else:
+                confirm_form = FormationImportConfirmForm(
+                    initial={
+                        "payload": json.dumps(data, ensure_ascii=False),
+                        "title": data["formation"]["title"],
+                        "academic_year": data["formation"].get("academic_year", ""),
+                    }
+                )
+    return render(
+        request,
+        "formations/import.html",
+        {
+            "upload_form": upload_form,
+            "confirm_form": confirm_form,
+            "preview": preview,
+            "breadcrumbs": [
+                {"label": "Formations", "url": reverse("formations:list")},
+                {"label": "Importer", "url": None},
+            ],
+        },
+    )
+
+
+@login_required
+def path_export(request, pk):
+    path = get_object_or_404(LearningPath, owner=request.user, pk=pk)
+    response = JsonResponse(
+        export_catalog(path),
+        json_dumps_params={"ensure_ascii": False, "indent": 2},
+    )
+    response["Content-Disposition"] = f'attachment; filename="formation-{path.pk}.json"'
+    return response
+
+
+@login_required
+def path_duplicate(request, pk):
+    source = get_object_or_404(LearningPath, owner=request.user, pk=pk)
+    form = FormationDuplicateForm(request.POST or None, initial={"title": f"Copie de {source.title}"})
+    if request.method == "POST" and form.is_valid():
+        path = import_catalog(export_catalog(source), owner=request.user, title=form.cleaned_data["title"])
+        messages.success(request, f"« {path.title} » est une copie indépendante.")
+        return redirect("formations:detail", pk=path.pk)
+    return render(
+        request,
+        "formations/duplicate.html",
+        {
+            "source": source,
+            "form": form,
+            "breadcrumbs": path_crumbs(source) + [{"label": "Dupliquer", "url": None}],
+        },
+    )
 
 
 @login_required
@@ -79,6 +229,7 @@ def path_tracking(request, pk):
     path = get_object_or_404(LearningPath, owner=request.user, pk=pk)
     ensure_progress_records(request.user, path)
     formset = ProgressRowFormSet(request.POST or None, queryset=tracked_records(request.user, path))
+    timeline = level_timeline(request.user, path)
     metric_errors = []
     if request.method == "POST":
         saved, metric_errors = save_tracking(path, formset, request.POST)
@@ -93,7 +244,14 @@ def path_tracking(request, pk):
             "formset": formset,
             # Les cases reprennent la saisie rejetée plutôt que la valeur en base.
             "grid": build_tracking_grid(path, formset, submitted=request.POST if request.method == "POST" else None),
-            "levels": ProgressRecord.Mastery.choices,
+            # Le nom du niveau et son critère voyagent ensemble : les séparer laisserait
+            # le gabarit rapprocher deux listes par leur ordre, ce qui casse en silence.
+            "levels": [
+                {"value": value, "label": label, "description": MASTERY_DESCRIPTIONS.get(value, "")}
+                for value, label in ProgressRecord.Mastery.choices
+            ],
+            "timeline": timeline,
+            "sparkline": sparkline(timeline),
             "metric_errors": metric_errors,
             "save_failed": request.method == "POST",
             "breadcrumbs": path_crumbs(path) + [{"label": "Suivi", "url": None}],
@@ -409,6 +567,23 @@ def competency_detail(request, pk):
         pk=pk,
     )
     progress, _ = ProgressRecord.objects.get_or_create(owner=request.user, competency=competency)
+    links = list(competency.unit_links.select_related("unit__period").order_by("-is_primary", "order"))
+    curated = recommendations_for(competency.title, [link.unit.title for link in links])
+    saved_urls = set(competency.resources.exclude(url="").values_list("url", flat=True))
+    curated_missing_count = sum(resource.url not in saved_urls for resource in curated)
+    curated_groups = [
+        {
+            "role": role,
+            "label": label,
+            "items": [
+                {"resource": resource, "saved": resource.url in saved_urls}
+                for resource in curated
+                if resource.role == role
+            ],
+        }
+        for role, label in ROLE_LABELS.items()
+        if any(resource.role == role for resource in curated)
+    ]
     return render(
         request,
         "formations/competency.html",
@@ -417,12 +592,52 @@ def competency_detail(request, pk):
             "progress": progress,
             # Une compétence peut se travailler dans plusieurs matières : le lien porte son
             # ordre, son caractère principal et son objectif local.
-            "links": competency.unit_links.select_related("unit__period").order_by("-is_primary", "order"),
+            "links": links,
             "resource_groups": group_by_purpose(competency.resources.all()),
+            "curated_groups": curated_groups,
+            "curated_count": len(curated),
+            "curated_missing_count": curated_missing_count,
             "sessions": competency.focus_sessions.filter(owner=request.user)[:8],
+            # Le chemin parcouru, et pas seulement le point d'arrivée : c'est ce qui
+            # distingue une compétence qui monte d'une compétence qui stagne.
+            "events": progress.events.all()[:10],
             "breadcrumbs": competency_crumbs(competency),
         },
     )
+
+
+@login_required
+@require_POST
+def competency_import_recommendations(request, pk):
+    """Copie le parcours conseillé dans la bibliothèque privée, sans créer de doublons.
+
+    Les recommandations restent consultables sans rien enregistrer. Ce POST explicite
+    matérialise ensuite le choix de l'étudiant : chaque lien devient une ``LibraryItem``
+    ordinaire, donc modifiable, classable et réutilisable ailleurs.
+    """
+    competency = get_object_or_404(
+        Competency.objects.prefetch_related("unit_links__unit"),
+        path__owner=request.user,
+        pk=pk,
+    )
+    if not recommendations_for(
+        competency.title,
+        [link.unit.title for link in competency.unit_links.all()],
+    ):
+        messages.error(request, "Aucun parcours recommandé n’est disponible pour cette compétence.")
+        return redirect("formations:competency", pk=competency.pk)
+
+    result = attach_curated_recommendations(owner=request.user, competency=competency)
+
+    if result.attached:
+        messages.success(
+            request,
+            f"{result.attached} ressource(s) du parcours ajoutée(s) à cette compétence"
+            f" — {result.created} nouvelle(s) dans la bibliothèque.",
+        )
+    else:
+        messages.info(request, "Tout le parcours recommandé est déjà associé à cette compétence.")
+    return redirect("formations:competency", pk=competency.pk)
 
 
 @login_required
@@ -477,6 +692,28 @@ def progress_edit(request, competency_pk):
         breadcrumbs=competency_crumbs(competency) + [{"label": "Progression", "url": None}],
         fallback=lambda obj: reverse("formations:competency", args=[competency.pk]),
     )
+
+
+@login_required
+@require_POST
+def progress_adopt(request, competency_pk):
+    """Fait sien le niveau que le temps a proposé.
+
+    Un seul geste couvre les deux situations visibles à l'écran : confirmer un palier qui
+    s'est appliqué tout seul, et adopter une proposition restée en attente parce qu'un
+    niveau avait déjà été déclaré. Dans les deux cas le niveau devient une appréciation
+    personnelle, datée, que plus aucun palier ne réécrira.
+    """
+    competency = get_object_or_404(
+        Competency.objects.select_related("path"), path__owner=request.user, pk=competency_pk
+    )
+    progress, _ = ProgressRecord.objects.get_or_create(owner=request.user, competency=competency)
+    progress.competency = competency
+    if progress.adopt_suggested_level():
+        messages.success(request, f"Niveau confirmé : {progress.get_mastery_level_display().lower()}.")
+    else:
+        messages.info(request, "Ce niveau est déjà le vôtre.")
+    return redirect(safe_next(request, reverse("formations:competency", args=[competency.pk])))
 
 
 @login_required
@@ -658,6 +895,21 @@ def result_edit(request, pk):
         if assessment.status in {Assessment.Status.PLANNED, Assessment.Status.TAKEN}:
             assessment.status = Assessment.Status.MARKED
             assessment.save(update_fields=["status", "updated_at"])
+        # Une note obtenue est une information sur la maîtrise : la laisser sans effet
+        # obligeait à retourner déclarer soi-même ce que le résultat venait de montrer.
+        # Elle propose donc un niveau, sans jamais primer sur une appréciation déclarée.
+        assessment.refresh_from_db()
+        applied, pending = suggest_from_result(request.user, assessment)
+        if applied:
+            messages.info(
+                request,
+                f"{len(applied)} compétence(s) ont reçu un niveau suggéré par ce résultat, à confirmer.",
+            )
+        if pending:
+            messages.info(
+                request,
+                f"{len(pending)} compétence(s) où ce résultat suggère mieux que le niveau que vous aviez déclaré.",
+            )
 
     return _form_page(
         request,

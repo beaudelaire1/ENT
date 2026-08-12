@@ -16,10 +16,46 @@
 
 <section class="panel legend-panel">
   <h2>Légende des niveaux de maîtrise</h2>
-  <div class="legend">
-    {% for value, label in levels %}<span class="legend-item level-{{ value }}">{{ value }} - {{ label }}</span>{% endfor %}
-  </div>
+  {% comment %}
+    Un niveau nommé sans critère observable dérive : « acquis » ne veut pas dire la même
+    chose un lundi matin et un dimanche soir. Le critère est donc écrit à côté du nom, et
+    formulé en termes de ce qu'on sait faire.
+  {% endcomment %}
+  <dl class="legend-criteria">
+    {% for level in levels %}
+      <div>
+        <dt><span class="legend-item level-{{ level.value }}">{{ level.value }} - {{ level.label }}</span></dt>
+        <dd class="muted">{{ level.description }}</dd>
+      </div>
+    {% endfor %}
+  </dl>
 </section>
+
+{% comment %}
+  La courbe n'apparaît qu'une fois qu'il y a un chemin à montrer : une ligne plate à zéro
+  n'apprend rien à qui débute, et lui prend la place de ce qu'il doit faire.
+  Le tracé est calculé par le serveur et écrit en SVG : aucun script, donc rien à
+  autoriser dans la politique de sécurité, et il reste lisible sans JavaScript.
+{% endcomment %}
+{% if sparkline %}
+  <section class="panel">
+    <h2>Compétences acquises dans le temps</h2>
+    <div class="timeline-chart">
+      <svg viewBox="0 0 {{ sparkline.width }} {{ sparkline.height }}" width="100%" height="{{ sparkline.height }}"
+           role="img" aria-labelledby="timeline-summary">
+        <polygon class="timeline-area" points="{{ sparkline.area }}"></polygon>
+        <polyline class="timeline-line" points="{{ sparkline.line }}"></polyline>
+        <circle class="timeline-head" cx="{{ sparkline.last.0 }}" cy="{{ sparkline.last.1 }}" r="3.5"></circle>
+      </svg>
+      <p id="timeline-summary" class="muted">
+        {% with first=timeline|first last=timeline|last %}
+          De {{ first.acquired }} à {{ last.acquired }} compétence(s) acquise(s) sur {{ last.total }},
+          entre {{ first.label }} et {{ last.label }}.
+        {% endwith %}
+      </p>
+    </div>
+  </section>
+{% endif %}
 
 <form method="post" class="tracking-form">
   {% csrf_token %}
@@ -55,7 +91,7 @@
                 <th class="col-metric">{{ definition.label }}{% if definition.unit_label %} ({{ definition.unit_label }}){% endif %}</th>
               {% endfor %}
               <th>Travail personnel estimé (h)</th>
-              <th>Temps réel (h)</th>
+              <th>Temps total (h)<span class="muted time-source">manuel + Sablier</span></th>
               <th>Niveau de maîtrise</th>
               <th class="col-progress">Progression</th>
               <th class="col-notes">Commentaires</th>
@@ -159,7 +195,7 @@
               <th class="col-label">Compétence</th>
               {% for definition in grid.definitions %}<th class="col-metric">{{ definition.label }}</th>{% endfor %}
               <th>Travail personnel estimé (h)</th>
-              <th>Temps réel (h)</th>
+              <th>Temps total (h)<span class="muted time-source">manuel + Sablier</span></th>
               <th>Niveau de maîtrise</th>
               <th class="col-progress">Progression</th>
               <th class="col-notes">Commentaires</th>

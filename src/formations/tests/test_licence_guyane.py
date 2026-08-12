@@ -8,6 +8,8 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from formations.management.commands.load_licence_guyane import (
+    GEOMETRY_COMPETENCIES,
+    LEGACY_DIFFERENTIAL_GEOMETRY_COMPETENCIES,
     PROGRAMME,
     declared_titles,
     expected_titles,
@@ -53,6 +55,19 @@ class ProgrammeShapeTests(TestCase):
                 for competence in competences:
                     with self.subTest(module=titre, competence=competence):
                         self.assertGreater(len(competence.split()), 2)
+
+    def test_geometry_is_affine_and_euclidean_instead_of_differential(self):
+        joined = " ".join(GEOMETRY_COMPETENCIES).casefold()
+        for expected in ("espace affine", "barycentre", "projection orthogonale", "isométrie", "conique"):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, joined)
+        for obsolete in ("frenet", "courbure de gauss", "géodésique", "surface régulière"):
+            with self.subTest(obsolete=obsolete):
+                self.assertNotIn(obsolete, joined)
+
+    def test_geometry_granularity_comes_from_the_syllabus_not_the_old_count(self):
+        self.assertNotEqual(len(GEOMETRY_COMPETENCIES), len(LEGACY_DIFFERENTIAL_GEOMETRY_COMPETENCIES))
+        self.assertGreaterEqual(len(GEOMETRY_COMPETENCIES), 30)
 
 
 class ReadableShareTests(TestCase):
@@ -127,6 +142,59 @@ class LoadCommandTests(TestCase):
         before = Competency.objects.count()
         self.load()
         self.assertEqual(Competency.objects.count(), before)
+
+    def test_loading_populates_the_library_and_attaches_the_resources(self):
+        self.load()
+        geometry = Competency.objects.filter(units__title="Géométrie").first()
+
+        self.assertTrue(LibraryItem.objects.filter(owner=self.user, legacy_source="curated").exists())
+        self.assertGreaterEqual(geometry.resources.count(), 3)
+        self.assertTrue(geometry.resources.filter(legacy_id="geometry_affine_course_lyon").exists())
+
+    def test_old_geometry_resources_are_reused_and_corrected(self):
+        self.load()
+        geometry = LearningUnit.objects.get(title="Géométrie")
+        LibraryItem.objects.filter(
+            owner=self.user,
+            legacy_id="geometry_affine_course_lyon",
+        ).delete()
+        old_competency = competency_in(
+            geometry,
+            title=LEGACY_DIFFERENTIAL_GEOMETRY_COMPETENCIES[0],
+            order=99,
+        )
+        obsolete = LibraryItem.objects.create(
+            owner=self.user,
+            kind=LibraryItem.Kind.LINK,
+            purpose=LibraryItem.Purpose.COURSE,
+            title="Courbes et surfaces",
+            url="https://example.com/courbes-surfaces",
+            legacy_source="curated",
+            legacy_id="geometry_course_exercises_saclay",
+        )
+        old_competency.resources.add(obsolete)
+
+        self.load()
+
+        self.assertFalse(Competency.objects.filter(pk=old_competency.pk).exists())
+        obsolete.refresh_from_db()
+        self.assertEqual(obsolete.legacy_id, "geometry_affine_course_lyon")
+        self.assertIn("affine", obsolete.title.casefold())
+
+    def test_old_geometry_competency_with_personal_work_is_preserved(self):
+        self.load()
+        geometry = LearningUnit.objects.get(title="Géométrie")
+        old_competency = competency_in(
+            geometry,
+            title=LEGACY_DIFFERENTIAL_GEOMETRY_COMPETENCIES[0],
+            order=99,
+        )
+        ProgressRecord.objects.create(owner=self.user, competency=old_competency, mastery_level=2)
+
+        output = self.load()
+
+        self.assertTrue(Competency.objects.filter(pk=old_competency.pk).exists())
+        self.assertIn("travail personnel", output)
 
     def test_loading_again_keeps_the_progress_already_entered(self):
         self.load()

@@ -10,6 +10,15 @@ from django.utils import timezone
 
 from core.models import OwnedQuerySet, TimeStampedModel
 
+from .progression import (
+    MASTERY_DESCRIPTIONS,
+    accepts_automatic_level,
+    hours_gap,
+    pending_suggestion,
+    suggested_level,
+    time_ratio,
+)
+
 # Bornes de stockage de MetricValue.value (max_digits=10, decimal_places=2). Une saisie
 # au-delà ne serait pas rejetée par le formulaire mais par la base, en erreur 500.
 METRIC_ABSOLUTE_LIMIT = Decimal("99999999.99")
@@ -28,8 +37,32 @@ class LearningPath(TimeStampedModel):
     title = models.CharField("intitulé", max_length=180)
     training_type = models.CharField("type de formation", max_length=120, blank=True)
     level_label = models.CharField("niveau", max_length=120, blank=True)
+    academic_year = models.CharField(
+        "année universitaire",
+        max_length=20,
+        blank=True,
+        help_text="Exemple : 2026-2027. Laissez vide pour une formation sans année scolaire.",
+    )
     description = models.TextField("description", blank=True)
     status = models.CharField("état", max_length=12, choices=Status.choices, default=Status.ACTIVE)
+    current_period = models.ForeignKey(
+        "formations.Period",
+        verbose_name="période en cours",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="current_for_paths",
+        help_text="Met cette période en avant dans la formation, le tableau de bord et les sélecteurs.",
+    )
+    time_suggests_level = models.BooleanField(
+        "paliers de temps",
+        default=True,
+        help_text=(
+            "Quand le temps travaillé atteint un quart du travail estimé, proposer « découvert », "
+            "puis « en cours », « acquis » et « maîtrisé » aux quarts suivants. "
+            "Une proposition ne remplace jamais un niveau que vous avez déclaré."
+        ),
+    )
     weight_metric = models.ForeignKey(
         "formations.MetricDefinition",
         verbose_name="colonne de pondération",
@@ -51,6 +84,10 @@ class LearningPath(TimeStampedModel):
 
     def __str__(self):
         return self.title
+
+    def clean(self):
+        if self.current_period_id and self.current_period.path_id != self.pk:
+            raise ValidationError({"current_period": "Cette période appartient à une autre formation."})
 
 
 class Period(TimeStampedModel):
@@ -571,11 +608,26 @@ class ProgressRecord(TimeStampedModel):
         validators=[MinValueValidator(0)],
     )
     actual_hours = models.DecimalField(
-        "temps réel (h)",
+        "temps total (h)",
         max_digits=7,
         decimal_places=2,
         default=0,
         validators=[MinValueValidator(0)],
+    )
+    manual_hours = models.DecimalField(
+        "temps saisi manuellement (h)",
+        max_digits=7,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
+    session_hours = models.DecimalField(
+        "temps des sessions Sablier (h)",
+        max_digits=7,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        editable=False,
     )
     notes = models.TextField("commentaires", blank=True)
     assessed_at = models.DateTimeField(
@@ -611,31 +663,112 @@ class ProgressRecord(TimeStampedModel):
             # ni l'admin, ni un script, ni une future vue ne puisse en créer.
             models.CheckConstraint(condition=models.Q(planned_hours__gte=0), name="progress_planned_hours_positive"),
             models.CheckConstraint(condition=models.Q(actual_hours__gte=0), name="progress_actual_hours_positive"),
+            models.CheckConstraint(condition=models.Q(manual_hours__gte=0), name="progress_manual_hours_positive"),
+            models.CheckConstraint(condition=models.Q(session_hours__gte=0), name="progress_session_hours_positive"),
         ]
+
+    # Les valeurs retenues à la lecture, pour savoir plus tard ce qui a bougé.
+    TRACKED_ON_LOAD = ("mastery_level", "actual_hours", "manual_hours", "session_hours")
 
     @classmethod
     def from_db(cls, db, field_names, values):
-        """Retient le niveau lu en base, pour savoir plus tard s'il a changé."""
+        """Retient les valeurs lues en base, sans jamais en réclamer d'autres.
+
+        Les valeurs sont prises dans ``values`` et non sur l'instance : lire un attribut
+        différé déclenche un rechargement, qui rappelle ``from_db``, qui relit l'attribut.
+        Django diffère précisément les champs qu'il n'utilise pas — au ramassage d'une
+        suppression en cascade, par exemple — et la lecture par attribut y partait en
+        récursion infinie.
+
+        Un champ absent ne laisse aucune valeur retenue, ce que ``save()`` interprète
+        déjà comme « on ne sait pas ce qu'il valait ».
+        """
         instance = super().from_db(db, field_names, values)
-        instance._loaded_mastery_level = instance.mastery_level
+        # `strict` : Django appaire toujours les deux listes ; un écart serait un défaut
+        # de la couche d'accès, à faire remonter plutôt qu'à tronquer en silence.
+        loaded = dict(zip(field_names, values, strict=True))
+        for name in cls.TRACKED_ON_LOAD:
+            if name in loaded:
+                setattr(instance, f"_loaded_{name}", loaded[name])
         return instance
 
     def save(self, *args, **kwargs):
-        """Horodate l'autoévaluation quand, et seulement quand, le niveau change.
+        """Horodate l'autoévaluation quand, et seulement quand, le niveau change, puis
+        laisse le temps travaillé proposer un palier.
 
         Une ligne créée d'office par la grille part à « non abordé » : rien n'a été évalué,
         la date reste vide. Sans cette nuance, toutes les compétences d'une formation
         paraîtraient évaluées le jour où l'on ouvre la grille pour la première fois.
+
+        L'ordre compte. Le niveau déclaré est traité d'abord : il date l'autoévaluation et
+        marque l'origine comme personnelle, ce qui ferme d'emblée la porte au palier. Le
+        palier ne s'écrit donc que là où rien n'a été déclaré, et sans jamais toucher à
+        ``assessed_at`` — voir ``formations.progression``.
         """
         previous = getattr(self, "_loaded_mastery_level", None)
-        changed = previous != self.mastery_level if previous is not None else bool(self.mastery_level)
+        # Une écriture posée par `suggest_level()` vient d'une source extérieure — un
+        # résultat d'évaluation — et non de l'étudiant : la traiter comme une déclaration
+        # la daterait comme une autoévaluation et la mettrait à l'abri des paliers, ce
+        # qu'aucune des deux n'a le droit de faire à la place de la personne.
+        suggesting = getattr(self, "_suggested_write", False)
+        changed = (previous != self.mastery_level if previous is not None else bool(self.mastery_level)) and (
+            not suggesting
+        )
+        loaded_actual = getattr(self, "_loaded_actual_hours", None)
+        loaded_manual = getattr(self, "_loaded_manual_hours", None)
+        loaded_session = getattr(self, "_loaded_session_hours", None)
+        direct_total_edit = (
+            loaded_actual is not None
+            and self.actual_hours != loaded_actual
+            and self.manual_hours == loaded_manual
+            and self.session_hours == loaded_session
+        )
+        if (
+            self._state.adding and self.actual_hours and not self.manual_hours and not self.session_hours
+        ) or direct_total_edit:
+            # Compatibilité des scripts et imports historiques qui écrivent encore le
+            # total : la part Sablier reste intacte, la différence devient manuelle.
+            self.manual_hours = max(Decimal(0), self.actual_hours - self.session_hours)
+        else:
+            self.actual_hours = self.manual_hours + self.session_hours
         if changed:
+            # Un niveau posé à la main est une appréciation personnelle : elle date
+            # l'autoévaluation et reprend l'origine au palier, qui l'aurait sinon
+            # réécrite à la session suivante.
             self.assessed_at = timezone.now()
+            self.level_origin = self.Origin.MANUAL
             update_fields = kwargs.get("update_fields")
-            if update_fields is not None and "assessed_at" not in update_fields:
-                kwargs["update_fields"] = [*update_fields, "assessed_at"]
+            if update_fields is not None:
+                kwargs["update_fields"] = list({*update_fields, "assessed_at", "level_origin"})
+        if accepts_automatic_level(self):
+            proposed = suggested_level(self)
+            if proposed is not None:
+                self.mastery_level = proposed
+                self.level_origin = self.Origin.SUGGESTED
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = list({*update_fields, "mastery_level", "level_origin"})
+        # Le niveau qui précède l'écriture, retenu pour le journal. `previous` vaut None sur
+        # une ligne neuve, où le point de départ est « non abordé ».
+        departure = previous if previous is not None else self.Mastery.NOT_STARTED
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and ({"manual_hours", "session_hours", "actual_hours"} & set(update_fields)):
+            kwargs["update_fields"] = list({*update_fields, "manual_hours", "actual_hours"})
         super().save(*args, **kwargs)
+        if self.mastery_level != departure:
+            # Après l'écriture seulement : un journal qui mentionnerait un niveau que la
+            # transaction n'a pas retenu serait pire que pas de journal du tout.
+            ProgressEvent.objects.create(
+                record=self,
+                previous_level=departure,
+                level=self.mastery_level,
+                origin=self.level_origin,
+            )
+        self._suggested_write = False
         self._loaded_mastery_level = self.mastery_level
+        self._loaded_actual_hours = self.actual_hours
+        self._loaded_manual_hours = self.manual_hours
+        self._loaded_session_hours = self.session_hours
 
     @property
     def percent(self) -> int:
@@ -649,6 +782,124 @@ class ProgressRecord(TimeStampedModel):
             return None
         return self.mastery_level >= self.target_level
 
+    @property
+    def is_suggested(self) -> bool:
+        """Le niveau affiché vient-il d'un palier de temps plutôt que d'une appréciation ?"""
+        return self.level_origin == self.Origin.SUGGESTED
+
+    @property
+    def mastery_description(self) -> str:
+        """Le critère observable du niveau courant, et non son seul nom."""
+        return MASTERY_DESCRIPTIONS.get(self.mastery_level, "")
+
+    @property
+    def target_label(self) -> str:
+        return dict(self.Mastery.choices).get(self.target_level, "") if self.target_level is not None else ""
+
+    @property
+    def days_to_target(self) -> int | None:
+        """Jours restants avant la date visée, négatif une fois la date passée."""
+        if self.target_date is None:
+            return None
+        return (self.target_date - timezone.localdate()).days
+
+    @property
+    def target_is_late(self) -> bool:
+        """L'objectif est-il manqué : une date dépassée, un niveau pas encore atteint ?"""
+        days = self.days_to_target
+        return bool(self.target_level is not None and days is not None and days < 0 and not self.reaches_target)
+
+    @property
+    def hours_comment(self) -> str:
+        """Le retour sur l'écart entre le temps estimé et le temps réellement passé."""
+        return hours_gap(self)
+
+    @property
+    def pending_level(self) -> int | None:
+        """Le niveau que le temps propose sans pouvoir l'écrire, faute d'y être autorisé."""
+        return pending_suggestion(self)
+
+    @property
+    def pending_level_label(self) -> str:
+        pending = self.pending_level
+        return dict(self.Mastery.choices).get(pending, "") if pending is not None else ""
+
+    @property
+    def time_percent(self) -> int | None:
+        """La part du temps estimé qui est écoulée, en pourcentage, ou ``None`` sans estimation."""
+        ratio = time_ratio(self)
+        return None if ratio is None else round(ratio * 100)
+
+    def suggest_level(self, level: int) -> bool:
+        """Pose un niveau proposé par une source extérieure — aujourd'hui un résultat.
+
+        Mêmes garde-fous que les paliers de temps : ne fait que monter, ne s'écrit que là
+        où rien n'a été déclaré, et n'horodate pas l'autoévaluation. Rend ``False`` quand
+        la proposition n'a pas lieu d'être, à charge pour l'appelant de l'afficher.
+        """
+        if level <= self.mastery_level or not accepts_automatic_level(self):
+            return False
+        self._suggested_write = True
+        self.mastery_level = level
+        self.level_origin = self.Origin.SUGGESTED
+        self.save(update_fields=["mastery_level", "level_origin", "updated_at"])
+        return True
+
+    def adopt_suggested_level(self) -> bool:
+        """Fait sien le niveau proposé : il devient une appréciation personnelle et datée.
+
+        Sert aux deux cas visibles à l'écran — confirmer un palier déjà appliqué, et
+        adopter une proposition restée en attente parce qu'un niveau avait été déclaré.
+        """
+        proposed = suggested_level(self) if accepts_automatic_level(self) else self.pending_level
+        target = max(self.mastery_level, proposed or 0)
+        if target == self.mastery_level and self.level_origin == self.Origin.MANUAL:
+            return False
+        self.mastery_level = target
+        self.level_origin = self.Origin.MANUAL
+        self.assessed_at = timezone.now()
+        self.save(update_fields=["mastery_level", "level_origin", "assessed_at", "updated_at"])
+        return True
+
     def clean(self):
         if self.competency.path.owner_id != self.owner_id:
             raise ValidationError("La progression appartient à un autre utilisateur.")
+
+
+class ProgressEvent(models.Model):
+    """Un changement de niveau, conservé après coup.
+
+    ``ProgressRecord`` ne garde que l'état courant : chaque écriture écrase la précédente.
+    On ne pouvait donc ni tracer une courbe, ni répondre à « où j'en étais il y a un mois »,
+    ni distinguer une compétence qui monte d'une qui stagne — alors que voir son propre
+    progrès est ce qui soutient l'effort le plus sûrement.
+
+    L'origine est conservée avec le niveau : une montée proposée par le temps et une montée
+    déclarée après un exercice ne racontent pas la même chose, et les confondre dans une
+    seule courbe la rendrait trompeuse.
+    """
+
+    record = models.ForeignKey(
+        ProgressRecord, verbose_name="progression", on_delete=models.CASCADE, related_name="events"
+    )
+    previous_level = models.PositiveSmallIntegerField("niveau précédent", choices=ProgressRecord.Mastery.choices)
+    level = models.PositiveSmallIntegerField("niveau atteint", choices=ProgressRecord.Mastery.choices)
+    origin = models.CharField("origine", max_length=10, choices=ProgressRecord.Origin.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "changement de niveau"
+        verbose_name_plural = "changements de niveau"
+        ordering = ["-created_at", "-pk"]
+        indexes = [models.Index(fields=["record", "created_at"], name="progress_event_record_idx")]
+
+    def __str__(self):
+        return f"{self.record.competency} : {self.previous_level} → {self.level}"
+
+    @property
+    def is_rise(self) -> bool:
+        return self.level > self.previous_level
+
+    @property
+    def is_suggested(self) -> bool:
+        return self.origin == ProgressRecord.Origin.SUGGESTED

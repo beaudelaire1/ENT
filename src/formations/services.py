@@ -48,7 +48,9 @@ def tracked_records(user, path):
     """
     return (
         ProgressRecord.objects.filter(owner=user, competency__path=path)
-        .select_related("competency__period")
+        # `competency__path` est chargé pour que le contrôle des paliers de temps, dans
+        # `save()`, ne coûte pas une requête par ligne enregistrée.
+        .select_related("competency__period", "competency__path")
         .order_by(
             "competency__period__order",
             "competency__period__title",

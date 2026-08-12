@@ -3,7 +3,7 @@
 {% block content %}
 <header class="page-header">
   <div>
-    <p class="eyebrow">{{ path.training_type|default:"FORMATION"|upper }}</p>
+    <p class="eyebrow">{{ path.training_type|default:"FORMATION"|upper }}{% if path.academic_year %} · {{ path.academic_year }}{% endif %}</p>
     <h1>{{ path.title }}</h1>
     {% if path.description %}<p class="muted">{{ path.description }}</p>{% endif %}
   </div>
@@ -12,6 +12,8 @@
     <a class="button primary" href="{% url 'formations:tracking' path.pk %}">Suivi de compétences</a>
     <a class="button" href="{% url 'formations:period_new' path.pk %}">Ajouter une période</a>
     <a class="button" href="{% url 'formations:metric_new' path.pk %}">Ajouter une colonne</a>
+    <a class="button quiet" href="{% url 'formations:duplicate' path.pk %}">Dupliquer</a>
+    <a class="button quiet" href="{% url 'formations:export' path.pk %}">Exporter</a>
     <a class="button" href="{% url 'formations:edit' path.pk %}">Modifier</a>
   </div>
 </header>
@@ -32,9 +34,9 @@
 {% endif %}
 
 {% for period in path.periods.all %}
-  <section class="panel formation-period" id="periode-{{ period.pk }}">
+  <section class="panel formation-period{% if path.current_period_id == period.pk %} current-period{% endif %}" id="periode-{{ period.pk }}">
     <div class="page-header compact">
-      <h2>{{ period.title }}</h2>
+      <h2>{{ period.title }}{% if path.current_period_id == period.pk %} <span class="chip static">En cours</span>{% endif %}</h2>
       <div class="actions">
         <a class="button" href="{% url 'formations:unit_new' period.pk %}">Ajouter une matière</a>
         <a class="button" href="{% url 'formations:group_new' period.pk %}">Ajouter un regroupement</a>

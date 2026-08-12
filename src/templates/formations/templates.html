@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Modèles de formation · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">CATALOGUE</p>
+    <h1>Partir d’un modèle</h1>
+    <p class="muted">Un modèle crée une copie entièrement modifiable dans votre espace.</p>
+  </div>
+  <a class="button" href="{% url 'formations:new' %}">Créer sans modèle</a>
+</header>
+<div class="content-cards">
+  {% for template in templates %}
+    <a class="panel content-card" href="{% url 'formations:template_preview' template.slug %}">
+      <span class="eyebrow">MODÈLE FOURNI</span>
+      <h2>{{ template.preview.title }}</h2>
+      <p class="muted">{{ template.preview.periods }} périodes · {{ template.preview.units }} matières · {{ template.preview.competencies }} compétences</p>
+      {% if template.preview.metadata.notice %}<p>{{ template.preview.metadata.notice }}</p>{% endif %}
+    </a>
+  {% endfor %}
+</div>
+{% endblock %}

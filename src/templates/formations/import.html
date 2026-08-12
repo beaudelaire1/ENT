@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Importer une formation · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div><p class="eyebrow">PORTABILITÉ</p><h1>Importer une formation</h1><p class="muted">Le fichier est contrôlé et résumé avant toute création.</p></div>
+</header>
+{% if preview %}
+  <section class="panel">
+    <p class="eyebrow">APERÇU VALIDÉ</p>
+    <h2>{{ preview.title }}</h2>
+    <p>{{ preview.periods }} périodes · {{ preview.groups }} regroupements · {{ preview.units }} matières · {{ preview.competencies }} compétences</p>
+    <form method="post">
+      {% csrf_token %}
+      {% include "core/_form_fields.html" with form=confirm_form %}
+      <div class="actions"><button class="button primary" type="submit" name="confirm" value="1">Confirmer l’import</button><a class="button quiet" href="{% url 'formations:import' %}">Changer de fichier</a></div>
+    </form>
+  </section>
+{% else %}
+  <section class="panel narrow-panel">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% include "core/_form_fields.html" with form=upload_form %}
+      <div class="actions"><button class="button primary" type="submit">Vérifier le fichier</button><a class="button quiet" href="{% url 'formations:list' %}">Annuler</a></div>
+    </form>
+  </section>
+{% endif %}
+{% endblock %}

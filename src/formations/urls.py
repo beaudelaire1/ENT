@@ -6,7 +6,12 @@ app_name = "formations"
 urlpatterns = [
     path("", views.path_list, name="list"),
     path("new/", views.path_edit, name="new"),
+    path("templates/", views.path_templates, name="templates"),
+    path("templates/<slug:slug>/", views.path_template_preview, name="template_preview"),
+    path("import/", views.path_import, name="import"),
     path("<int:pk>/", views.path_detail, name="detail"),
+    path("<int:pk>/export/", views.path_export, name="export"),
+    path("<int:pk>/duplicate/", views.path_duplicate, name="duplicate"),
     path("<int:pk>/suivi/", views.path_tracking, name="tracking"),
     path("<int:pk>/edit/", views.path_edit, name="edit"),
     path("<int:pk>/delete/", views.path_delete, name="delete"),
@@ -29,10 +34,16 @@ urlpatterns = [
     path("units/<int:pk>/resources/", views.unit_resources, name="unit_resources"),
     path("units/<int:unit_pk>/competencies/new/", views.competency_edit, name="competency_new"),
     path("competencies/<int:pk>/", views.competency_detail, name="competency"),
+    path(
+        "competencies/<int:pk>/recommended-resources/",
+        views.competency_import_recommendations,
+        name="competency_import_recommendations",
+    ),
     path("competencies/<int:pk>/resources/", views.competency_resources, name="competency_resources"),
     path("competencies/<int:pk>/edit/", views.competency_edit, name="competency_edit"),
     path("competencies/<int:pk>/delete/", views.competency_delete, name="competency_delete"),
     path("competencies/<int:competency_pk>/progress/", views.progress_edit, name="progress"),
+    path("competencies/<int:competency_pk>/progress/adopt/", views.progress_adopt, name="progress_adopt"),
     # Les évaluations vivent au niveau du compte : une épreuve peut être transversale, et
     # la liste sert d'abord à voir ce qui arrive, toutes formations confondues.
     path("evaluations/", views.assessment_list, name="assessments"),

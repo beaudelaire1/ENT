@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ template.preview.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">APERÇU DU MODÈLE</p>
+    <h1>{{ template.preview.title }}</h1>
+    <p class="muted">{{ template.preview.periods }} périodes · {{ template.preview.groups }} regroupements · {{ template.preview.units }} matières · {{ template.preview.competencies }} compétences</p>
+  </div>
+</header>
+<div class="split-layout">
+  <section class="panel prose">
+    <h2>Ce qui sera créé</h2>
+    <p>{{ template.preview.metadata.notice }}</p>
+    {% if template.preview.metadata.source %}<p><a href="{{ template.preview.metadata.source }}" rel="noreferrer">Consulter la source du programme</a></p>{% endif %}
+    {% for period in template.data.periods %}
+      <h3>{{ period.title }}</h3>
+      <p class="muted">{{ period.units|length }} matières · {{ period.groups|length }} regroupements</p>
+      <ul>{% for unit in period.units %}<li>{{ unit.title }}</li>{% endfor %}</ul>
+    {% endfor %}
+  </section>
+  <section class="panel">
+    <h2>Créer ma copie</h2>
+    <form method="post">
+      {% csrf_token %}
+      {% include "core/_form_fields.html" with form=form %}
+      <div class="actions">
+        <button class="button primary" type="submit">Créer la formation</button>
+        <a class="button quiet" href="{% url 'formations:templates' %}">Annuler</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

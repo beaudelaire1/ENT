@@ -12,7 +12,7 @@
     de quoi la travailler. Les deux actions sont ici, pas trois écrans plus loin.
   {% endcomment %}
   <div class="actions">
-    <a class="button primary" href="{% url 'sablier:home' %}?competency={{ competency.pk }}">Travailler avec Sablier</a>
+    <a class="button primary" href="{% url 'sablier:home' %}?competency={{ competency.pk }}&amp;intention={{ competency.title|urlencode }}&amp;duration=25&amp;next={{ request.path|urlencode }}">Travailler 25 min avec Sablier</a>
     <a class="button" href="{% url 'formations:competency_resources' competency.pk %}">Associer une ressource</a>
     <a class="button" href="{% url 'formations:progress' competency.pk %}">Où j’en suis</a>
     <a class="button" href="{% url 'formations:competency_edit' competency.pk %}">Modifier</a>
@@ -24,15 +24,91 @@
     <h2>État de maîtrise</h2>
     <div class="mastery-state">
       <span class="legend-item level-{{ progress.mastery_level }}">{{ progress.mastery_level }} - {{ progress.get_mastery_level_display }}</span>
+      {% if progress.is_suggested %}<span class="chip static suggested"><span class="chip-label">suggéré par le temps</span></span>{% endif %}
       <div class="progress-bar" role="img" aria-label="Maîtrise : {{ progress.get_mastery_level_display }}, soit {{ progress.percent }} %">
         <div class="progress-fill level-{{ progress.mastery_level }}" style="width:{{ progress.percent }}%"></div>
       </div>
     </div>
+    {% comment %}
+      Le critère est écrit sous le niveau : « acquis » sans définition dérive avec la
+      fatigue, et c'est sur cette échelle que se juge un palier proposé par le temps.
+    {% endcomment %}
+    <p class="muted level-criterion">{{ progress.mastery_description }}</p>
+    {% if progress.target_level is not None or progress.target_date %}
+      <div class="list-row">
+        <span>Objectif</span>
+        <span>
+          {% if progress.target_label %}{{ progress.target_label|lower }}{% else %}sans niveau visé{% endif %}
+          {% if progress.target_date %}
+            · pour le {{ progress.target_date|date:"j F Y" }}
+          {% endif %}
+          {% if progress.reaches_target %}
+            <span class="chip static reached"><span class="chip-label">atteint</span></span>
+          {% elif progress.target_is_late %}
+            <span class="chip static urgent"><span class="chip-label">date dépassée</span></span>
+          {% elif progress.days_to_target is not None %}
+            <span class="muted">· dans {{ progress.days_to_target }} jour(s)</span>
+          {% endif %}
+        </span>
+      </div>
+    {% endif %}
+    {% comment %}
+      Une proposition se lit là où l'on travaille, et se refuse en ne faisant rien : il
+      n'y a pas de bouton « refuser », modifier soi-même le niveau suffit et vaut mieux.
+    {% endcomment %}
+    {% if progress.is_suggested or progress.pending_level is not None %}
+      <form method="post" action="{% url 'formations:progress_adopt' competency.pk %}" class="suggestion-note">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <p class="muted">
+          {% if progress.pending_level is not None %}
+            Vous avez travaillé {{ progress.time_percent }} % du temps estimé : cela suggère « {{ progress.pending_level_label|lower }} », au-delà du niveau que vous avez déclaré.
+          {% else %}
+            Ce niveau vient des {{ progress.time_percent }} % du temps estimé déjà travaillés. Il n’a pas encore été confirmé par vous.
+          {% endif %}
+        </p>
+        <button class="button small" type="submit">
+          {% if progress.pending_level is not None %}Adopter ce niveau{% else %}Confirmer ce niveau{% endif %}
+        </button>
+        <a class="button small quiet" href="{% url 'formations:progress' competency.pk %}">Corriger moi-même</a>
+      </form>
+    {% endif %}
+    {% if progress.assessed_at %}
+      <div class="list-row"><span>Dernière autoévaluation</span><span class="muted">{{ progress.assessed_at|date:"j F Y" }}</span></div>
+    {% endif %}
     <div class="list-row"><span>Travail personnel estimé</span><strong>{{ progress.planned_hours|floatformat:"-2" }} h</strong></div>
-    <div class="list-row"><span>Temps réel</span><strong>{{ progress.actual_hours|floatformat:"-2" }} h</strong></div>
+    <div class="list-row"><span>Temps total</span><strong>{{ progress.actual_hours|floatformat:"-2" }} h</strong></div>
+    <div class="list-row"><span>Saisi manuellement</span><strong>{{ progress.manual_hours|floatformat:"-2" }} h</strong></div>
+    <div class="list-row"><span>Sessions Sablier</span><strong>{{ progress.session_hours|floatformat:"-2" }} h</strong></div>
+    {% if progress.hours_comment %}
+      {% comment %}
+        Un constat, pas un reproche : dépasser une estimation n'est pas une faute, et
+        c'est le seul moyen d'apprendre à estimer.
+      {% endcomment %}
+      <p class="muted">{{ progress.hours_comment }}</p>
+    {% endif %}
     {% if progress.notes %}
       <h2>Commentaire</h2>
       <p class="muted">{{ progress.notes|linebreaksbr }}</p>
+    {% endif %}
+    {% if events %}
+      <h2>Chemin parcouru</h2>
+      {% comment %}
+        L'origine reste visible à côté du niveau : une montée proposée par le temps et une
+        montée déclarée après un exercice ne racontent pas la même chose.
+      {% endcomment %}
+      <ol class="level-history">
+        {% for event in events %}
+          <li>
+            <span class="legend-item level-{{ event.level }}">{{ event.get_level_display }}</span>
+            <span class="muted">
+              {% if event.is_rise %}depuis{% else %}revenu de{% endif %} « {{ event.get_previous_level_display|lower }} »
+              · {{ event.created_at|date:"j F Y" }}
+              · {% if event.is_suggested %}proposé par le temps{% else %}déclaré{% endif %}
+            </span>
+          </li>
+        {% endfor %}
+      </ol>
     {% endif %}
     <h2>Matières où elle se travaille</h2>
     {% for link in links %}
@@ -59,7 +135,49 @@
   </section>
 
   <section class="panel">
-    <h2>Ressources</h2>
+    {% if curated_groups %}
+      <h2>Parcours recommandé</h2>
+      <p class="muted recommended-intro">
+        Une sélection pédagogique pour comprendre, voir et pratiquer cette compétence. Les ressources
+        complémentaires n’apparaissent que lorsqu’elles apportent un traitement plus ciblé.
+      </p>
+      {% for group in curated_groups %}
+        <h3 class="resource-group">{{ group.label }}</h3>
+        <div class="recommended-list">
+          {% for entry in group.items %}
+            <article class="recommended-resource{% if entry.saved %} is-saved{% endif %}">
+              <div class="recommended-resource-heading">
+                <a href="{{ entry.resource.url }}" target="_blank" rel="noopener noreferrer">
+                  {{ entry.resource.title }} <span aria-hidden="true">↗</span>
+                </a>
+                {% if entry.saved %}<span class="resource-saved">Ajoutée</span>{% endif %}
+              </div>
+              <p>{{ entry.resource.description }}</p>
+              <div class="resource-meta">
+                <span>{{ entry.resource.provider }}</span>
+                <span>{{ entry.resource.format_label }}</span>
+                <span lang="{% if entry.resource.language == 'en' %}en{% else %}fr{% endif %}">
+                  {{ entry.resource.language_label }}
+                </span>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% endfor %}
+      {% if curated_missing_count %}
+        <form method="post" action="{% url 'formations:competency_import_recommendations' competency.pk %}" class="recommended-import">
+          {% csrf_token %}
+          <button class="button primary" type="submit">
+            Ajouter les {{ curated_missing_count }} ressources manquantes à ma bibliothèque
+          </button>
+          <span class="muted">Les liens restent ensuite modifiables et classables.</span>
+        </form>
+      {% else %}
+        <p class="resource-saved recommended-import">Ce parcours est déjà disponible dans Ma bibliothèque.</p>
+      {% endif %}
+    {% endif %}
+
+    <h2>{% if curated_groups %}Ma bibliothèque{% else %}Ressources{% endif %}</h2>
     {% comment %}Groupées par nature : on cherche « une annale », pas « un fichier ».{% endcomment %}
     {% for group in resource_groups %}
       <h3 class="resource-group">{{ group.label }}</h3>
@@ -82,8 +200,8 @@
     <h2>Séances récentes</h2>
     {% for session in sessions %}
       <div class="list-row">
-        <span>{{ session.started_at|date:"d/m/Y H:i" }}</span>
-        <strong>{{ session.minutes }} min</strong>
+        <span>{{ session.started_at|date:"d/m/Y H:i" }}{% if session.excluded_at %} · exclue{% endif %}</span>
+        <div class="actions"><strong>{{ session.minutes }} min</strong><a class="button small quiet" href="{% url 'sablier:session_edit' session.pk %}?next={{ request.path|urlencode }}">Corriger</a></div>
       </div>
     {% empty %}
       <p class="empty">Aucune séance enregistrée sur cette compétence.</p>

@@ -5,18 +5,49 @@
 <header class="page-header"><div><p class="eyebrow">VOTRE ESPACE</p><h1>Bonjour {{ appearance.display_name|default:user.username }}</h1><p class="muted">Tout ce qui compte, sans bruit inutile.</p></div><div class="actions"><details class="widget-settings"><summary class="button">Personnaliser</summary><div class="panel"><h2>Widgets visibles</h2>{% for widget in widgets %}<label for="widget-toggle-{{ widget.kind }}"><input type="checkbox" id="widget-toggle-{{ widget.kind }}" aria-label="Afficher le bloc {{ widget.get_kind_display }}" data-widget-toggle="{{ widget.kind }}" {% if widget.visible %}checked{% endif %}> {{ widget.get_kind_display }}</label>{% endfor %}<button class="button" type="button" data-save-widgets>Appliquer</button></div></details><a class="button primary" href="{% url 'sablier:home' %}">Ouvrir Sablier</a></div></header>
 <div class="dashboard-grid" id="dashboard-grid" data-layout-url="{% url 'dashboard:save_layout' %}">
 {% for widget in widgets %}{% if widget.visible %}
-  <section class="panel widget {% if widget.kind == 'today' or widget.kind == 'recent' %}wide{% endif %}" draggable="true" data-widget="{{ widget.kind }}">
-    <div class="widget-heading"><span class="drag-handle" title="Déplacer">⋮⋮</span><h2>{{ widget.get_kind_display }}</h2></div>
+  <section class="panel widget {% if widget.kind == 'today' or widget.kind == 'recent' or widget.kind == 'academic' %}wide{% endif %}" draggable="true" data-widget="{{ widget.kind }}">
+    <div class="widget-heading"><span class="drag-handle" title="Déplacer" aria-hidden="true">⋮⋮</span><h2>{{ widget.get_kind_display }}</h2><div class="widget-move-actions"><button class="icon-button" type="button" data-move-widget="up" aria-label="Déplacer {{ widget.get_kind_display }} vers le haut">↑</button><button class="icon-button" type="button" data-move-widget="down" aria-label="Déplacer {{ widget.get_kind_display }} vers le bas">↓</button></div></div>
     {% if widget.kind == 'today' %}
-      {% for event in events_today %}<div class="list-row"><span>{{ event.title }}</span><time>{{ event.starts_at|time:"H:i" }}</time></div>{% empty %}<div class="empty-state"><p class="empty">Rien de prévu aujourd’hui.</p><a class="button small" href="{% url 'planner:event_new' %}">Ajouter un événement</a></div>{% endfor %}
+      {% for event in events_today %}<div class="list-row"><a href="{% url 'planner:event_edit' event.pk %}?next={% url 'dashboard:home' %}">{{ event.title }}</a><time>{{ event.starts_at|time:"H:i" }}–{{ event.ends_at|time:"H:i" }}</time></div>{% empty %}<div class="empty-state"><p class="empty">Rien de prévu aujourd’hui.</p><a class="button small" href="{% url 'planner:event_new' %}">Ajouter un événement</a></div>{% endfor %}
     {% elif widget.kind == 'tasks' %}
-      {% for task in tasks %}<div class="list-row"><span>{{ task.title }}</span><span class="muted">{{ task.get_priority_display }}</span></div>{% empty %}<div class="empty-state"><p class="empty">Tout est à jour.</p><a class="button small" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}
+      {% for task in tasks %}<div class="list-row"><div><a href="{% url 'planner:task_edit' task.pk %}?next={% url 'dashboard:home' %}">{{ task.title }}</a><span class="muted"> · {{ task.get_priority_display }}{% if task.due_at %} · {{ task.due_at|date:"d/m H:i" }}{% endif %}</span></div><form method="post" action="{% url 'planner:task_toggle' task.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:home' %}"><button class="button small" type="submit">Terminer</button></form></div>{% empty %}<div class="empty-state"><p class="empty">Tout est à jour.</p><a class="button small" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}
     {% elif widget.kind == 'reminders' %}
-      {% for note in notifications %}<div class="list-row"><span>{{ note.title }}</span></div>{% empty %}<p class="empty">Aucun rappel.</p>{% endfor %}
+      {% for note in notifications %}<div class="list-row"><div><strong>{{ note.title }}</strong>{% if note.message %}<span class="muted"> · {{ note.message|truncatechars:80 }}</span>{% endif %}</div><form method="post" action="{% url 'notifications:read' note.pk %}">{% csrf_token %}<button class="button small" type="submit">Ouvrir</button></form></div>{% empty %}<p class="empty">Aucun rappel.</p>{% endfor %}
     {% elif widget.kind == 'recent' %}
       {% for item in recent_items %}<div class="list-row"><a href="{% url 'library:detail' item.pk %}">{{ item.title }}</a><span class="muted">{{ item.get_kind_display }}</span></div>{% empty %}<div class="empty-state"><p class="empty">Bibliothèque vide.</p><a class="button small" href="{% url 'library:new' %}">Ajouter un contenu</a></div>{% endfor %}
     {% elif widget.kind == 'formations' %}
-      {% for path in formations %}<div class="list-row"><a href="{% url 'formations:detail' path.pk %}">{{ path.title }}</a></div>{% empty %}<div class="empty-state"><p class="empty">Aucune formation.</p><a class="button small" href="{% url 'formations:new' %}">Créer une formation</a></div>{% endfor %}
+      {% for path in formations %}<div class="list-row"><a href="{% url 'formations:detail' path.pk %}">{{ path.title }}</a><span class="muted">{% if path.current_period %}{{ path.current_period }}{% else %}{{ path.get_status_display }}{% endif %}</span></div>{% empty %}<div class="empty-state"><p class="empty">Aucune formation.</p><a class="button small" href="{% url 'formations:templates' %}">Choisir un modèle</a></div>{% endfor %}
+    {% elif widget.kind == 'academic' %}
+      {% if academic %}
+        <div class="academic-heading"><div><p class="eyebrow">{{ academic.path.title }}</p><h3>{{ academic.period.title }}</h3></div>{% if academic.average.exists %}<p class="result-score"><strong>{{ academic.average.value }}</strong>/20</p>{% endif %}</div>
+        <label for="academic-progress">Progression : {{ academic.progress_percent }} % · {{ academic.acquired }} compétence(s) acquise(s) sur {{ academic.competencies }}</label>
+        {% comment %}
+          La barre suit la progression pondérée et non le seul décompte des acquises : un
+          niveau intermédiaire y compte pour ce qu'il vaut, et une compétence principale
+          pèse davantage qu'une compétence seulement rappelée.
+        {% endcomment %}
+        <progress id="academic-progress" value="{{ academic.progress_percent }}" max="100">{{ academic.progress_percent }} %</progress>
+        {% comment %}
+          « À reprendre » remplace la liste des seuls objectifs dépassés : elle les
+          contient, et y ajoute les évaluations qui approchent et les autoévaluations
+          devenues vieilles. Chaque ligne dit sa raison — une liste sans motif se lit
+          comme un reproche.
+        {% endcomment %}
+        {% if academic.to_revisit %}
+          <h3>À reprendre</h3>
+          {% for revision in academic.to_revisit %}
+            <div class="list-row">
+              <a href="{% url 'formations:competency' revision.competency.pk %}">{{ revision.competency.title }}</a>
+              <span class="muted">{{ revision.reason }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% if academic.assessments %}<h3>Prochaines évaluations</h3>{% endif %}
+        {% for assessment in academic.assessments %}<div class="list-row"><a href="{% url 'formations:assessment' assessment.pk %}">{{ assessment.title }}</a><time>{{ assessment.scheduled_for|date:"d/m H:i" }}</time></div>{% endfor %}
+        <div class="actions"><a class="button small primary" href="{% url 'formations:tracking' academic.path.pk %}">Mettre à jour le suivi</a><a class="button small" href="{% url 'formations:assessments' %}">Voir les évaluations</a></div>
+      {% else %}
+        <div class="empty-state"><p class="empty">Choisissez une période en cours dans une formation active pour afficher votre situation ici.</p><a class="button small" href="{% url 'formations:list' %}">Ouvrir les formations</a></div>
+      {% endif %}
     {% elif widget.kind == 'quick_note' %}
       <form method="post" action="{% url 'dashboard:quick_note' %}" class="stack-form">{% csrf_token %}<textarea name="text" rows="3" placeholder="Capturez une idée…" required></textarea><button class="button">Ajouter à la bibliothèque</button></form>
     {% elif widget.kind == 'sablier' %}
@@ -25,5 +56,6 @@
   </section>
 {% endif %}{% endfor %}
 </div>
+<p class="visually-hidden" id="layout-status" aria-live="polite"></p>
 {% endblock %}
 {% block scripts %}<script src="{% static 'dashboard/dashboard.js' %}" defer></script>{% endblock %}

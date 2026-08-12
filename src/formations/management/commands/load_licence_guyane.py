@@ -50,6 +50,7 @@ from formations.models import (
     ProgressRecord,
     UnitCompetency,
 )
+from formations.resource_services import sync_path_curated_resources
 
 FONDAMENTAL, APPLIQUE, PROJET, LANGUE = "fondamental", "appliqué", "projet", "langue"
 
@@ -65,6 +66,96 @@ ORAUX = [
     "Répondre à une question de cours sans préparation",
     "Gérer son temps et l’espace du tableau",
     "Reconnaître et corriger une erreur en direct",
+]
+
+# L'ancien bloc de « Géométrie » décrivait par erreur un cours de géométrie
+# différentielle (courbes, surfaces, courbures). Ces intitulés ne font pas partie du
+# programme affine et euclidien visé. La liste est conservée uniquement pour nettoyer
+# prudemment les formations déjà chargées ; elle ne sert jamais à fabriquer de nouvelles
+# compétences.
+LEGACY_DIFFERENTIAL_GEOMETRY_COMPETENCIES = [
+    "Paramétrer une courbe et étudier sa régularité",
+    "Calculer la longueur d’un arc",
+    "Reparamétrer une courbe par l’abscisse curviligne",
+    "Construire le repère de Frenet d’une courbe plane",
+    "Calculer la courbure d’une courbe plane et interpréter son signe",
+    "Déterminer cercle osculateur et développée",
+    "Construire le repère de Frenet d’une courbe gauche",
+    "Calculer courbure et torsion d’une courbe de l’espace",
+    "Utiliser le théorème fondamental des courbes",
+    "Étudier une courbe fermée, son indice et l’inégalité isopérimétrique",
+    "Paramétrer une surface régulière et déterminer son plan tangent",
+    "Changer de paramétrage et vérifier la régularité",
+    "Calculer la première forme fondamentale",
+    "Calculer longueurs, angles et aires sur une surface",
+    "Déterminer l’application de Gauss et orienter une surface",
+    "Calculer la seconde forme fondamentale",
+    "Déterminer courbures et directions principales",
+    "Calculer courbure de Gauss et courbure moyenne",
+    "Classer un point : elliptique, hyperbolique, parabolique, planaire",
+    "Énoncer et exploiter le theorema egregium de Gauss",
+    "Reconnaître une isométrie locale et une application conforme",
+    "Étudier les surfaces réglées et les surfaces de révolution",
+    "Écrire les équations des géodésiques",
+    "Déterminer les géodésiques du plan et de la sphère",
+    "Utiliser la dérivée covariante et le transport parallèle",
+    "Appliquer le théorème de Gauss-Bonnet local",
+    "Situer ces notions dans le cadre des variétés riemanniennes",
+]
+
+# Granularité issue des gestes distincts du programme L3, et non du nombre de lignes de
+# l'ancien bloc. Les quatre parties suivent le syllabus « Géométrie affine et
+# euclidienne » de Lille : affine, euclidien, coniques/quadriques et géométrie plane.
+GEOMETRY_COMPETENCIES = [
+    # Espaces et calcul affine
+    "Modéliser un espace affine et utiliser la relation de Chasles",
+    "Reconnaître un sous-espace affine et déterminer sa direction et sa dimension",
+    "Étudier l’intersection et le parallélisme de sous-espaces affines",
+    "Déterminer l’enveloppe affine d’une famille de points et son équation",
+    "Caractériser l’indépendance affine et reconnaître un repère affine",
+    "Calculer les coordonnées d’un point et effectuer un changement de repère affine",
+    "Écrire des équations paramétriques et cartésiennes de droites, plans et hyperplans",
+    "Définir une application affine et déterminer son application linéaire associée",
+    "Écrire la représentation matricielle d’une application affine",
+    "Composer et inverser des applications affines",
+    "Déterminer l’ensemble des points fixes d’une application affine",
+    "Construire une translation et une homothétie affines",
+    "Construire une projection affine parallèlement à une direction",
+    "Construire une symétrie affine et identifier ses sous-espaces caractéristiques",
+    "Exploiter les invariants affines : alignement, parallélisme, rapports, aires et volumes",
+    # Barycentres et convexité
+    "Déterminer l’existence d’un barycentre et le calculer",
+    "Utiliser l’associativité des barycentres et les barycentres partiels",
+    "Calculer des coordonnées barycentriques dans un simplexe",
+    "Caractériser une application affine par la conservation des barycentres",
+    "Reconnaître une combinaison convexe et déterminer une enveloppe convexe",
+    # Structure euclidienne et projections orthogonales
+    "Manipuler produit scalaire, norme, distance et angle dans un espace euclidien",
+    "Déterminer l’orthogonal d’un sous-espace et une décomposition orthogonale",
+    "Construire une base orthonormée par le procédé de Gram-Schmidt",
+    "Calculer la projection orthogonale sur un sous-espace vectoriel",
+    "Calculer la projection orthogonale sur un sous-espace affine et la distance à ce sous-espace",
+    "Calculer la distance entre deux sous-espaces affines",
+    "Décrire médiatrices, sphères et lieux d’équidistance par le produit scalaire",
+    "Calculer orientations, déterminants, aires et volumes dans un repère orthonormé",
+    # Isométries et similitudes
+    "Caractériser une isométrie linéaire et reconnaître une matrice orthogonale",
+    "Décomposer une transformation orthogonale en réflexions et rotations",
+    "Démontrer qu’une isométrie d’un espace affine euclidien est affine",
+    "Décomposer canoniquement une isométrie affine en translation et isométrie à point fixe",
+    "Classifier les isométries affines du plan",
+    "Classifier les isométries affines de l’espace de dimension trois",
+    "Déterminer le groupe des isométries laissant stable une figure",
+    "Classifier les similitudes directes et indirectes du plan à l’aide des complexes",
+    "Résoudre un problème de géométrie plane par les nombres complexes",
+    "Établir des relations métriques et trigonométriques dans le triangle et le cercle",
+    # Coniques et quadriques
+    "Caractériser une conique par foyer, directrice et excentricité",
+    "Réduire l’équation d’une conique et la classifier dans un repère adapté",
+    "Interpréter les coniques comme sections planes d’un cône de révolution",
+    "Réduire et classifier une quadrique par transformations affines et euclidiennes",
+    "Déterminer centre, axes et éléments de symétrie d’une quadrique",
+    "Reconnaître ellipsoïdes, hyperboloïdes, paraboloïdes, cylindres et cônes",
 ]
 
 # (intitulé, UE d'appartenance, heures encadrées, ECTS publiés, nature, compétences)
@@ -161,35 +252,7 @@ PROGRAMME = {
             50,
             5,
             FONDAMENTAL,
-            [
-                "Paramétrer une courbe et étudier sa régularité",
-                "Calculer la longueur d’un arc",
-                "Reparamétrer une courbe par l’abscisse curviligne",
-                "Construire le repère de Frenet d’une courbe plane",
-                "Calculer la courbure d’une courbe plane et interpréter son signe",
-                "Déterminer cercle osculateur et développée",
-                "Construire le repère de Frenet d’une courbe gauche",
-                "Calculer courbure et torsion d’une courbe de l’espace",
-                "Utiliser le théorème fondamental des courbes",
-                "Étudier une courbe fermée, son indice et l’inégalité isopérimétrique",
-                "Paramétrer une surface régulière et déterminer son plan tangent",
-                "Changer de paramétrage et vérifier la régularité",
-                "Calculer la première forme fondamentale",
-                "Calculer longueurs, angles et aires sur une surface",
-                "Déterminer l’application de Gauss et orienter une surface",
-                "Calculer la seconde forme fondamentale",
-                "Déterminer courbures et directions principales",
-                "Calculer courbure de Gauss et courbure moyenne",
-                "Classer un point : elliptique, hyperbolique, parabolique, planaire",
-                "Énoncer et exploiter le theorema egregium de Gauss",
-                "Reconnaître une isométrie locale et une application conforme",
-                "Étudier les surfaces réglées et les surfaces de révolution",
-                "Écrire les équations des géodésiques",
-                "Déterminer les géodésiques du plan et de la sphère",
-                "Utiliser la dérivée covariante et le transport parallèle",
-                "Appliquer le théorème de Gauss-Bonnet local",
-                "Situer ces notions dans le cadre des variétés riemanniennes",
-            ],
+            GEOMETRY_COMPETENCIES,
         ),
         ("Oraux de mathématiques", "UEO Mathématiques 5", 18, 2, LANGUE, ORAUX),
         (
@@ -579,6 +642,39 @@ def prune_obsolete(path, owner) -> int:
     return len(removable)
 
 
+def retire_legacy_geometry(path, owner) -> tuple[int, int]:
+    """Retire le bloc différentiel erroné sans effacer un travail réel de l'étudiant.
+
+    Les recommandations créées par MyENT ne comptent pas comme du travail personnel :
+    elles sont détachées avant la décision. Une note, une ressource personnelle, un temps
+    réalisé, un niveau ou une séance protège en revanche l'ancienne compétence.
+    """
+    removed = preserved = 0
+    competencies = Competency.objects.filter(
+        path=path,
+        title__in=LEGACY_DIFFERENTIAL_GEOMETRY_COMPETENCIES,
+    ).prefetch_related("resources", "progress_records")
+    for competency in competencies:
+        managed_ids = list(
+            competency.resources.filter(owner=owner, legacy_source="curated").values_list("pk", flat=True)
+        )
+        if managed_ids:
+            competency.resources.remove(*managed_ids)
+        has_recorded_work = any(
+            record.mastery_level or record.actual_hours or record.notes.strip()
+            for record in competency.progress_records.all()
+        )
+        has_recorded_work = (
+            has_recorded_work or competency.resources.exists() or competency.focus_sessions.filter(owner=owner).exists()
+        )
+        if has_recorded_work:
+            preserved += 1
+        else:
+            competency.delete()
+            removed += 1
+    return removed, preserved
+
+
 class Command(BaseCommand):
     help = "Charge la maquette officielle de la L3 Mathématiques (Université de Guyane)."
 
@@ -740,7 +836,14 @@ class Command(BaseCommand):
         distributed = sum((entry["hours"] for entry in plan.values()), Decimal(0))
         added = self.sync_competencies(path, plan, owner=owner, reset=options["reset_hours"])
 
-        pruned = prune_obsolete(path, owner) if options["prune"] else 0
+        retired, preserved_legacy = retire_legacy_geometry(path, owner)
+        resource_sync = sync_path_curated_resources(
+            owner=owner,
+            path=path,
+            competency_titles=declared_titles(),
+        )
+
+        pruned = retired + (prune_obsolete(path, owner) if options["prune"] else 0)
 
         encadre_total = sum(m[2] for matieres in PROGRAMME.values() for m in matieres)
         total = Competency.objects.filter(path=path).count()
@@ -757,6 +860,17 @@ class Command(BaseCommand):
             f"{(distributed - total_perso).normalize():+f} h par rapport à l'estimation. "
             "Une durée lisible vaut mieux qu'une division exacte."
         )
+        self.stdout.write(
+            f"Bibliothèque : {resource_sync.created} ressource(s) créée(s), "
+            f"{resource_sync.updated} actualisée(s) et {resource_sync.attached} rattachement(s) ajouté(s)."
+        )
+        if preserved_legacy:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"{preserved_legacy} ancienne(s) compétence(s) de géométrie différentielle "
+                    "contiennent un travail personnel et ont donc été conservées."
+                )
+            )
         if not options["prune"]:
             self.stdout.write(
                 "Un découpage antérieur reste en place s'il en existait un. "

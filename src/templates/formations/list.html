@@ -1,4 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Formations · MyENT{% endblock %}
-{% block content %}<header class="page-header"><div><p class="eyebrow">MODULE FORMATIONS</p><h1>Vos parcours</h1><p class="muted">Un module de l’ENT, sans imposer sa structure au reste de votre espace.</p></div><a class="button primary" href="{% url 'formations:new' %}">Nouvelle formation</a></header><div class="content-cards">{% for path in paths %}<a class="panel content-card" href="{% url 'formations:detail' path.pk %}"><span class="eyebrow">{{ path.get_status_display }}</span><h2>{{ path.title }}</h2><p class="muted">{{ path.training_type }}{% if path.level_label %} · {{ path.level_label }}{% endif %}</p></a>{% empty %}<section class="panel"><div class="empty-state"><p class="empty">Aucune formation. Créez-en une pour suivre vos matières et vos compétences.</p><a class="button primary" href="{% url 'formations:new' %}">Créer ma première formation</a></div></section>{% endfor %}</div>{% endblock %}
-
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">MODULE FORMATIONS</p>
+    <h1>Vos parcours</h1>
+    <p class="muted">Créez votre structure, partez d’un modèle ou restaurez un export.</p>
+  </div>
+  <div class="actions">
+    <a class="button primary" href="{% url 'formations:new' %}">Nouvelle formation</a>
+    <a class="button" href="{% url 'formations:templates' %}">Partir d’un modèle</a>
+    <a class="button quiet" href="{% url 'formations:import' %}">Importer</a>
+  </div>
+</header>
+<div class="content-cards">
+  {% for path in paths %}
+    <a class="panel content-card" href="{% url 'formations:detail' path.pk %}">
+      <span class="eyebrow">{{ path.get_status_display }}{% if path.academic_year %} · {{ path.academic_year }}{% endif %}</span>
+      <h2>{{ path.title }}</h2>
+      <p class="muted">{{ path.training_type }}{% if path.level_label %} · {{ path.level_label }}{% endif %}</p>
+      {% if path.current_period %}<span class="chip static">En cours · {{ path.current_period }}</span>{% endif %}
+    </a>
+  {% empty %}
+    <section class="panel">
+      <div class="empty-state">
+        <p class="empty">Aucune formation. Créez une structure vide ou adaptez un modèle prêt à l’emploi.</p>
+        <div class="actions">
+          <a class="button primary" href="{% url 'formations:templates' %}">Explorer les modèles</a>
+          <a class="button" href="{% url 'formations:new' %}">Créer sans modèle</a>
+        </div>
+      </div>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

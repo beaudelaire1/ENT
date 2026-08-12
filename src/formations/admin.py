@@ -77,6 +77,14 @@ class MetricValueAdmin(admin.ModelAdmin):
 
 @admin.register(ProgressRecord)
 class ProgressRecordAdmin(admin.ModelAdmin):
-    list_display = ("competency", "owner", "mastery_level", "planned_hours", "actual_hours")
+    list_display = (
+        "competency",
+        "owner",
+        "mastery_level",
+        "planned_hours",
+        "manual_hours",
+        "session_hours",
+        "actual_hours",
+    )
     list_filter = ("mastery_level", "owner")
     search_fields = ("competency__title", "notes")

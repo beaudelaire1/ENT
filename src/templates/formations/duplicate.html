@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Dupliquer {{ source.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">DUPLICATION</p><h1>Dupliquer la formation</h1><p class="muted">La structure et le temps prévu sont copiés. Les notes, temps réalisés et ressources personnelles ne le sont pas.</p></div></header>
+<section class="panel narrow-panel">
+  <form method="post">
+    {% csrf_token %}
+    {% include "core/_form_fields.html" with form=form %}
+    <div class="actions"><button class="button primary" type="submit">Créer la copie</button><a class="button quiet" href="{% url 'formations:detail' source.pk %}">Annuler</a></div>
+  </form>
+</section>
+{% endblock %}
