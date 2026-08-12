@@ -9,6 +9,7 @@ import boto3
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Max, Sum
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,13 +21,14 @@ from django.views.decorators.http import require_POST
 from accounts.models import UserProfile
 from core.deletion import confirm_delete
 from core.formatting import human_mb
+from core.navigation import safe_next
 from core.queue import enqueue
 from formations.models import Competency
 
 from . import scenes
-from .forms import AddTrackForm, AudioUploadForm, FocusPreferenceForm, PlaylistForm
-from .models import AudioTrack, FocusPreference, Playlist, PlaylistTrack
-from .services import record_session
+from .forms import AddTrackForm, AudioUploadForm, FocusPreferenceForm, FocusSessionForm, PlaylistForm
+from .models import AudioTrack, FocusPreference, FocusSession, Playlist, PlaylistTrack
+from .services import format_duration, parse_duration, record_session, revise_session
 from .tasks import validate_audio_track
 
 
@@ -73,6 +75,18 @@ def home(request):
         .select_related("path", "period")
         .prefetch_related("unit_links__unit")
     )
+    selected = None
+    if request.GET.get("competency"):
+        selected = competencies.filter(pk=request.GET.get("competency")).first()
+    initial_intention = (request.GET.get("intention") or preference.session_intention)[:80]
+    initial_seconds = preference.default_duration_seconds
+    if request.GET.get("duration"):
+        try:
+            initial_seconds = parse_duration(request.GET["duration"])
+        except ValueError:
+            pass
+    contextual_launch = any(request.GET.get(key) for key in ("competency", "intention", "duration"))
+    return_to = safe_next(request, "") if request.GET.get("next") else ""
     return render(
         request,
         "sablier/home.html",
@@ -91,9 +105,60 @@ def home(request):
             # le chargement serait indétectable côté navigateur.
             "saved_at": f"{preference.updated_at.timestamp():.6f}",
             "competencies": competencies,
+            "selected_competency": selected.pk if selected else None,
+            "initial_intention": initial_intention,
+            "initial_seconds": initial_seconds,
+            "initial_duration": format_duration(initial_seconds),
+            "contextual_launch": contextual_launch,
+            "return_to": return_to,
             "recent_sessions": request.user.focus_sessions.select_related("competency")[:5],
         },
     )
+
+
+@login_required
+def session_list(request):
+    sessions = FocusSession.objects.filter(owner=request.user).select_related("competency__path")
+    page_obj = Paginator(sessions, 30).get_page(request.GET.get("page"))
+    return render(request, "sablier/sessions.html", {"sessions": page_obj, "page_obj": page_obj})
+
+
+@login_required
+def session_edit(request, pk):
+    session = get_object_or_404(FocusSession, owner=request.user, pk=pk)
+    form = FocusSessionForm(request.POST or None, instance=session, user=request.user)
+    if request.method == "POST" and form.is_valid():
+        revise_session(
+            session,
+            seconds=form.cleaned_data["duration"],
+            started_at=form.cleaned_data["started_at"],
+            intention=form.cleaned_data["intention"],
+            competency=form.cleaned_data["competency"],
+            excluded=form.cleaned_data["excluded"],
+        )
+        messages.success(request, "Session corrigée et temps de suivi recalculé.")
+        return redirect(safe_next(request, reverse("sablier:sessions")))
+    return render(
+        request,
+        "sablier/session_form.html",
+        {"session": session, "form": form, "back_to": safe_next(request, reverse("sablier:sessions"))},
+    )
+
+
+@login_required
+@require_POST
+def session_toggle_excluded(request, pk):
+    session = get_object_or_404(FocusSession, owner=request.user, pk=pk)
+    revise_session(
+        session,
+        seconds=session.seconds,
+        started_at=session.started_at,
+        intention=session.intention,
+        competency=session.competency,
+        excluded=not bool(session.excluded_at),
+    )
+    messages.success(request, "Session réincluse." if session.excluded_at else "Session exclue du temps suivi.")
+    return redirect(request.POST.get("next") or "sablier:sessions")
 
 
 @login_required

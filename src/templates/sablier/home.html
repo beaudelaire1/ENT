@@ -4,26 +4,27 @@
 <style>{{ palette_css }}</style>{% endblock %}
 {% block content %}
 <div class="focus-app" id="focus-app"
-     data-user="{{ user.pk }}" data-total="{{ preference.default_duration_seconds }}" data-mode="{{ preference.mode }}"
+     data-user="{{ user.pk }}" data-total="{{ initial_seconds }}" data-mode="{{ preference.mode }}"
      data-ambience="{{ preference.ambience }}" data-warning="{{ preference.warning_seconds }}"
      data-focus-level="{{ preference.focus_level }}" data-decor-density="{{ preference.decor_density }}" data-saved-at="{{ saved_at }}"
      data-end-sound="{{ preference.end_sound_enabled|yesno:'true,false' }}"
      data-log-url="{% url 'sablier:log_session' %}" data-csrf="{{ csrf_token }}"
+     data-contextual="{{ contextual_launch|yesno:'true,false' }}" data-return-url="{{ return_to }}"
      {% comment %}
        La couleur n'est plus posée en inline : elle écrasait l'ambiance, l'alerte finale
        et la couleur de fin, qu'aucune règle de feuille de style ne pouvait plus atteindre.
      {% endcomment %}
      style="{% if preference.custom_accent %}--focus-user-accent:{{ preference.accent_color }};{% endif %}{% if preference.background_image %}--focus-image:url('{{ preference.background_image.url }}');{% endif %}">
-  <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre atmosphère.</p></div><div class="focus-header-actions"><span class="live-chip" id="live-chip">● PRÊT</span><button class="focus-button" type="button" id="scene-button">Mode concentration ⛶</button></div></header>
+  <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre atmosphère.</p></div><div class="focus-header-actions"><a class="focus-button" href="{% url 'sablier:sessions' %}">Historique</a><a class="focus-button" id="return-after-session" href="{{ return_to }}" hidden>Revenir à la compétence</a><span class="live-chip" id="live-chip">● PRÊT</span><button class="focus-button" type="button" id="scene-button">Mode concentration ⛶</button></div></header>
   <div class="focus-layout">
     <aside class="focus-sidebar" id="focus-sidebar">
       <p class="focus-eyebrow">CONFIGURATION</p><h1>Votre session</h1>
-      <label>INTENTION<input id="session-intention" value="{{ preference.session_intention }}" maxlength="80" placeholder="Réviser, créer, apprendre…"></label>
-      <label>DURÉE</label><div class="duration-row"><input id="duration-input" value="05:00" inputmode="numeric"><button class="focus-button primary" id="apply-duration" type="button">OK</button></div>
+      <label>INTENTION<input id="session-intention" value="{{ initial_intention }}" maxlength="80" placeholder="Réviser, créer, apprendre…"></label>
+      <label>DURÉE</label><div class="duration-row"><input id="duration-input" value="{{ initial_duration }}" inputmode="numeric"><button class="focus-button primary" id="apply-duration" type="button">OK</button></div>
       <div class="preset-row"><button data-preset="1">1m</button><button data-preset="3">3m</button><button data-preset="5">5m</button><button data-preset="10">10m</button></div>
       <label>VISUALISATION</label><div class="mode-grid"><button data-mode="ring">◉<span>Anneau</span></button><button data-mode="hourglass">⌛<span>Sablier</span></button><button data-mode="wave">≈<span>Marée</span></button><button data-mode="candle">▯<span>Bougie</span></button><button data-mode="beads">⁘<span>Perles</span></button><button data-mode="moon">☾<span>Lune</span></button><button data-mode="bars">▮<span>Colonnes</span></button><button data-mode="spiral">◠<span>Spirale</span></button><button data-mode="sun">☀<span>Soleil</span></button><button data-mode="digital">01<span>Digital</span></button><button data-mode="zen">◎<span>Zen</span></button></div>
       <label>AMBIANCE<select id="ambience-select">{% for value,label in ambience_choices %}<option value="{{ value }}" {% if preference.ambience == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-      <label>DÉCOR</label><div class="decor-levels"><button data-decor="0">Aucun</button><button data-decor="1">Léger</button><button data-decor="2">Normal</button><button data-decor="3">Dense</button></div><label>DÉPOUILLEMENT</label><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div>
+      <label>DÉCOR</label><div class="decor-levels" role="group" aria-label="Densité du décor"><button type="button" data-decor="0" aria-pressed="false">Aucun</button><button type="button" data-decor="1" aria-pressed="false">Léger</button><button type="button" data-decor="2" aria-pressed="false">Normal</button><button type="button" data-decor="3" aria-pressed="false">Dense</button></div><label>DÉPOUILLEMENT</label><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div>
       <label>ALERTE FINALE <output id="warning-output">{{ preference.warning_seconds }} s</output><input id="warning-slider" type="range" min="10" max="180" step="10" value="{{ preference.warning_seconds }}"></label>
       {% if competencies %}
         <label>COMPÉTENCE TRAVAILLÉE
@@ -37,7 +38,7 @@
       {% if recent_sessions %}
         <p class="focus-eyebrow">SESSIONS RÉCENTES</p>
         <ul class="session-log">
-          {% for session in recent_sessions %}<li><strong>{{ session.minutes }} min</strong><span>{{ session.started_at|date:"d/m H:i" }}{% if session.competency %} · {{ session.competency.title }}{% endif %}</span></li>{% endfor %}
+          {% for session in recent_sessions %}<li><strong>{{ session.minutes }} min{% if session.excluded_at %} · exclue{% endif %}</strong><span>{{ session.started_at|date:"d/m H:i" }}{% if session.competency %} · {{ session.competency.title }}{% endif %} · <a href="{% url 'sablier:session_edit' session.pk %}">corriger</a></span></li>{% endfor %}
         </ul>
       {% endif %}
       <details class="preference-panel"><summary>Apparence et sauvegarde</summary><form method="post" enctype="multipart/form-data" class="stack-form" id="focus-preferences">{% csrf_token %}{{ form.as_p }}<button class="focus-button primary">Enregistrer mes préférences</button></form></details>

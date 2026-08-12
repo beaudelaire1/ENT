@@ -31,7 +31,7 @@ class PlaylistTrackAdmin(admin.ModelAdmin):
 
 @admin.register(FocusSession)
 class FocusSessionAdmin(admin.ModelAdmin):
-    list_display = ("started_at", "owner", "minutes", "competency", "counted_at")
-    list_filter = ("owner",)
+    list_display = ("started_at", "owner", "minutes", "competency", "counted_at", "excluded_at")
+    list_filter = ("owner", "excluded_at")
     search_fields = ("intention", "competency__title")
     date_hierarchy = "started_at"

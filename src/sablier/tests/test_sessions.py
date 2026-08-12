@@ -52,7 +52,55 @@ class FocusSessionTests(TestCase):
 
         record = ProgressRecord.objects.get(owner=self.user, competency=self.competency)
         self.assertEqual(record.actual_hours, Decimal("5.00"))
+        self.assertEqual(record.manual_hours, Decimal("4.00"))
+        self.assertEqual(record.session_hours, Decimal("1.00"))
         self.assertEqual(record.mastery_level, 2)
+
+    def test_a_correction_recalculates_only_session_time(self):
+        ProgressRecord.objects.create(
+            owner=self.user, competency=self.competency, manual_hours=Decimal("2.00"), mastery_level=2
+        )
+        session = record_session(self.user, seconds=1800, started_at=timezone.now(), competency=self.competency)
+
+        response = self.client.post(
+            reverse("sablier:session_edit", args=[session.pk]),
+            {
+                "started_at": session.started_at.strftime("%Y-%m-%dT%H:%M"),
+                "intention": "Corrigée",
+                "competency": self.competency.pk,
+                "duration": "01:00:00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        record = ProgressRecord.objects.get(owner=self.user, competency=self.competency)
+        self.assertEqual(record.manual_hours, Decimal("2.00"))
+        self.assertEqual(record.session_hours, Decimal("1.00"))
+        self.assertEqual(record.actual_hours, Decimal("3.00"))
+
+    def test_a_session_can_be_excluded_then_reincluded(self):
+        session = record_session(self.user, seconds=1800, started_at=timezone.now(), competency=self.competency)
+        self.client.post(reverse("sablier:session_toggle_excluded", args=[session.pk]))
+        record = ProgressRecord.objects.get(owner=self.user, competency=self.competency)
+        self.assertEqual(record.session_hours, Decimal("0.00"))
+        session.refresh_from_db()
+        self.assertIsNotNone(session.excluded_at)
+
+        self.client.post(reverse("sablier:session_toggle_excluded", args=[session.pk]))
+        record.refresh_from_db()
+        session.refresh_from_db()
+        self.assertEqual(record.session_hours, Decimal("0.50"))
+        self.assertIsNone(session.excluded_at)
+
+    def test_competency_launch_prefills_and_returns(self):
+        response = self.client.get(
+            reverse("sablier:home"),
+            {"competency": self.competency.pk, "intention": "Compacité", "duration": "25", "next": "/formations/"},
+        )
+        self.assertContains(response, 'value="Compacité"')
+        self.assertContains(response, 'data-total="1500"')
+        self.assertContains(response, 'data-return-url="/formations/"')
+        self.assertContains(response, f'value="{self.competency.pk}" selected')
 
     def test_the_endpoint_records_a_session(self):
         response = self.client.post(

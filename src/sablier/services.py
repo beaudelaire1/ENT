@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
+from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
 
+@transaction.atomic
 def record_session(user, *, seconds: int, started_at, intention: str = "", competency=None):
     """Enregistre une session terminée et reporte son temps sur la compétence visée.
 
@@ -26,9 +30,47 @@ def record_session(user, *, seconds: int, started_at, intention: str = "", compe
         return session
 
     record, _ = ProgressRecord.objects.get_or_create(owner=user, competency=competency)
-    ProgressRecord.objects.filter(pk=record.pk).update(actual_hours=F("actual_hours") + session.hours)
+    ProgressRecord.objects.filter(pk=record.pk).update(
+        session_hours=F("session_hours") + session.hours,
+        actual_hours=F("actual_hours") + session.hours,
+    )
     session.counted_at = timezone.now()
     session.save(update_fields=["counted_at", "updated_at"])
+    return session
+
+
+def _adjust_competency_time(owner, competency, delta: Decimal) -> None:
+    from formations.models import ProgressRecord
+
+    record, _ = ProgressRecord.objects.get_or_create(owner=owner, competency=competency)
+    record = ProgressRecord.objects.select_for_update().get(pk=record.pk)
+    record.session_hours = max(Decimal(0), record.session_hours + delta)
+    record.actual_hours = record.manual_hours + record.session_hours
+    record.save(update_fields=["session_hours", "actual_hours"])
+
+
+@transaction.atomic
+def revise_session(session, *, seconds: int, started_at, intention: str, competency, excluded: bool):
+    """Corrige une session et répercute exactement son ancienne puis sa nouvelle part."""
+    from .models import FocusSession
+
+    session = FocusSession.objects.select_for_update().get(pk=session.pk, owner=session.owner)
+    if session.is_counted:
+        _adjust_competency_time(session.owner, session.competency, -session.hours)
+
+    session.seconds = seconds
+    session.started_at = started_at
+    session.intention = intention[:80]
+    session.competency = competency
+    session.excluded_at = timezone.now() if excluded else None
+    if competency is None:
+        session.counted_at = None
+    elif not excluded:
+        session.counted_at = session.counted_at or timezone.now()
+        _adjust_competency_time(session.owner, competency, session.hours)
+    session.save(
+        update_fields=["seconds", "started_at", "intention", "competency", "excluded_at", "counted_at", "updated_at"]
+    )
     return session
 
 

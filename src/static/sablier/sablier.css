@@ -28,11 +28,46 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
     radial-gradient(circle at 50% 44%, color-mix(in srgb,var(--focus-accent) 12%,transparent), transparent 48%),
     radial-gradient(circle at 50% 96%, color-mix(in srgb,var(--focus-tint,var(--focus-accent)) 16%,transparent), transparent 62%),
     color-mix(in srgb,var(--focus-bg) 96%,transparent);
+  isolation:isolate;
+  transition:background-color .7s ease,box-shadow .7s ease;
+}
+
+/* La lumière vient d'un endroit cohérent avec chaque scène. Le canvas ajoute le
+   paysage ; ces couches donnent la profondeur atmosphérique qui manquait au fond plat. */
+.focus-app[data-ambience="printemps"] .focus-stage,
+.focus-app[data-ambience="ete"] .focus-stage {
+  background:radial-gradient(circle at 78% 25%,color-mix(in srgb,var(--focus-accent) 22%,transparent),transparent 28%),linear-gradient(180deg,color-mix(in srgb,var(--focus-tint) 9%,var(--focus-bg)),var(--focus-bg) 68%);
+}
+.focus-app[data-ambience="automne"] .focus-stage,
+.focus-app[data-ambience="sahara"] .focus-stage,
+.focus-app[data-ambience="braises"] .focus-stage {
+  background:radial-gradient(ellipse at 50% 100%,color-mix(in srgb,var(--focus-accent) 24%,transparent),transparent 58%),linear-gradient(180deg,var(--focus-bg),color-mix(in srgb,var(--focus-tint) 11%,var(--focus-bg)));
+}
+.focus-app[data-ambience="hiver"] .focus-stage,
+.focus-app[data-ambience="pluie"] .focus-stage,
+.focus-app[data-ambience="orage"] .focus-stage {
+  background:linear-gradient(165deg,color-mix(in srgb,var(--focus-tint) 13%,var(--focus-bg)),var(--focus-bg) 58%),radial-gradient(circle at 20% 10%,color-mix(in srgb,var(--focus-accent) 12%,transparent),transparent 38%);
+}
+.focus-app[data-ambience="ocean"] .focus-stage {
+  background:linear-gradient(180deg,color-mix(in srgb,var(--focus-tint) 9%,var(--focus-bg)) 0 63%,color-mix(in srgb,var(--focus-tint) 17%,var(--focus-bg)) 64%,var(--focus-bg));
+}
+.focus-app[data-ambience="foret"] .focus-stage {
+  background:radial-gradient(ellipse at 50% 10%,color-mix(in srgb,var(--focus-accent) 15%,transparent),transparent 42%),linear-gradient(90deg,color-mix(in srgb,var(--focus-tint) 17%,var(--focus-bg)),var(--focus-bg) 25% 75%,color-mix(in srgb,var(--focus-tint) 17%,var(--focus-bg)));
+}
+.focus-app[data-ambience="aurore"] .focus-stage,
+.focus-app[data-ambience="nuit"] .focus-stage {
+  background:radial-gradient(ellipse at 50% 18%,color-mix(in srgb,var(--focus-accent) 17%,transparent),transparent 44%),linear-gradient(180deg,color-mix(in srgb,var(--focus-tint) 12%,var(--focus-bg)),var(--focus-bg) 72%);
+}
+.focus-stage::after {
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 42%,color-mix(in srgb,var(--focus-bg) 32%,transparent) 100%);
+  box-shadow:inset 0 0 110px color-mix(in srgb,var(--focus-bg) 42%,transparent);
 }
 
 /* Le décor occupe toute la scène, derrière le minuteur et sans jamais l'intercepter. */
-.decor-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; }
-.focus-stage > *:not(.decor-canvas) { position:relative; z-index:1; }
+.decor-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; transition:opacity .45s ease,filter .7s ease; }
+html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
+.focus-stage > *:not(.decor-canvas) { position:relative; z-index:3; }
 
 /* Sur écran étroit la barre latérale passe en deux colonnes, et un intitulé se
    retrouvait seul dans une cellule pendant que ses boutons partaient dans l'autre :
@@ -41,6 +76,7 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 @media(max-width:1400px){
   .focus-sidebar > label,
   .focus-sidebar > .mode-grid,
+  .focus-sidebar > .decor-levels,
   .focus-sidebar > .preset-row,
   .focus-sidebar > .focus-levels,
   .focus-sidebar > .duration-row { grid-column:1/-1; }
@@ -63,11 +99,41 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
    au centre d'un grand vide. */
 .visual-wrap { min-height:min(72vh,620px); }
 .visual-wrap canvas { width:min(660px,96%); height:min(660px,96%); }
-.digital-visual { width:min(720px,96%); }
-.zen-rings { width:min(400px,62vw); height:min(400px,62vw); }
+.visual-wrap #timer-canvas { filter:drop-shadow(0 24px 45px color-mix(in srgb,var(--focus-bg) 62%,transparent)); }
+.digital-visual { width:min(720px,96%);position:relative;overflow:hidden;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--focus-text) 10%,transparent),inset 0 -30px 70px color-mix(in srgb,var(--focus-bg) 35%,transparent),0 25px 70px color-mix(in srgb,var(--focus-bg) 35%,transparent); }
+.digital-visual::before { content:"";position:absolute;inset:-40% 45% 35% -20%;transform:rotate(-12deg);background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--focus-text) 8%,transparent),transparent);pointer-events:none; }
+.digital-visual strong { font-variant-numeric:tabular-nums lining-nums;text-shadow:0 0 28px color-mix(in srgb,var(--focus-accent) 30%,transparent); }
+.digital-visual i { box-shadow:inset 0 1px 3px color-mix(in srgb,var(--focus-bg) 45%,transparent); }
+.digital-visual i::before { box-shadow:0 0 14px color-mix(in srgb,var(--focus-accent) 45%,transparent);transition:width .8s linear; }
+.zen-rings { width:min(400px,62vw); height:min(400px,62vw);position:relative;background:radial-gradient(circle,color-mix(in srgb,var(--focus-accent) 8%,transparent),transparent 62%);box-shadow:0 0 0 45px color-mix(in srgb,var(--focus-accent) 4%,transparent),0 0 0 90px color-mix(in srgb,var(--focus-accent) 2%,transparent),0 24px 80px color-mix(in srgb,var(--focus-bg) 42%,transparent); }
+.zen-rings::before,.zen-rings::after { content:"";position:absolute;border-radius:50%;border:1px solid color-mix(in srgb,var(--focus-accent) 24%,transparent); }
+.zen-rings::before { inset:9%; }
+.zen-rings::after { inset:22%;border-color:color-mix(in srgb,var(--focus-text) 9%,transparent); }
+.zen-rings>div { position:relative;z-index:1;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--focus-text) 9%,transparent),0 0 45px color-mix(in srgb,var(--focus-accent) 12%,transparent); }
+.canvas-time strong { font-variant-numeric:tabular-nums lining-nums;text-shadow:0 3px 24px color-mix(in srgb,var(--focus-bg) 72%,transparent); }
 .canvas-time strong,.digital-visual strong { font-size:clamp(44px,6vw,64px); }
 @media(max-width:700px){ .visual-wrap { min-height:min(58vh,460px); } }
 
 /* Densité du décor : réglable en un clic, comme le mode et l'ambiance. */
 .decor-levels { display:flex; gap:8px; }
-.decor-levels button { flex:1; padding:9px 6px; font-size:11px; }
+.decor-levels button {
+  flex:1;
+  border:1px solid var(--focus-border);
+  border-radius:11px;
+  padding:9px 6px;
+  background:var(--focus-surface);
+  color:var(--focus-text);
+  cursor:pointer;
+  font-size:11px;
+  font-weight:700;
+  transition:border-color .18s,background-color .18s,color .18s,transform .18s;
+}
+.decor-levels button.active {
+  border-color:var(--focus-accent);
+  background:color-mix(in srgb,var(--focus-accent) 14%,var(--focus-surface));
+  color:var(--focus-text);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--focus-accent) 16%,transparent),0 5px 16px color-mix(in srgb,var(--focus-accent) 10%,transparent);
+}
+.decor-levels button:hover { border-color:color-mix(in srgb,var(--focus-accent) 60%,var(--focus-border)); }
+.decor-levels button:focus-visible { outline:2px solid var(--focus-accent); outline-offset:2px; }
+.decor-levels button:active { transform:translateY(1px); }

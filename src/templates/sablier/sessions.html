@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Historique Sablier · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">SABLIER</p><h1>Historique des sessions</h1><p class="muted">Une correction recalcule le temps de la compétence. Une exclusion conserve la trace sans compter sa durée.</p></div><a class="button primary" href="{% url 'sablier:home' %}">Nouvelle session</a></header>
+<section class="panel"><div class="list">
+  {% for session in sessions %}
+    <div class="list-row{% if session.excluded_at %} session-excluded{% endif %}">
+      <div><strong>{{ session.intention|default:"Session sans intention" }}</strong><div class="muted">{{ session.started_at|date:"d/m/Y H:i" }} · {{ session.minutes }} min{% if session.competency %} · {{ session.competency.path.title }} · {{ session.competency.title }}{% endif %}{% if session.excluded_at %} · exclue du suivi{% endif %}</div></div>
+      <div class="actions"><a class="button small quiet" href="{% url 'sablier:session_edit' session.pk %}">Corriger</a><form method="post" action="{% url 'sablier:session_toggle_excluded' session.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'sablier:sessions' %}"><button class="button small quiet" type="submit">{% if session.excluded_at %}Réinclure{% else %}Exclure{% endif %}</button></form></div>
+    </div>
+  {% empty %}<div class="empty-state"><p class="empty">Aucune session enregistrée.</p><a class="button primary" href="{% url 'sablier:home' %}">Lancer Sablier</a></div>{% endfor %}
+</div></section>
+{% if page_obj.paginator.num_pages > 1 %}<nav class="pagination" aria-label="Pages de sessions">{% if page_obj.has_previous %}<a class="button small" href="?page={{ page_obj.previous_page_number }}">Précédent</a>{% endif %}<span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="button small" href="?page={{ page_obj.next_page_number }}">Suivant</a>{% endif %}</nav>{% endif %}
+{% endblock %}

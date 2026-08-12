@@ -178,6 +178,12 @@ class FocusSession(TimeStampedModel):
     started_at = models.DateTimeField("début")
     seconds = models.PositiveIntegerField("durée (s)", validators=[MinValueValidator(1), MaxValueValidator(86400)])
     counted_at = models.DateTimeField("reportée le", null=True, blank=True)
+    excluded_at = models.DateTimeField(
+        "exclue du suivi le",
+        null=True,
+        blank=True,
+        help_text="Une session exclue reste dans l'historique mais ne compte plus dans le temps de la compétence.",
+    )
 
     class Meta:
         verbose_name = "session de concentration"
@@ -192,6 +198,10 @@ class FocusSession(TimeStampedModel):
     @property
     def minutes(self) -> int:
         return round(self.seconds / 60)
+
+    @property
+    def is_counted(self) -> bool:
+        return bool(self.competency_id and self.counted_at and not self.excluded_at)
 
     def __str__(self):
         return f"{self.intention or 'Session'} · {self.seconds // 60} min"

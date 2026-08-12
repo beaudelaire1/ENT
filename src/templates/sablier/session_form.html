@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Corriger une session · MyENT{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">SABLIER · HISTORIQUE</p><h1>Corriger la session</h1><p class="muted">Le temps total sera recalculé automatiquement, sans toucher au temps saisi manuellement.</p></div></header>
+<section class="panel narrow"><form method="post" class="stack-form">{% csrf_token %}<input type="hidden" name="next" value="{{ back_to }}">{% include "core/_form_fields.html" %}<div class="form-actions"><button class="button primary" type="submit">Enregistrer la correction</button><a class="button quiet" href="{{ back_to }}">Annuler</a></div></form></section>
+{% endblock %}

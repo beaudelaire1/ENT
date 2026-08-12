@@ -9,8 +9,48 @@ from django.db.models import Sum
 from accounts.models import UserProfile
 from core.formatting import human_mb
 from core.forms import ScopedModelForm
+from formations.models import Competency
 
-from .models import AudioTrack, FocusPreference, Playlist
+from .models import AudioTrack, FocusPreference, FocusSession, Playlist
+from .services import format_duration, parse_duration
+
+
+class DateTimeLocalInput(forms.DateTimeInput):
+    input_type = "datetime-local"
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("format", "%Y-%m-%dT%H:%M")
+        super().__init__(*args, **kwargs)
+
+
+class FocusSessionForm(forms.ModelForm):
+    duration = forms.CharField(
+        label="Durée",
+        help_text="En minutes, MM:SS ou HH:MM:SS. Modifier la durée corrige le suivi associé.",
+    )
+    excluded = forms.BooleanField(
+        label="Exclure cette session du temps suivi",
+        required=False,
+        help_text="Elle reste visible dans l'historique et pourra être réincluse.",
+    )
+
+    class Meta:
+        model = FocusSession
+        fields = ["started_at", "intention", "competency"]
+        widgets = {"started_at": DateTimeLocalInput()}
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["competency"].queryset = Competency.objects.filter(path__owner=user).select_related("path")
+        if self.instance.pk:
+            self.fields["duration"].initial = format_duration(self.instance.seconds)
+            self.fields["excluded"].initial = bool(self.instance.excluded_at)
+
+    def clean_duration(self):
+        try:
+            return parse_duration(self.cleaned_data["duration"])
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc)) from exc
 
 
 class FocusPreferenceForm(forms.ModelForm):
