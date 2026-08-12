@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Ressources · {{ holder }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">ASSOCIER DES RESSOURCES</p>
+    <h1>{{ holder }}</h1>
+    <p class="muted">{{ subtitle }}</p>
+  </div>
+  <div class="actions">
+    <a class="button" href="{{ back_to }}">Retour</a>
+    <a class="button" href="{{ create_url }}">Créer une ressource</a>
+  </div>
+</header>
+
+<section class="panel">
+  <h2>Ressources associées</h2>
+  {% comment %}
+    Retirer une association et supprimer une ressource sont deux gestes distincts : le
+    bouton le dit, parce que la confusion coûte cher dans un sens.
+  {% endcomment %}
+  {% for resource in attached %}
+    <div class="list-row">
+      <div>
+        <a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a>
+        <p class="muted">{{ resource.get_purpose_display }} · {{ resource.get_kind_display }}{% if resource.provider_name %} · {{ resource.provider_name }}{% endif %}</p>
+      </div>
+      <form method="post" class="inline-form">
+        {% csrf_token %}
+        <button class="button small quiet danger" name="remove" value="{{ resource.pk }}" type="submit">Retirer</button>
+      </form>
+    </div>
+  {% empty %}
+    <p class="empty">Aucune ressource associée pour l’instant.</p>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Chercher dans la bibliothèque</h2>
+  <form method="get" class="filter-form" role="search">
+    <div class="field">
+      <label for="q">Titre, description, source ou étiquette</label>
+      <input id="q" type="search" name="q" value="{{ query }}" placeholder="annales, Cauchy, polycopié…">
+    </div>
+    <div class="field">
+      <label for="purpose">Nature</label>
+      <select id="purpose" name="purpose">
+        <option value="">Toutes</option>
+        {% for value, label in purposes %}<option value="{{ value }}"{% if purpose == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="kind">Type</label>
+      <select id="kind" name="kind">
+        <option value="">Tous</option>
+        {% for value, label in kinds %}<option value="{{ value }}"{% if kind == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="button" type="submit">Filtrer</button>
+      {% if query or kind or purpose %}<a class="button quiet" href="{{ request.path }}">Effacer</a>{% endif %}
+    </div>
+  </form>
+
+  <form method="post">
+    {% csrf_token %}
+    <p class="muted">{{ total }} ressource{{ total|pluralize }} disponible{{ total|pluralize }}{% if truncated %}, dont {{ truncated }} non affichée{{ truncated|pluralize }} : précisez la recherche{% endif %}.</p>
+    {% for resource in candidates %}
+      <label class="pick-row">
+        <input type="checkbox" name="resources" value="{{ resource.pk }}">
+        <span>
+          <strong>{{ resource.title }}</strong>
+          <span class="muted">{{ resource.get_purpose_display }} · {{ resource.get_kind_display }}{% if resource.folder %} · {{ resource.folder.name }}{% endif %}</span>
+          {% if resource.description %}<span class="muted">{{ resource.description|truncatechars:120 }}</span>{% endif %}
+        </span>
+      </label>
+    {% empty %}
+      <div class="empty-state">
+        <p class="empty">
+          {% if query or kind or purpose %}Aucune ressource ne correspond.{% else %}Toute votre bibliothèque est déjà associée, ou elle est vide.{% endif %}
+        </p>
+        <a class="button" href="{{ create_url }}">Créer une ressource</a>
+      </div>
+    {% endfor %}
+    {% if candidates %}
+      <div class="form-actions">
+        <button class="button primary" type="submit">Associer la sélection</button>
+      </div>
+    {% endif %}
+  </form>
+</section>
+{% endblock %}

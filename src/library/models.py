@@ -12,12 +12,19 @@ from core.models import OwnedQuerySet, TimeStampedModel
 
 class LibraryItemQuerySet(OwnedQuerySet):
     def search(self, query):
+        """Recherche sur tout ce qui identifie une ressource, étiquettes comprises.
+
+        L'étiquette manquait : une ressource rangée sous « annale » ne se retrouvait pas
+        en tapant « annale », alors que c'est précisément le mot qu'on avait choisi pour
+        la désigner.
+        """
         return self.filter(
             Q(title__icontains=query)
             | Q(description__icontains=query)
             | Q(note_text__icontains=query)
             | Q(provider_name__icontains=query)
             | Q(source_category__icontains=query)
+            | Q(tags__name__icontains=query)
         ).distinct()
 
 
@@ -80,9 +87,31 @@ def library_upload_path(instance, filename):
 
 class LibraryItem(TimeStampedModel):
     class Kind(models.TextChoices):
+        """Le type technique : sous quelle forme la ressource est stockée."""
+
         LINK = "link", "Lien"
         FILE = "file", "Fichier"
         NOTE = "note", "Note"
+
+    class Purpose(models.TextChoices):
+        """La nature pédagogique : à quoi la ressource sert.
+
+        Distincte du type technique, et non un modèle de plus. Une annale est
+        techniquement un fichier ; un corrigé peut être un lien. Chercher « les annales de
+        topologie » n'a rien à voir avec chercher « les fichiers PDF », et confondre les
+        deux obligeait à deviner la nature d'une ressource depuis son titre.
+        """
+
+        COURSE = "course", "Cours"
+        SHEET = "sheet", "Fiche"
+        EXERCISE = "exercise", "Exercices"
+        SOLUTION = "solution", "Corrigé"
+        PAST_PAPER = "past_paper", "Annale"
+        VIDEO = "video", "Vidéo"
+        NOTEBOOK = "notebook", "Notebook"
+        TOOL = "tool", "Outil numérique"
+        EXTERNAL = "external", "Lien externe"
+        OTHER = "other", "Autre"
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="library_items")
     folder = models.ForeignKey(
@@ -90,6 +119,7 @@ class LibraryItem(TimeStampedModel):
     )
     tags = models.ManyToManyField(Tag, verbose_name="étiquettes", blank=True, related_name="items")
     kind = models.CharField("type", max_length=8, choices=Kind.choices)
+    purpose = models.CharField("nature", max_length=12, choices=Purpose.choices, default=Purpose.OTHER)
     title = models.CharField("titre", max_length=200)
     description = models.TextField("description", blank=True)
     url = models.URLField("adresse", max_length=1000, blank=True)

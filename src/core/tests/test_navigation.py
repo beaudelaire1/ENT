@@ -65,3 +65,61 @@ class ActiveSectionTests(TestCase):
     def test_a_task_form_keeps_the_tasks_section_active(self):
         response = self.client.get(reverse("planner:task_new"))
         self.assertEqual(response.context["nav_section"], "tasks")
+
+
+class SidebarGroupTests(TestCase):
+    """Chaque module a son groupe repliable, et non Sablier seul."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("alice", password="secret")
+        self.client.force_login(self.user)
+
+    def test_every_module_offers_a_collapsible_group(self):
+        response = self.client.get(reverse("dashboard:home"))
+        for label in ("Planning", "Bibliothèque", "Formations", "Sablier"):
+            with self.subTest(groupe=label):
+                self.assertContains(response, f"<summary>{label}</summary>", html=False)
+
+    def test_the_group_of_the_current_section_is_open(self):
+        response = self.client.get(reverse("planner:tasks"))
+        self.assertContains(response, '<details class="nav-group" open>')
+
+    def test_the_formations_group_lists_the_users_formations(self):
+        from formations.models import LearningPath
+
+        path = LearningPath.objects.create(owner=self.user, title="L3 Mathématiques")
+        response = self.client.get(reverse("dashboard:home"))
+        self.assertContains(response, reverse("formations:detail", args=[path.pk]))
+        self.assertContains(response, "L3 Mathématiques")
+
+    def test_another_users_formation_never_appears_in_the_sidebar(self):
+        from formations.models import LearningPath
+
+        bob = get_user_model().objects.create_user("bob", password="secret")
+        LearningPath.objects.create(owner=bob, title="Formation privée de Bob")
+        response = self.client.get(reverse("dashboard:home"))
+        self.assertNotContains(response, "Formation privée de Bob")
+
+    def test_the_sidebar_announces_what_it_does_not_show(self):
+        from formations.models import LearningPath
+
+        for index in range(9):
+            LearningPath.objects.create(owner=self.user, title=f"Formation {index}")
+        response = self.client.get(reverse("dashboard:home"))
+        self.assertEqual(len(response.context["nav_paths"]), 6)
+        self.assertContains(response, "et 3 autres…")
+
+    def test_the_open_formation_is_marked_in_the_sidebar(self):
+        from formations.models import LearningPath
+
+        path = LearningPath.objects.create(owner=self.user, title="L3 Mathématiques")
+        response = self.client.get(reverse("formations:detail", args=[path.pk]))
+        self.assertEqual(response.context["nav_path_id"], path.pk)
+
+    def test_the_sidebar_carries_no_contextual_action(self):
+        """Créer une matière ou ajouter une ressource appartient à la page de l'objet."""
+        response = self.client.get(reverse("dashboard:home"))
+        sidebar = response.content.decode().split('<aside class="sidebar"')[1].split("</aside>")[0]
+        for forbidden in ("/new/", "competencies/new", "metrics/new", "periods/new"):
+            with self.subTest(action=forbidden):
+                self.assertNotIn(forbidden, sidebar)

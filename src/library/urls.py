@@ -13,6 +13,7 @@ urlpatterns = [
     path("tags/<int:pk>/edit/", views.tag_edit, name="tag_edit"),
     path("tags/<int:pk>/delete/", views.tag_delete, name="tag_delete"),
     path("<int:pk>/", views.item_detail, name="detail"),
+    path("<int:pk>/links/", views.item_links, name="links"),
     path("<int:pk>/edit/", views.item_edit, name="edit"),
     path("<int:pk>/delete/", views.item_delete, name="delete"),
     path("<int:pk>/download/", views.download, name="download"),

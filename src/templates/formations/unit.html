@@ -47,8 +47,8 @@
             {% empty %}
               <p class="field-help">
                 Aucune ressource associée.
-                <a href="{% url 'library:list' %}">Rechercher dans la bibliothèque</a>
-                ou <a href="{% url 'formations:competency_edit' competency.pk %}">en ajouter une</a>.
+                <a href="{% url 'formations:competency_resources' competency.pk %}">Rechercher dans la bibliothèque</a>
+                ou <a href="{% url 'library:new' %}?next={{ request.path|urlencode }}">en ajouter une</a>.
               </p>
             {% endfor %}
           </div>
@@ -77,11 +77,11 @@
     {% for resource in unit.resources.all %}
       <div class="list-row"><a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a></div>
     {% empty %}
-      <div class="empty-state">
-        <p class="empty">Aucune ressource liée à cette matière.</p>
-        <a class="button small" href="{% url 'formations:unit_edit' unit.pk %}">Associer une ressource</a>
-      </div>
+      <p class="empty">Aucune ressource liée à cette matière.</p>
     {% endfor %}
+    <div class="actions">
+      <a class="button small" href="{% url 'formations:unit_resources' unit.pk %}">Associer une ressource</a>
+    </div>
 
     <h2>Structure</h2>
     <div class="list-row">

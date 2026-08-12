@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Associations · {{ item.title }} · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">ASSOCIATIONS</p>
+    <h1>{{ item.title }}</h1>
+    <p class="muted">{{ item.get_purpose_display }} · {{ item.get_kind_display }}</p>
+  </div>
+  <div class="actions"><a class="button" href="{{ back_to }}">Retour à la ressource</a></div>
+</header>
+
+<form method="get" class="filter-form" role="search">
+  <div class="field">
+    <label for="q">Chercher une compétence ou une matière</label>
+    <input id="q" type="search" name="q" value="{{ query }}" placeholder="compacité, topologie, semestre 5…">
+  </div>
+  <div class="form-actions">
+    <button class="button" type="submit">Filtrer</button>
+    {% if query %}<a class="button quiet" href="{{ request.path }}">Effacer</a>{% endif %}
+  </div>
+</form>
+
+<div class="two-columns">
+  <section class="panel">
+    <h2>Compétences associées</h2>
+    {% for competency in attached_competencies %}
+      <div class="list-row">
+        <div>
+          <a href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
+          <p class="muted">{{ competency.unit.title }} · {{ competency.unit.period.title }}</p>
+        </div>
+        <form method="post" class="inline-form">
+          {% csrf_token %}
+          <input type="hidden" name="target" value="competency">
+          <button class="button small quiet danger" name="remove" value="{{ competency.pk }}" type="submit">Retirer</button>
+        </form>
+      </div>
+    {% empty %}
+      <p class="empty">Aucune compétence associée.</p>
+    {% endfor %}
+
+    <h2>Ajouter des compétences</h2>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="target" value="competency">
+      {% for competency in competencies %}
+        <label class="pick-row">
+          <input type="checkbox" name="chosen" value="{{ competency.pk }}">
+          <span>
+            <strong>{{ competency.title }}</strong>
+            <span class="muted">{{ competency.unit.title }} · {{ competency.unit.period.path.title }}</span>
+          </span>
+        </label>
+      {% empty %}
+        <p class="empty">{% if query %}Aucune compétence ne correspond.{% else %}Toutes vos compétences sont déjà associées, ou vous n’en avez aucune.{% endif %}</p>
+      {% endfor %}
+      {% if competency_overflow %}<p class="muted">{{ competency_overflow }} compétence{{ competency_overflow|pluralize }} non affichée{{ competency_overflow|pluralize }} : précisez la recherche.</p>{% endif %}
+      {% if competencies %}<div class="form-actions"><button class="button primary" type="submit">Associer</button></div>{% endif %}
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Matières associées</h2>
+    {% for unit in attached_units %}
+      <div class="list-row">
+        <div>
+          <a href="{% url 'formations:unit' unit.pk %}">{{ unit.title }}</a>
+          <p class="muted">{{ unit.period.title }}</p>
+        </div>
+        <form method="post" class="inline-form">
+          {% csrf_token %}
+          <input type="hidden" name="target" value="unit">
+          <button class="button small quiet danger" name="remove" value="{{ unit.pk }}" type="submit">Retirer</button>
+        </form>
+      </div>
+    {% empty %}
+      <p class="empty">Aucune matière associée.</p>
+    {% endfor %}
+
+    <h2>Ajouter des matières</h2>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="target" value="unit">
+      {% for unit in units %}
+        <label class="pick-row">
+          <input type="checkbox" name="chosen" value="{{ unit.pk }}">
+          <span>
+            <strong>{{ unit.title }}</strong>
+            <span class="muted">{{ unit.period.title }} · {{ unit.period.path.title }}</span>
+          </span>
+        </label>
+      {% empty %}
+        <p class="empty">{% if query %}Aucune matière ne correspond.{% else %}Toutes vos matières sont déjà associées, ou vous n’en avez aucune.{% endif %}</p>
+      {% endfor %}
+      {% if unit_overflow %}<p class="muted">{{ unit_overflow }} matière{{ unit_overflow|pluralize }} non affichée{{ unit_overflow|pluralize }} : précisez la recherche.</p>{% endif %}
+      {% if units %}<div class="form-actions"><button class="button primary" type="submit">Associer</button></div>{% endif %}
+    </form>
+  </section>
+</div>
+
+<p class="muted">Retirer une association ne supprime jamais la ressource : elle reste dans la bibliothèque.</p>
+{% endblock %}

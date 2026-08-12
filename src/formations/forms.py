@@ -3,7 +3,6 @@ from decimal import Decimal
 from django import forms
 
 from core.forms import ScopedModelForm
-from library.models import LibraryItem
 
 from .models import Competency, LearningPath, LearningUnit, MetricDefinition, Period, ProgressRecord
 
@@ -67,18 +66,14 @@ class PeriodForm(ScopedModelForm):
 class LearningUnitForm(ScopedModelForm):
     class Meta:
         model = LearningUnit
-        fields = ["title", "description", "order", "resources"]
-        widgets = {"description": forms.Textarea(attrs={"rows": 3}), "resources": forms.CheckboxSelectMultiple()}
+        fields = ["title", "description", "order"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["resources"].queryset = LibraryItem.objects.filter(owner=user)
         annotate(
             self,
-            {
-                "order": "Position dans la période, pour retrouver l’ordre de la maquette.",
-                "resources": "Ressources qui concernent toute la matière. Celles d’une compétence précise se lient à la compétence.",
-            },
+            {"order": "Position dans la période, pour retrouver l’ordre de la maquette."},
             {"title": "Topologie"},
         )
 
@@ -86,18 +81,16 @@ class LearningUnitForm(ScopedModelForm):
 class CompetencyForm(ScopedModelForm):
     class Meta:
         model = Competency
-        fields = ["title", "description", "order", "resources"]
-        widgets = {"description": forms.Textarea(attrs={"rows": 3}), "resources": forms.CheckboxSelectMultiple()}
+        fields = ["title", "description", "order"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["resources"].queryset = LibraryItem.objects.filter(owner=user)
         annotate(
             self,
             {
                 "title": "Ce qui doit être maîtrisé, formulé comme un savoir-faire.",
                 "description": "Ce que vous devez savoir faire précisément. Utile pour vous relire dans six mois.",
-                "resources": "Cours, fiches, annales ou vidéos qui servent à travailler cette compétence.",
             },
             {"title": "Déterminer si un espace est compact"},
         )

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -7,6 +9,7 @@ from django.urls import reverse
 
 from core.deletion import confirm_delete
 from core.editing import form_page
+from library.models import LibraryItem
 
 from .forms import (
     CompetencyForm,
@@ -159,6 +162,115 @@ def unit_detail(request, pk):
     return render(request, "formations/unit.html", {"unit": unit, "rows": rows, "breadcrumbs": unit_crumbs(unit)})
 
 
+RESOURCE_RESULT_LIMIT = 40
+
+
+def group_by_purpose(resources) -> list[dict]:
+    """Regroupe des ressources par nature pédagogique, dans l'ordre des choix déclarés.
+
+    On cherche « les annales » ou « le corrigé », pas « les fichiers » : le classement
+    suit donc l'usage et non le format de stockage.
+    """
+    labels = dict(LibraryItem.Purpose.choices)
+    buckets: dict[str, list] = {}
+    for resource in resources:
+        buckets.setdefault(resource.purpose, []).append(resource)
+    return [
+        {"purpose": value, "label": labels[value], "items": buckets[value]}
+        for value, _label in LibraryItem.Purpose.choices
+        if value in buckets
+    ]
+
+
+def _resource_picker(request, *, holder, subtitle, breadcrumbs, back_to):
+    """Associer des ressources par recherche, plutôt que dans une liste de cases.
+
+    Le formulaire d'édition affichait toute la bibliothèque en cases à cocher : passé
+    quelques dizaines de ressources, trouver la bonne devenait un exercice de patience, et
+    une case décochée par inadvertance rompait une association sans prévenir.
+
+    Retirer une association ne supprime pas la ressource : elle reste dans la
+    bibliothèque, où elle peut servir ailleurs.
+    """
+    owner = request.user
+    if request.method == "POST":
+        removed = request.POST.get("remove")
+        chosen = request.POST.getlist("resources")
+        if removed:
+            resource = get_object_or_404(LibraryItem, owner=owner, pk=removed)
+            holder.resources.remove(resource)
+            messages.success(request, f"« {resource.title} » n’est plus associée. Elle reste dans la bibliothèque.")
+        elif chosen:
+            resources = list(LibraryItem.objects.filter(owner=owner, pk__in=chosen))
+            holder.resources.add(*resources)
+            messages.success(request, f"{len(resources)} ressource(s) associée(s).")
+        else:
+            messages.error(request, "Aucune ressource sélectionnée.")
+        return redirect(request.get_full_path())
+
+    query = request.GET.get("q", "").strip()
+    kind = request.GET.get("kind", "")
+    purpose = request.GET.get("purpose", "")
+    candidates = LibraryItem.objects.filter(owner=owner).exclude(pk__in=holder.resources.values("pk"))
+    if query:
+        candidates = candidates.search(query)
+    if kind in LibraryItem.Kind.values:
+        candidates = candidates.filter(kind=kind)
+    if purpose in LibraryItem.Purpose.values:
+        candidates = candidates.filter(purpose=purpose)
+    candidates = candidates.order_by("-updated_at")
+    total = candidates.count()
+    return render(
+        request,
+        "formations/resources.html",
+        {
+            "holder": holder,
+            "subtitle": subtitle,
+            "attached": holder.resources.all().order_by("purpose", "title"),
+            "candidates": candidates[:RESOURCE_RESULT_LIMIT],
+            "total": total,
+            # Une liste tronquée le dit : sinon elle passe pour la liste complète.
+            "truncated": max(0, total - RESOURCE_RESULT_LIMIT),
+            "query": query,
+            "kind": kind,
+            "purpose": purpose,
+            "kinds": LibraryItem.Kind.choices,
+            "purposes": LibraryItem.Purpose.choices,
+            "breadcrumbs": breadcrumbs,
+            "back_to": back_to,
+            "create_url": f"{reverse('library:new')}?next={quote(request.get_full_path())}",
+        },
+    )
+
+
+@login_required
+def competency_resources(request, pk):
+    competency = get_object_or_404(
+        Competency.objects.select_related("unit__period__path"), unit__period__path__owner=request.user, pk=pk
+    )
+    return _resource_picker(
+        request,
+        holder=competency,
+        subtitle=f"Compétence · {competency.title}",
+        breadcrumbs=competency_crumbs(competency) + [{"label": "Ressources", "url": None}],
+        back_to=reverse("formations:competency", args=[competency.pk]),
+    )
+
+
+@login_required
+def unit_resources(request, pk):
+    unit = get_object_or_404(
+        LearningUnit.objects.select_related("period__path"), period__path__owner=request.user, pk=pk
+    )
+    return _resource_picker(
+        request,
+        holder=unit,
+        subtitle=f"Matière · {unit.title}",
+        breadcrumbs=unit_crumbs(unit) + [{"label": "Ressources", "url": None}],
+        back_to=reverse("formations:unit", args=[unit.pk]),
+    )
+
+
 @login_required
 def competency_detail(request, pk):
     """La page d'une compétence : son état, et ce qui permet de la travailler.
@@ -180,7 +292,8 @@ def competency_detail(request, pk):
             "competency": competency,
             "progress": progress,
             "unit": competency.unit,
-            "resources": competency.resources.all(),
+            "resource_groups": group_by_purpose(competency.resources.all()),
+            "sessions": competency.focus_sessions.filter(owner=request.user)[:8],
             "breadcrumbs": competency_crumbs(competency),
         },
     )

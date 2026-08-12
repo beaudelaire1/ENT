@@ -7,8 +7,14 @@
     <h1>{{ competency.title }}</h1>
     {% if competency.description %}<p class="muted">{{ competency.description }}</p>{% endif %}
   </div>
+  {% comment %}
+    Une compétence en difficulté doit mener quelque part : travailler dessus, ou trouver
+    de quoi la travailler. Les deux actions sont ici, pas trois écrans plus loin.
+  {% endcomment %}
   <div class="actions">
-    <a class="button primary" href="{% url 'formations:progress' competency.pk %}">Où j’en suis</a>
+    <a class="button primary" href="{% url 'sablier:home' %}?competency={{ competency.pk }}">Travailler avec Sablier</a>
+    <a class="button" href="{% url 'formations:competency_resources' competency.pk %}">Associer une ressource</a>
+    <a class="button" href="{% url 'formations:progress' competency.pk %}">Où j’en suis</a>
     <a class="button" href="{% url 'formations:competency_edit' competency.pk %}">Modifier</a>
   </div>
 </header>
@@ -38,25 +44,34 @@
 
   <section class="panel">
     <h2>Ressources</h2>
-    {% for resource in resources %}
-      <div class="list-row">
-        <a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a>
-        <span class="chip static"><span class="chip-label">{{ resource.get_kind_display }}</span></span>
-      </div>
+    {% comment %}Groupées par nature : on cherche « une annale », pas « un fichier ».{% endcomment %}
+    {% for group in resource_groups %}
+      <h3 class="resource-group">{{ group.label }}</h3>
+      {% for resource in group.items %}
+        <div class="list-row">
+          <a href="{% url 'library:detail' resource.pk %}">{{ resource.title }}</a>
+          <span class="muted">{{ resource.get_kind_display }}</span>
+        </div>
+      {% endfor %}
     {% empty %}
       <div class="empty-state">
         <p class="empty">Aucune ressource associée. Rechercher dans la bibliothèque ou en ajouter une.</p>
         <div class="actions">
-          <a class="button" href="{% url 'library:list' %}">Ouvrir la bibliothèque</a>
-          <a class="button" href="{% url 'formations:competency_edit' competency.pk %}?next={{ request.path|urlencode }}">Associer une ressource</a>
+          <a class="button primary" href="{% url 'formations:competency_resources' competency.pk %}">Chercher dans la bibliothèque</a>
+          <a class="button" href="{% url 'library:new' %}?next={{ request.path|urlencode }}">Créer une ressource</a>
         </div>
       </div>
     {% endfor %}
-    {% if resources %}
-      <div class="actions">
-        <a class="button" href="{% url 'formations:competency_edit' competency.pk %}?next={{ request.path|urlencode }}">Associer une ressource</a>
+
+    <h2>Séances récentes</h2>
+    {% for session in sessions %}
+      <div class="list-row">
+        <span>{{ session.started_at|date:"d/m/Y H:i" }}</span>
+        <strong>{{ session.minutes }} min</strong>
       </div>
-    {% endif %}
+    {% empty %}
+      <p class="empty">Aucune séance enregistrée sur cette compétence.</p>
+    {% endfor %}
   </section>
 </div>
 

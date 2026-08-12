@@ -1,7 +1,85 @@
 {% extends "base.html" %}
 {% block title %}{{ item.title }} · MyENT{% endblock %}
 {% block content %}
-<header class="page-header"><div><p class="eyebrow">{{ item.get_kind_display|upper }}</p><h1>{{ item.title }}</h1></div><div class="actions"><a class="button danger" href="{% url 'library:delete' item.pk %}">Supprimer</a><a class="button" href="{% url 'library:edit' item.pk %}">Modifier</a>{% if item.kind == 'file' %}<a class="button primary" href="{% url 'library:download' item.pk %}">Télécharger</a>{% elif item.kind == 'link' %}<a class="button primary" href="{{ item.url }}" target="_blank" rel="noopener">Ouvrir</a>{% endif %}</div></header>
-<section class="panel note-content">{% if item.kind == 'note' %}{{ item.note_html|safe }}{% else %}<p>{{ item.description|linebreaksbr }}</p>{% endif %}</section>
-{% endblock %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">{{ item.get_purpose_display|upper }} · {{ item.get_kind_display|upper }}</p>
+    <h1>{{ item.title }}</h1>
+  </div>
+  <div class="actions">
+    {% if item.kind == 'file' %}
+      <a class="button primary" href="{% url 'library:download' item.pk %}">Télécharger</a>
+    {% elif item.kind == 'link' %}
+      <a class="button primary" href="{{ item.url }}" target="_blank" rel="noopener">Ouvrir</a>
+    {% endif %}
+    <a class="button" href="{% url 'library:links' item.pk %}">Associer</a>
+    <a class="button" href="{% url 'library:edit' item.pk %}">Modifier</a>
+  </div>
+</header>
 
+<div class="two-columns">
+  <section class="panel note-content">
+    {% if item.kind == 'note' %}
+      {{ item.note_html|safe }}
+    {% else %}
+      {% if item.description %}<p>{{ item.description|linebreaksbr }}</p>{% else %}<p class="empty">Aucune description.</p>{% endif %}
+      {% if item.kind == 'link' %}<p class="muted"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.url|truncatechars:80 }}</a></p>{% endif %}
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    {% comment %}
+      Les relations inverses : à quoi cette ressource sert. Sans elles, on savait qu'une
+      compétence pointait vers une ressource, jamais l'inverse — et une fiche retrouvée par
+      la recherche ne disait pas à quel cours elle appartenait.
+    {% endcomment %}
+    <h2>Rangement</h2>
+    <div class="list-row">
+      <span>Dossier</span>
+      {% if item.folder %}
+        <a href="{% url 'library:list' %}?folder={{ item.folder_id }}">{{ item.folder.name }}</a>
+      {% else %}<span class="muted">Aucun</span>{% endif %}
+    </div>
+    <div class="list-row">
+      <span>Étiquettes</span>
+      <span class="chip-row">
+        {% for tag in item.tags.all %}<a class="chip" href="{% url 'library:list' %}?tag={{ tag.pk }}">{{ tag.name }}</a>{% empty %}<span class="muted">Aucune</span>{% endfor %}
+      </span>
+    </div>
+    <div class="list-row"><span>Nature</span><strong>{{ item.get_purpose_display }}</strong></div>
+    <div class="list-row"><span>Type</span><strong>{{ item.get_kind_display }}</strong></div>
+    {% if item.provider_name %}<div class="list-row"><span>Source</span><strong>{{ item.provider_name }}</strong></div>{% endif %}
+    {% if item.source_category %}<div class="list-row"><span>Catégorie</span><strong>{{ item.source_category }}</strong></div>{% endif %}
+    <div class="list-row"><span>Ajoutée le</span><time>{{ item.created_at|date:"d/m/Y H:i" }}</time></div>
+    <div class="list-row"><span>Modifiée le</span><time>{{ item.updated_at|date:"d/m/Y H:i" }}</time></div>
+
+    <h2>Compétences travaillées</h2>
+    {% for competency in competencies %}
+      <div class="list-row">
+        <a href="{% url 'formations:competency' competency.pk %}">{{ competency.title }}</a>
+        <span class="muted">{{ competency.unit.title }}</span>
+      </div>
+    {% empty %}
+      <p class="empty">Cette ressource n’est reliée à aucune compétence.</p>
+    {% endfor %}
+
+    <h2>Matières</h2>
+    {% for unit in units %}
+      <div class="list-row">
+        <a href="{% url 'formations:unit' unit.pk %}">{{ unit.title }}</a>
+        <span class="muted">{{ unit.period.title }}</span>
+      </div>
+    {% empty %}
+      <p class="empty">Cette ressource n’est reliée à aucune matière.</p>
+    {% endfor %}
+
+    <div class="actions">
+      <a class="button" href="{% url 'library:links' item.pk %}">Gérer les associations</a>
+    </div>
+  </section>
+</div>
+
+<p class="muted secondary-action">
+  <a class="danger-link" href="{% url 'library:delete' item.pk %}">Supprimer cette ressource</a>
+</p>
+{% endblock %}

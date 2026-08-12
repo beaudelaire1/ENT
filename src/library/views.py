@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -9,6 +10,7 @@ from django.urls import reverse
 from core.deletion import confirm_delete
 from core.editing import form_page
 from core.navigation import crumb, safe_next
+from formations.models import Competency, LearningUnit
 
 from .forms import FolderForm, LibraryItemForm, TagForm
 from .models import Folder, LibraryItem, Tag
@@ -58,11 +60,83 @@ def item_list(request):
 @login_required
 def item_detail(request, pk):
     item = get_object_or_404(
-        LibraryItem.objects.select_related("folder").prefetch_related("tags", "learning_units", "competencies"),
-        owner=request.user,
-        pk=pk,
+        LibraryItem.objects.select_related("folder").prefetch_related("tags"), owner=request.user, pk=pk
     )
-    return render(request, "library/detail.html", {"item": item, "breadcrumbs": item_crumbs(item)})
+    return render(
+        request,
+        "library/detail.html",
+        {
+            "item": item,
+            # Les relations inverses : à quoi la ressource sert, et non seulement ce
+            # qu'elle est.
+            "competencies": item.competencies.select_related("unit__period__path"),
+            "units": item.learning_units.select_related("period__path"),
+            "breadcrumbs": item_crumbs(item),
+        },
+    )
+
+
+LINK_RESULT_LIMIT = 40
+
+
+@login_required
+def item_links(request, pk):
+    """Associer une ressource à des compétences ou des matières, depuis la ressource.
+
+    L'association n'existait que dans un sens. En trouvant une annale dans la
+    bibliothèque, rien ne permettait de la rattacher au cours qu'elle prépare : il fallait
+    retrouver la compétence, ouvrir son écran, y chercher la ressource.
+    """
+    item = get_object_or_404(LibraryItem, owner=request.user, pk=pk)
+    if request.method == "POST":
+        target = request.POST.get("target", "")
+        removed = request.POST.get("remove")
+        chosen = request.POST.getlist("chosen")
+        model = Competency if target == "competency" else LearningUnit
+        scope = (
+            {"unit__period__path__owner": request.user}
+            if target == "competency"
+            else {"period__path__owner": request.user}
+        )
+        if removed:
+            holder = get_object_or_404(model, pk=removed, **scope)
+            holder.resources.remove(item)
+            messages.success(request, f"Association retirée. « {item.title} » reste dans la bibliothèque.")
+        elif chosen:
+            holders = list(model.objects.filter(pk__in=chosen, **scope))
+            for holder in holders:
+                holder.resources.add(item)
+            messages.success(request, f"{len(holders)} association(s) ajoutée(s).")
+        else:
+            messages.error(request, "Aucune cible sélectionnée.")
+        return redirect(request.get_full_path())
+
+    query = request.GET.get("q", "").strip()
+    competencies = Competency.objects.filter(unit__period__path__owner=request.user).select_related(
+        "unit__period__path"
+    )
+    units = LearningUnit.objects.filter(period__path__owner=request.user).select_related("period__path")
+    if query:
+        competencies = competencies.filter(Q(title__icontains=query) | Q(unit__title__icontains=query))
+        units = units.filter(Q(title__icontains=query) | Q(period__title__icontains=query))
+    free_competencies = competencies.exclude(resources=item).order_by("unit__title", "order", "title")
+    free_units = units.exclude(resources=item).order_by("period__order", "order", "title")
+    return render(
+        request,
+        "library/links.html",
+        {
+            "item": item,
+            "attached_competencies": item.competencies.select_related("unit__period__path"),
+            "attached_units": item.learning_units.select_related("period__path"),
+            "competencies": free_competencies[:LINK_RESULT_LIMIT],
+            "units": free_units[:LINK_RESULT_LIMIT],
+            "competency_overflow": max(0, free_competencies.count() - LINK_RESULT_LIMIT),
+            "unit_overflow": max(0, free_units.count() - LINK_RESULT_LIMIT),
+            "query": query,
+            "breadcrumbs": item_crumbs(item) + [crumb("Associations")],
+            "back_to": reverse("library:detail", args=[item.pk]),
+        },
+    )
 
 
 @login_required

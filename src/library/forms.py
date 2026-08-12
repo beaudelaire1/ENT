@@ -38,7 +38,18 @@ class LibraryItemForm(ScopedModelForm):
 
     class Meta:
         model = LibraryItem
-        fields = ["kind", "title", "description", "folder", "tags", "url", "file", "provider_name", "source_category"]
+        fields = [
+            "kind",
+            "purpose",
+            "title",
+            "description",
+            "folder",
+            "tags",
+            "url",
+            "file",
+            "provider_name",
+            "source_category",
+        ]
         widgets = {"description": forms.Textarea(attrs={"rows": 3}), "tags": forms.CheckboxSelectMultiple()}
 
     def __init__(self, *args, user=None, **kwargs):
@@ -47,6 +58,15 @@ class LibraryItemForm(ScopedModelForm):
         super().__init__(*args, **kwargs)
         self.fields["folder"].queryset = Folder.objects.filter(owner=user)
         self.fields["tags"].queryset = Tag.objects.filter(owner=user)
+        self.fields["kind"].help_text = "Sous quelle forme la ressource est stockée."
+        self.fields[
+            "purpose"
+        ].help_text = (
+            "À quoi elle sert. Indépendant du type : une annale est souvent un fichier, un corrigé peut être un lien."
+        )
+        # Facultatif à la saisie : une ressource dont on ne sait pas encore quoi dire
+        # tombe dans « Autre » plutôt que de bloquer l'enregistrement.
+        self.fields["purpose"].required = False
         if self.instance.pk:
             self.fields["note_delta_json"].initial = json.dumps(self.instance.note_delta)
             self.fields["note_html_input"].initial = self.instance.note_html
@@ -57,6 +77,9 @@ class LibraryItemForm(ScopedModelForm):
         if upload and getattr(upload, "size", 0) > settings.LIBRARY_MAX_UPLOAD_MB * 1024 * 1024:
             raise forms.ValidationError(f"Le fichier dépasse {settings.LIBRARY_MAX_UPLOAD_MB} Mo.")
         return upload
+
+    def clean_purpose(self):
+        return self.cleaned_data.get("purpose") or LibraryItem.Purpose.OTHER
 
     def clean_note_delta_json(self):
         value = self.cleaned_data.get("note_delta_json") or "{}"

@@ -18,14 +18,39 @@
       ressource ou modifier une compétence sont des actions contextuelles : leur place est
       sur la page de l'objet concerné, pas dans un menu global.
     {% endcomment %}
+    {% comment %}
+      Chaque module a son groupe repliable, et non Sablier seul : les sous-entrées ne
+      s'étalent que lorsqu'on est dans la rubrique, et le volet reste court. Les
+      sous-entrées sont des destinations — une vue, un filtre, une formation — jamais une
+      action contextuelle comme « ajouter une ressource », qui appartient à la page de
+      l'objet concerné.
+    {% endcomment %}
     <nav aria-label="Navigation principale">
       <a href="{% url 'dashboard:home' %}"{% if nav_section == 'dashboard' %} class="active" aria-current="page"{% endif %}>Tableau de bord</a>
-      <a href="{% url 'planner:agenda' %}"{% if nav_section == 'agenda' %} class="active" aria-current="page"{% endif %}>Agenda</a>
-      <a href="{% url 'planner:tasks' %}"{% if nav_section == 'tasks' %} class="active" aria-current="page"{% endif %}>Tâches</a>
-      <a href="{% url 'library:list' %}"{% if nav_section == 'library' %} class="active" aria-current="page"{% endif %}>Bibliothèque</a>
-      <a href="{% url 'formations:list' %}"{% if nav_section == 'formations' %} class="active" aria-current="page"{% endif %}>Formations</a>
-      {% comment %}Replié par défaut, ouvert dès qu'on est dans Sablier : les
-      sous-entrées ne s'étalent que lorsqu'elles servent.{% endcomment %}
+
+      <details class="nav-group"{% if nav_section == 'agenda' or nav_section == 'tasks' %} open{% endif %}>
+        <summary{% if nav_section == 'agenda' or nav_section == 'tasks' %} class="active"{% endif %}>Planning</summary>
+        <a href="{% url 'planner:agenda' %}"{% if nav_section == 'agenda' %} class="active" aria-current="page"{% endif %}>Agenda</a>
+        <a href="{% url 'planner:tasks' %}"{% if nav_section == 'tasks' %} class="active" aria-current="page"{% endif %}>Tâches</a>
+      </details>
+
+      <details class="nav-group"{% if nav_section == 'library' %} open{% endif %}>
+        <summary{% if nav_section == 'library' %} class="active"{% endif %}>Bibliothèque</summary>
+        <a href="{% url 'library:list' %}"{% if nav_section == 'library' and not request.GET.kind %} class="active" aria-current="page"{% endif %}>Toutes les ressources</a>
+        <a href="{% url 'library:list' %}?kind=note"{% if request.GET.kind == 'note' %} class="active" aria-current="page"{% endif %}>Notes</a>
+        <a href="{% url 'library:list' %}?kind=file"{% if request.GET.kind == 'file' %} class="active" aria-current="page"{% endif %}>Fichiers</a>
+        <a href="{% url 'library:list' %}?kind=link"{% if request.GET.kind == 'link' %} class="active" aria-current="page"{% endif %}>Liens</a>
+      </details>
+
+      <details class="nav-group"{% if nav_section == 'formations' %} open{% endif %}>
+        <summary{% if nav_section == 'formations' %} class="active"{% endif %}>Formations</summary>
+        <a href="{% url 'formations:list' %}"{% if nav_section == 'formations' and request.resolver_match.url_name == 'list' %} class="active" aria-current="page"{% endif %}>Toutes mes formations</a>
+        {% for path in nav_paths %}
+          <a href="{% url 'formations:detail' path.pk %}" class="nav-sub{% if nav_path_id == path.pk %} active{% endif %}">{{ path.title }}</a>
+        {% endfor %}
+        {% if nav_paths_overflow %}<a href="{% url 'formations:list' %}" class="nav-sub muted">et {{ nav_paths_overflow }} autre{{ nav_paths_overflow|pluralize }}…</a>{% endif %}
+      </details>
+
       <details class="nav-group"{% if nav_section == 'sablier' %} open{% endif %}>
         <summary{% if nav_section == 'sablier' %} class="active"{% endif %}>Sablier</summary>
         <a href="{% url 'sablier:home' %}"{% if request.resolver_match.url_name == 'home' and nav_section == 'sablier' %} class="active" aria-current="page"{% endif %}>Minuteur</a>
