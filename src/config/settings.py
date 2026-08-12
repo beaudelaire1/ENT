@@ -264,6 +264,15 @@ CELERY_BEAT_SCHEDULE = {
     }
 }
 
+# Les tests exécutent les tâches sur place. L'intégration continue fournit un courtier
+# mais aucun worker : `delay()` y réussissait, la tâche partait en file, et personne ne
+# l'exécutait jamais — la réindexation et les rappels restaient en attente jusqu'à la fin
+# du test. En local, sans courtier, `core.queue.enqueue` retombait sur une exécution
+# immédiate et masquait précisément ce cas.
+if RUNNING_TESTS:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
 LIBRARY_MAX_UPLOAD_MB = int(os.getenv("LIBRARY_MAX_UPLOAD_MB", "25"))
 AUDIO_MAX_TRACK_MB = int(os.getenv("AUDIO_MAX_TRACK_MB", "1024"))
 AUDIO_DEFAULT_QUOTA_MB = int(os.getenv("AUDIO_DEFAULT_QUOTA_MB", "10240"))
