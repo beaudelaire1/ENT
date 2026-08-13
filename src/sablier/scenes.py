@@ -1,9 +1,5 @@
 """Registre des univers immersifs du Sablier.
 
-Les clés sont volontairement les identifiants historiques déjà stockés en production.
-Elles ne décrivent plus l'esthétique visible : elles servent uniquement de contrat de
-persistance afin qu'une refonte artistique ne force aucune migration des préférences.
-
 Un univers n'est pas une palette. Il décrit un lieu : composition, profondeur,
 source lumineuse, mouvement et évolution pendant la session. Ces informations
 servent aussi de contrat artistique aux tests de non-régression.
@@ -35,7 +31,6 @@ class Scene:
     motion: tuple[str, ...]
     progression: str
     description: str
-    selectable: bool = True
 
     @property
     def art_signature(self) -> tuple[str, tuple[str, ...], str]:
@@ -45,7 +40,7 @@ class Scene:
 
 SCENES: tuple[Scene, ...] = (
     Scene(
-        "concentration",
+        "arbre_etoiles",
         "Arbre des étoiles",
         "#7ad8ff",
         "#154a70",
@@ -60,97 +55,7 @@ SCENES: tuple[Scene, ...] = (
         "Un arbre monumental sur une île d'eau noire, entre ciel étoilé et lumière dorée.",
     ),
     Scene(
-        "printemps",
-        "Éden",
-        "#91e7a8",
-        "#1f6b4a",
-        "eden",
-        "#061714",
-        "#285b42",
-        "#08130e",
-        "#fff0a6",
-        "garden-terraces-great-tree-stream",
-        ("leaf-breath", "fireflies", "stream-glints"),
-        "sunbeams-cross-the-canopy",
-        "Un jardin primordial organisé autour d'un arbre immense, de terrasses et d'une eau claire.",
-    ),
-    Scene(
-        "ete",
-        "Oasis des confins",
-        "#ffd17b",
-        "#91562c",
-        "oasis",
-        "#171426",
-        "#8a573f",
-        "#25130d",
-        "#ffd89b",
-        "dunes-oasis-ruins-palms-distant-mesa",
-        ("heat-haze", "palm-breeze", "sand-veils"),
-        "sunset-turns-to-starlight",
-        "Une oasis isolée entre dunes, ruines anciennes et ciel de fin du monde.",
-    ),
-    Scene(
-        "automne",
-        "Fleuve du Temps",
-        "#9dcaff",
-        "#354e8b",
-        "time_river",
-        "#070d1d",
-        "#314b76",
-        "#090d18",
-        "#f2d6a0",
-        "ruins-river-arches-temporal-shards",
-        ("river-flow", "light-shards", "mist-drift"),
-        "ruins-cross-faintly-between-eras",
-        "Un fleuve lumineux traverse des ruines appartenant à plusieurs époques à la fois.",
-    ),
-    Scene(
-        "hiver",
-        "Vallée des aurores",
-        "#7defcf",
-        "#28516a",
-        "aurora_valley",
-        "#06121e",
-        "#17445b",
-        "#081018",
-        "#baffef",
-        "mountain-valley-lake-aurora",
-        ("aurora-ribbons", "lake-reflection", "snow-drift"),
-        "aurora-gains-depth-with-elapsed-time",
-        "Une vallée glacée et son lac reflètent de larges voiles d'aurore au-dessus des montagnes.",
-    ),
-    Scene(
-        "pluie",
-        "Refuge sous la pluie",
-        "#d7b36c",
-        "#42505d",
-        "rain_refuge",
-        "#111820",
-        "#344756",
-        "#15130f",
-        "#ffd28a",
-        "interior-window-lamp-rain-city",
-        ("window-rain", "outside-bokeh", "lamp-breath"),
-        "interior-warmth-increases-as-outside-darkens",
-        "Un refuge chaud derrière une grande vitre, pendant qu'une pluie froide efface le dehors.",
-    ),
-    Scene(
-        "ocean",
-        "Sanctuaire abyssal",
-        "#58d6d8",
-        "#155d68",
-        "abyss",
-        "#021217",
-        "#0d4b55",
-        "#031015",
-        "#9ff8ee",
-        "submerged-temple-columns-surface-shafts",
-        ("caustics", "bubbles", "bioluminescent-drift"),
-        "surface-rays-shift-with-the-session",
-        "Un sanctuaire englouti dort sous des rais de lumière venus d'une surface très lointaine.",
-    ),
-    Scene(
-        "sahara",
+        "fontaine",
         "Fontaine de l’Éternité",
         "#57e3df",
         "#176c78",
@@ -165,7 +70,37 @@ SCENES: tuple[Scene, ...] = (
         "Une cité verticale oubliée, traversée par des bassins turquoise et de longues cascades.",
     ),
     Scene(
-        "foret",
+        "eden",
+        "Éden",
+        "#91e7a8",
+        "#1f6b4a",
+        "eden",
+        "#061714",
+        "#285b42",
+        "#08130e",
+        "#fff0a6",
+        "garden-terraces-great-tree-stream",
+        ("leaf-breath", "fireflies", "stream-glints"),
+        "sunbeams-cross-the-canopy",
+        "Un jardin primordial organisé autour d'un arbre immense, de terrasses et d'une eau claire.",
+    ),
+    Scene(
+        "fleuve_temps",
+        "Fleuve du Temps",
+        "#9dcaff",
+        "#354e8b",
+        "time_river",
+        "#070d1d",
+        "#314b76",
+        "#090d18",
+        "#f2d6a0",
+        "ruins-river-arches-temporal-shards",
+        ("river-flow", "light-shards", "mist-drift"),
+        "ruins-cross-faintly-between-eras",
+        "Un fleuve lumineux traverse des ruines appartenant à plusieurs époques à la fois.",
+    ),
+    Scene(
+        "souvenirs",
         "Souvenirs",
         "#d2b6ff",
         "#5c4772",
@@ -180,7 +115,7 @@ SCENES: tuple[Scene, ...] = (
         "Un lieu impossible composé de fragments familiers qui émergent doucement dans la brume.",
     ),
     Scene(
-        "orage",
+        "interstellaire",
         "Interstellaire",
         "#8eb8ff",
         "#283966",
@@ -194,26 +129,23 @@ SCENES: tuple[Scene, ...] = (
         "planet-limb-slides-across-horizon",
         "Une plateforme d'observation dérive près d'une planète géante et de ses anneaux.",
     ),
-    # Identifiant historique conservé uniquement pour les utilisateurs ayant enregistré
-    # « Braises » avant la refonte. Il converge vers Souvenirs et n'est plus proposé.
     Scene(
-        "braises",
-        "Souvenirs",
-        "#d2b6ff",
-        "#5c4772",
-        "memories",
-        "#15111d",
-        "#55445f",
-        "#100d14",
-        "#f0cba2",
-        "legacy-memory-alias",
-        ("legacy-alias", "no-new-art-direction"),
-        "compatibility-only",
-        "Compatibilité invisible avec l'ancienne préférence Braises ; aucun nouvel univers n'est dupliqué.",
-        False,
+        "galaxie",
+        "Galaxie",
+        "#d18aff",
+        "#55286f",
+        "galaxy",
+        "#03020b",
+        "#25133d",
+        "#05030b",
+        "#f2d6ff",
+        "spiral-galaxy-nebula-starfield",
+        ("spiral-rotation", "nebula-breath", "stellar-twinkle"),
+        "galactic-core-pulses-more-clearly",
+        "La scène s'affranchit de tout repère humain : une galaxie entière devient le paysage.",
     ),
     Scene(
-        "aurore",
+        "heaven",
         "Heaven — Hauts Cieux",
         "#bce7ff",
         "#72abc5",
@@ -228,35 +160,92 @@ SCENES: tuple[Scene, ...] = (
         "Des îles et architectures suspendues dominent une mer de nuages sans horizon terrestre.",
     ),
     Scene(
-        "nuit",
-        "Galaxie",
-        "#d18aff",
-        "#55286f",
-        "galaxy",
-        "#03020b",
-        "#25133d",
-        "#05030b",
-        "#f2d6ff",
-        "spiral-galaxy-nebula-starfield",
-        ("spiral-rotation", "nebula-breath", "stellar-twinkle"),
-        "galactic-core-pulses-more-clearly",
-        "La scène s'affranchit de tout repère humain : une galaxie entière devient le paysage.",
+        "oasis",
+        "Oasis des confins",
+        "#ffd17b",
+        "#91562c",
+        "oasis",
+        "#171426",
+        "#8a573f",
+        "#25130d",
+        "#ffd89b",
+        "dunes-oasis-ruins-palms-distant-mesa",
+        ("heat-haze", "palm-breeze", "sand-veils"),
+        "sunset-turns-to-starlight",
+        "Une oasis isolée entre dunes, ruines anciennes et ciel de fin du monde.",
+    ),
+    Scene(
+        "abysses",
+        "Sanctuaire abyssal",
+        "#58d6d8",
+        "#155d68",
+        "abyss",
+        "#021217",
+        "#0d4b55",
+        "#031015",
+        "#9ff8ee",
+        "submerged-temple-columns-surface-shafts",
+        ("caustics", "bubbles", "bioluminescent-drift"),
+        "surface-rays-shift-with-the-session",
+        "Un sanctuaire englouti dort sous des rais de lumière venus d'une surface très lointaine.",
+    ),
+    Scene(
+        "refuge_pluie",
+        "Refuge sous la pluie",
+        "#d7b36c",
+        "#42505d",
+        "rain_refuge",
+        "#111820",
+        "#344756",
+        "#15130f",
+        "#ffd28a",
+        "interior-window-lamp-rain-city",
+        ("window-rain", "outside-bokeh", "lamp-breath"),
+        "interior-warmth-increases-as-outside-darkens",
+        "Un refuge chaud derrière une grande vitre, pendant qu'une pluie froide efface le dehors.",
+    ),
+    Scene(
+        "aurores",
+        "Vallée des aurores",
+        "#7defcf",
+        "#28516a",
+        "aurora_valley",
+        "#06121e",
+        "#17445b",
+        "#081018",
+        "#baffef",
+        "mountain-valley-lake-aurora",
+        ("aurora-ribbons", "lake-reflection", "snow-drift"),
+        "aurora-gains-depth-with-elapsed-time",
+        "Une vallée glacée et son lac reflètent de larges voiles d'aurore au-dessus des montagnes.",
     ),
 )
 
 BY_KEY = {scene.key: scene for scene in SCENES}
-CHOICES = [(scene.key, scene.label) for scene in SCENES if scene.selectable]
-DEFAULT = "concentration"
-STORAGE_KEYS = tuple(scene.key for scene in SCENES)
+CHOICES = [(scene.key, scene.label) for scene in SCENES]
+DEFAULT = "arbre_etoiles"
+
+# Conversion des valeurs enregistrées avant la refonte. Cette table est également
+# utilisée côté navigateur comme filet de sécurité pour les états locaux anciens.
+LEGACY_REPLACED = {
+    "concentration": "arbre_etoiles",
+    "printemps": "eden",
+    "ete": "oasis",
+    "automne": "fleuve_temps",
+    "hiver": "aurores",
+    "pluie": "refuge_pluie",
+    "ocean": "abysses",
+    "sahara": "oasis",
+    "foret": "eden",
+    "orage": "interstellaire",
+    "braises": "souvenirs",
+    "aurore": "heaven",
+    "nuit": "galaxie",
+}
 
 
 def palette_css() -> str:
-    """Expose séparément la couleur du minuteur et la palette du monde.
-
-    Une couleur personnelle peut donc modifier le sablier sans repeindre le ciel,
-    l'eau, les ombres et la lumière de l'univers. C'est le garde-fou principal contre
-    les anciennes « ambiances » qui n'étaient que des recolorations.
-    """
+    """Expose séparément la couleur du minuteur et la palette du monde."""
     return mark_safe(  # noqa: S308 — registre statique, aucune donnée utilisateur
         "".join(
             f'[data-ambience="{scene.key}"]{{'
