@@ -158,7 +158,7 @@ class Playlist(TimeStampedModel):
 
     class Meta:
         verbose_name = "playlist"
-        verbose_name_plural = "pistes audio"
+        verbose_name_plural = "playlists"
         ordering = ["title"]
         constraints = [models.UniqueConstraint(fields=["owner", "title"], name="unique_playlist_title_per_user")]
 
