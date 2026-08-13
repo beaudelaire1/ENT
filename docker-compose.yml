@@ -38,6 +38,11 @@ x-app-environment: &app-environment
   # Remise des fichiers privés par le proxy (X-Accel-Redirect). Vide, Django les sert
   # lui-même et occupe un worker pendant tout le transfert.
   MEDIA_INTERNAL_LOCATION: ${MEDIA_INTERNAL_LOCATION:-}
+  # Collecte des erreurs. Sans DSN, rien n'est monté : l'alerte par courriel reste le
+  # filet, et elle couvre le cas où Sentry lui-même serait injoignable.
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+  SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
   GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-900}
 
 x-app-service: &app-service

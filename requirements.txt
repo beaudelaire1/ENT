@@ -8,4 +8,6 @@ boto3>=1.40,<2
 Pillow>=11,<13
 bleach>=6.2,<7
 mutagen>=1.47,<2
+django-jazzmin>=3.0,<4
+sentry-sdk[django]>=2.20,<3
 

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
@@ -88,6 +89,44 @@ class AllowedHostsTests(SimpleTestCase):
 
     def test_it_is_not_duplicated_when_already_present(self):
         self.assertEqual(allowed_hosts(["localhost", "127.0.0.1"]).count("127.0.0.1"), 1)
+
+
+class AdminSkinTests(SimpleTestCase):
+    """L'habillage de l'administration ne doit rien charger depuis l'extérieur.
+
+    La politique de sécurité n'autorise que `'self'` pour les scripts et les styles. Une
+    ressource distante serait bloquée par le navigateur sans qu'aucune erreur serveur ne
+    le dise : l'écran s'afficherait simplement de travers.
+    """
+
+    def test_jazzmin_precedes_the_admin(self):
+        """Django retient le premier gabarit trouvé : l'ordre des applications décide."""
+        apps = settings.INSTALLED_APPS
+        self.assertLess(apps.index("jazzmin"), apps.index("django.contrib.admin"))
+
+    def test_google_fonts_are_not_fetched(self):
+        self.assertFalse(settings.JAZZMIN_SETTINGS["use_google_fonts_cdn"])
+
+    def test_the_admin_page_loads_nothing_remote(self):
+        remote = [
+            value
+            for value in settings.JAZZMIN_SETTINGS.values()
+            if isinstance(value, str) and value.startswith(("http://", "https://"))
+        ]
+        self.assertEqual(remote, [])
+
+
+class SentryTests(SimpleTestCase):
+    """Sans DSN, rien n'est monté ; avec, aucune donnée personnelle ne part d'office."""
+
+    def test_no_dsn_configured_by_default(self):
+        self.assertEqual(settings.SENTRY_DSN, "")
+
+    def test_email_alerts_remain_the_fallback(self):
+        """Sentry complète les ADMINS, il ne les remplace pas : un Sentry injoignable
+        laisserait sinon l'incident invisible."""
+        self.assertIn("admins", settings.LOGGING["handlers"])
+        self.assertIn("admins", settings.LOGGING["root"]["handlers"])
 
 
 class OptionalBoolTests(SimpleTestCase):

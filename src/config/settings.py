@@ -57,6 +57,9 @@ if not DEBUG and SECRET_KEY == "dev-only-insecure-key-change-me":
     raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être défini par un secret long en production.")
 
 INSTALLED_APPS = [
+    # Avant `django.contrib.admin` : Jazzmin remplace les gabarits de l'administration,
+    # et Django retient le premier trouvé dans l'ordre des applications.
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -370,4 +373,79 @@ LOGGING = {
         ),
     },
     "root": {"handlers": ["console", "admins"], "level": os.getenv("LOG_LEVEL", "INFO")},
+}
+
+# Collecte des erreurs. Sans DSN, rien n'est monté et l'application se comporte comme
+# avant : Sentry est un complément aux alertes par courriel, pas leur remplacement — un
+# incident qui empêcherait de joindre le service externe reste signalé par les ADMINS.
+#
+# `send_default_pii` reste à False délibérément. MyENT porte des données scolaires
+# personnelles ; envoyer d'office les en-têtes, cookies et adresses IP à un tiers pour
+# confortablement déboguer ne se justifie pas ici.
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN and not RUNNING_TESTS:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+        release=os.getenv("SENTRY_RELEASE") or None,
+        # Échantillonnage des traces à zéro par défaut : la performance n'est pas le
+        # besoin, et chaque transaction envoyée est facturée.
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0")),
+        send_default_pii=False,
+    )
+
+# Administration. Jazzmin n'apporte que l'habillage : les modèles, les permissions et les
+# écrans restent ceux de `django.contrib.admin`.
+#
+# Aucune ressource distante n'est déclarée ici. La politique de sécurité de
+# `core.middleware` n'autorise que `'self'` pour les scripts, et une feuille ou une police
+# appelée depuis un CDN serait bloquée par le navigateur, sans erreur serveur pour le dire.
+JAZZMIN_SETTINGS = {
+    "site_title": "MyENT",
+    "site_header": "MyENT",
+    "site_brand": "MyENT",
+    "welcome_sign": "Administration de MyENT",
+    "copyright": "MyENT",
+    "search_model": ["auth.User", "formations.LearningPath", "library.LibraryItem"],
+    # Jazzmin charge sinon une feuille depuis fonts.googleapis.com. La politique de
+    # sécurité n'autorise que `'self'` pour les styles : le navigateur la bloquerait, et
+    # l'administration s'afficherait dégradée sans qu'aucune erreur serveur ne le signale.
+    # Les polices du système prennent le relais.
+    "use_google_fonts_cdn": False,
+    "show_ui_builder": False,
+    "changeform_format": "horizontal_tabs",
+    "related_modal_active": True,
+    "icons": {
+        "auth.User": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "accounts.UserProfile": "fas fa-id-card",
+        "accounts.Invitation": "fas fa-envelope-open-text",
+        "formations.LearningPath": "fas fa-graduation-cap",
+        "formations.Period": "fas fa-calendar-alt",
+        "formations.LearningUnit": "fas fa-book",
+        "formations.Competency": "fas fa-bullseye",
+        "formations.ProgressRecord": "fas fa-chart-line",
+        "formations.Assessment": "fas fa-file-signature",
+        "library.LibraryItem": "fas fa-folder-open",
+        "library.Folder": "fas fa-folder",
+        "library.Tag": "fas fa-tag",
+        "planner.Task": "fas fa-check-square",
+        "planner.CalendarEvent": "fas fa-calendar-day",
+        "sablier.FocusSession": "fas fa-hourglass-half",
+        "sablier.AudioTrack": "fas fa-music",
+        "notifications.Notification": "fas fa-bell",
+    },
+    "order_with_respect_to": ["formations", "library", "planner", "sablier", "accounts", "auth"],
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "flatly",
+    # `auto` suit le réglage du système, comme le reste de MyENT — dont le gabarit de base
+    # déclare `color-scheme: light dark`. `dark_mode_theme` faisait la même chose mais est
+    # désormais ignoré, en émettant un avertissement à chaque démarrage.
+    "default_theme_mode": "auto",
+    "navbar_small_text": False,
+    "sidebar_nav_flat_style": True,
 }
