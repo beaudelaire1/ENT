@@ -194,6 +194,20 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Cet emplacement doit être déclaré `internal` côté proxy, jamais exposé publiquement.
 MEDIA_INTERNAL_LOCATION = os.getenv("MEDIA_INTERNAL_LOCATION", "")
 
+
+def addressing_style(endpoint: str | None, override: str | None) -> str:
+    """Où placer le nom du bucket dans l'adresse d'un fichier.
+
+    `virtual` le met en sous-domaine du point de terminaison, `path` le met dans le
+    chemin. Les services compatibles S3 qui imposent leur point de terminaison — R2,
+    MinIO, Scaleway — n'acceptent que le second, et c'est aussi le seul qui produise un
+    hôte identique à celui que `core.middleware` autorise dans la politique de sécurité.
+    Un sous-domaine y serait refusé par le navigateur, une politique CSP ne les couvrant
+    pas implicitement.
+    """
+    return override or ("path" if endpoint else "virtual")
+
+
 USE_S3 = env_bool("USE_S3", False)
 STORAGES = {
     "staticfiles": {
@@ -218,6 +232,16 @@ if USE_S3:
     AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
     AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL")
     AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
+    # Adressage par chemin dès qu'un point de terminaison est imposé — Cloudflare R2,
+    # MinIO, Scaleway. Par défaut boto3 place le nom du bucket en sous-domaine, ce qui
+    # donne `https://mon-bucket.<endpoint>/clé` : un hôte différent de celui que la
+    # politique de sécurité autorise, laquelle ne couvre pas les sous-domaines
+    # implicitement. Le navigateur bloquait donc chaque piste, sans la moindre erreur
+    # côté serveur — le fichier était bien là, il n'était simplement pas joignable.
+    #
+    # Par chemin, l'adresse devient `https://<endpoint>/mon-bucket/clé` : le même hôte
+    # que celui déclaré dans la CSP, et le seul que `core.middleware` en déduit.
+    AWS_S3_ADDRESSING_STYLE = addressing_style(AWS_S3_ENDPOINT_URL, os.getenv("AWS_S3_ADDRESSING_STYLE"))
     AWS_QUERYSTRING_AUTH = True
     AWS_QUERYSTRING_EXPIRE = 900
     AWS_DEFAULT_ACL = None
