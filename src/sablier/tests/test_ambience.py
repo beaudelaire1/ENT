@@ -6,15 +6,15 @@ from sablier.models import FocusPreference
 
 
 class AmbiencePaletteTests(TestCase):
-    """L'ambiance doit pouvoir colorer la scène, et l'alerte finale doit pouvoir la couvrir.
+    """Le monde et la visualisation du temps doivent garder leurs couleurs indépendantes.
 
-    Le gabarit posait la couleur en style inline, qui l'emporte sur toute règle de
-    feuille de style : ni les quatre ambiances, ni l'ambre de l'alerte, ni le rouge de
-    fin ne pouvaient s'appliquer.
+    Une couleur personnelle peut recolorer le sablier, les perles ou la bougie sans
+    repeindre le ciel, l'eau et la lumière de l'univers. L'alerte finale doit elle aussi
+    pouvoir reprendre la main sur la couleur de la visualisation.
     """
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user("alice", password="secret")
+        self.user = get_user_model().objects.create_user("alice")
         self.client.force_login(self.user)
 
     def page(self):
@@ -28,9 +28,9 @@ class AmbiencePaletteTests(TestCase):
     def test_the_accent_is_never_forced_inline_by_default(self):
         self.assertNotIn("--focus-accent", self.scene_style())
 
-    def test_the_chosen_ambience_reaches_the_markup(self):
-        FocusPreference.objects.update_or_create(user=self.user, defaults={"ambience": FocusPreference.Ambience.ETE})
-        self.assertIn('data-ambience="ete"', self.page())
+    def test_the_chosen_universe_reaches_the_markup(self):
+        FocusPreference.objects.update_or_create(user=self.user, defaults={"ambience": FocusPreference.Ambience.OASIS})
+        self.assertIn('data-ambience="oasis"', self.page())
 
     def test_a_custom_colour_is_published_under_its_own_variable(self):
         FocusPreference.objects.update_or_create(
@@ -38,8 +38,6 @@ class AmbiencePaletteTests(TestCase):
         )
         style = self.scene_style()
 
-        # Sous sa propre variable, la couleur sert de valeur par défaut aux palettes
-        # sans empêcher l'alerte finale de reprendre la main.
         self.assertIn("--focus-user-accent:#11AA22", style)
         self.assertNotIn("--focus-accent:", style)
 
@@ -49,11 +47,15 @@ class AmbiencePaletteTests(TestCase):
         )
         style = self.scene_style()
 
-        # La couleur reste visible dans le sélecteur du panneau de préférences ; ce qui
-        # compte est qu'elle ne soit appliquée à la scène sous aucune forme.
         self.assertNotIn("--focus-user-accent", style)
         self.assertNotIn("--focus-accent", style)
 
+    def test_world_palette_is_published_separately_from_the_timer_accent(self):
+        page = self.page()
+        self.assertIn("--world-sky:", page)
+        self.assertIn("--world-horizon:", page)
+        self.assertIn("--world-ground:", page)
+        self.assertIn("--world-light:", page)
+
     def test_the_template_leaves_no_stray_comment_in_the_markup(self):
         self.assertNotIn("{#", self.page())
-        self.assertNotIn("n’est plus posée en inline", self.page())
