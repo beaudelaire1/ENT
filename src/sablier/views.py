@@ -276,7 +276,16 @@ def _delete_tracks(request, tracks):
 
 
 @login_required
+@never_cache
 def audio_stream(request, pk):
+    """Redirige vers le fichier — et interdit que cette redirection soit conservée.
+
+    En production, la réponse est une redirection vers une adresse signée valable quinze
+    minutes. Rejouée après ce délai, elle vaut « accès refusé » : le fichier est intact et
+    le serveur n'a rien vu passer. Une redirection sans consigne de cache peut être gardée
+    par le navigateur comme par tout intermédiaire, et une piste réécoutée le lendemain
+    part alors avec l'identifiant de la veille.
+    """
     track = get_object_or_404(AudioTrack, owner=request.user, pk=pk, status=AudioTrack.Status.READY)
     if not track.file:
         raise Http404

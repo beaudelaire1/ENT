@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
 
 from core.deletion import confirm_delete
 from core.editing import form_page
@@ -296,7 +297,9 @@ def tag_delete(request, pk):
 
 
 @login_required
+@never_cache
 def download(request, pk):
+    """Même précaution que pour les pistes : la redirection signée expire, pas le cache."""
     item = get_object_or_404(LibraryItem, owner=request.user, pk=pk, kind=LibraryItem.Kind.FILE)
     if not item.file:
         raise Http404
