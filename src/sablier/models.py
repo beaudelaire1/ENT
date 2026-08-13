@@ -89,9 +89,7 @@ class FocusPreference(models.Model):
     warning_seconds = models.PositiveSmallIntegerField(
         "alerte finale (s)", default=60, validators=[MinValueValidator(10), MaxValueValidator(180)]
     )
-    decor_density = models.PositiveSmallIntegerField(
-        "niveau d’immersion", choices=Decor.choices, default=Decor.NORMAL
-    )
+    decor_density = models.PositiveSmallIntegerField("niveau d’immersion", choices=Decor.choices, default=Decor.NORMAL)
     end_sound_enabled = models.BooleanField("son de fin", default=True)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#8878FF", validators=[color_validator])
     custom_accent = models.BooleanField("utiliser ma couleur pour la visualisation", default=False)
@@ -160,7 +158,7 @@ class Playlist(TimeStampedModel):
 
     class Meta:
         verbose_name = "playlist"
-        verbose_name_plural = "playlists"
+        verbose_name_plural = "pistes audio"
         ordering = ["title"]
         constraints = [models.UniqueConstraint(fields=["owner", "title"], name="unique_playlist_title_per_user")]
 
