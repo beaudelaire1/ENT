@@ -40,8 +40,16 @@
   };
 
   window.SablierDecor = stub;
+  window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)
+    .catch((error) => {
+      const app = document.querySelector("#focus-app");
+      if (app) {
+        app.dataset.renderer3d = "fallback";
+        app.dataset.renderer3dReason = "premium-module-load";
+      }
+      console.error("Sablier premium 3D indisponible", error);
+      return null;
+    });
   window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"));
-  window.SablierDecorReady
-    .then(() => import(new URL("premium3d.js" + version, here).href))
-    .catch(() => {});
+  window.SablierDecorReady.catch((error) => console.error("Décor Sablier indisponible", error));
 })();
