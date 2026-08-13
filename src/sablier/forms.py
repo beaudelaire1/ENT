@@ -123,7 +123,7 @@ class AudioUploadForm(forms.Form):
             AudioTrack.objects.filter(owner=self.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"]
             or 0
         )
-        quota = profile.audio_quota_mb * 1024 * 1024
+        quota = profile.effective_audio_quota_mb * 1024 * 1024
 
         erreurs, cumul = [], 0
         for upload in uploads:

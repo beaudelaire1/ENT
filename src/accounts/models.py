@@ -22,7 +22,14 @@ class UserProfile(models.Model):
     theme = models.CharField("thème", max_length=10, choices=Theme.choices, default=Theme.SYSTEM)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#7C6CFF", validators=[accent_validator])
     timezone = models.CharField("fuseau horaire", max_length=64, default="America/Cayenne")
-    audio_quota_mb = models.PositiveIntegerField("quota audio (Mo)", default=settings.AUDIO_DEFAULT_QUOTA_MB)
+    audio_quota_mb = models.PositiveIntegerField(
+        "quota audio (Mo)",
+        default=settings.AUDIO_DEFAULT_QUOTA_MB,
+        help_text=(
+            "Un compte administrateur bénéficie au minimum de AUDIO_ADMIN_QUOTA_MB, "
+            "quelle que soit la valeur inscrite ici."
+        ),
+    )
     email_verified_at = models.DateTimeField("email vérifié le", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -32,6 +39,22 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.display_name or self.user.get_username()
+
+    @property
+    def effective_audio_quota_mb(self) -> int:
+        """Le quota réellement appliqué, plancher administrateur compris.
+
+        Un compte administrateur dépose la musique de l'établissement, pas seulement la
+        sienne : le quota ordinaire n'a pas de sens pour lui. Le plancher est appliqué au
+        calcul plutôt qu'écrit dans la colonne, pour deux raisons — un compte promu
+        administrateur en bénéficie aussitôt sans qu'on pense à modifier son profil, et un
+        compte rétrogradé retrouve le quota commun sans qu'il reste une valeur oubliée.
+
+        `max` et non un remplacement : un quota relevé à la main pour un administrateur
+        particulier ne doit pas être rabaissé au plancher.
+        """
+        floor = getattr(settings, "AUDIO_ADMIN_QUOTA_MB", 0) if self.user.is_superuser else 0
+        return max(self.audio_quota_mb, floor)
 
 
 class Invitation(models.Model):

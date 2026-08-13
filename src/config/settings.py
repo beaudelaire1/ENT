@@ -297,6 +297,10 @@ if RUNNING_TESTS:
 LIBRARY_MAX_UPLOAD_MB = int(os.getenv("LIBRARY_MAX_UPLOAD_MB", "25"))
 AUDIO_MAX_TRACK_MB = int(os.getenv("AUDIO_MAX_TRACK_MB", "1024"))
 AUDIO_DEFAULT_QUOTA_MB = int(os.getenv("AUDIO_DEFAULT_QUOTA_MB", "10240"))
+# Plancher pour les comptes administrateurs, qui déposent la musique de
+# l'établissement et non la leur. Appliqué au calcul, jamais écrit dans le profil :
+# voir `accounts.models.UserProfile.effective_audio_quota_mb`.
+AUDIO_ADMIN_QUOTA_MB = int(os.getenv("AUDIO_ADMIN_QUOTA_MB", "51200"))
 
 # Un envoi volumineux est écrit sur disque plutôt que gardé en mémoire, sans quoi
 # plusieurs téléversements simultanés suffiraient à saturer le conteneur.

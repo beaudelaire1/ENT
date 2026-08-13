@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Supprimer des pistes · Sablier{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">SABLIER</p><h1>Supprimer {{ tracks|length }} piste{{ tracks|length|pluralize }}</h1><p class="muted">Le fichier audio est effacé du stockage. Cette suppression ne peut pas être annulée.</p></div></header>
+<section class="panel">
+  <h2>Ce qui disparaît</h2>
+  {% for track in tracks %}
+    <div class="list-row"><div><strong>{{ track.title }}</strong><div class="muted">{{ track.artist }} · {{ track.get_status_display }}</div></div></div>
+  {% endfor %}
+  {% if playlists %}
+    {% comment %}
+      Une piste rangée dans une playlist en disparaît aussi. Le dire avant vaut mieux que
+      de le laisser découvrir à la lecture suivante.
+    {% endcomment %}
+    <h2>Playlists concernées</h2>
+    <p class="muted">Ces playlists perdront la ou les pistes correspondantes ; elles ne sont pas supprimées.</p>
+    {% for playlist in playlists %}
+      <div class="list-row"><a href="{% url 'sablier:playlist_detail' playlist.pk %}">{{ playlist.title }}</a></div>
+    {% endfor %}
+  {% endif %}
+  <form method="post" action="{% url 'sablier:audio_bulk' %}" class="actions">
+    {% csrf_token %}
+    {% for track in tracks %}<input type="hidden" name="tracks" value="{{ track.pk }}">{% endfor %}
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="confirm" value="1">
+    <button class="button danger" type="submit">Supprimer définitivement</button>
+    <a class="button quiet" href="{{ back_to }}">Annuler</a>
+  </form>
+</section>
+{% endblock %}

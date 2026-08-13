@@ -10,6 +10,7 @@ urlpatterns = [
     path("sessions/<int:pk>/edit/", views.session_edit, name="session_edit"),
     path("sessions/<int:pk>/toggle-excluded/", views.session_toggle_excluded, name="session_toggle_excluded"),
     path("audio/", views.audio_library, name="audio"),
+    path("audio/bulk/", views.audio_bulk, name="audio_bulk"),
     path("audio/presign/", views.presign_audio, name="presign_audio"),
     path("audio/<int:pk>/confirm/", views.confirm_audio, name="confirm_audio"),
     path("audio/<int:pk>/stream/", views.audio_stream, name="audio_stream"),

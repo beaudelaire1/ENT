@@ -188,13 +188,91 @@ def audio_library(request):
         {
             "form": form,
             "tracks": AudioTrack.objects.filter(owner=request.user),
+            # Pour la barre d'actions groupées : sans playlist, le bouton d'ajout n'a
+            # nulle part où ranger et ne s'affiche pas.
+            "playlists": Playlist.objects.filter(owner=request.user),
             "used": human_mb(used_mb),
-            "quota": human_mb(profile.audio_quota_mb),
-            "remaining": human_mb(max(0, profile.audio_quota_mb - used_mb)),
+            "quota": human_mb(profile.effective_audio_quota_mb),
+            "remaining": human_mb(max(0, profile.effective_audio_quota_mb - used_mb)),
             "max_track": human_mb(settings.AUDIO_MAX_TRACK_MB),
-            "used_percent": min(100, round(used_mb * 100 / profile.audio_quota_mb)) if profile.audio_quota_mb else 0,
+            "used_percent": (
+                min(100, round(used_mb * 100 / profile.effective_audio_quota_mb))
+                if profile.effective_audio_quota_mb
+                else 0
+            ),
         },
     )
+
+
+@login_required
+@require_POST
+def audio_bulk(request):
+    """Agir sur plusieurs pistes d'un coup : les ranger dans une playlist, ou les supprimer.
+
+    Une seule sélection, deux boutons : c'est le même geste de la main — cocher ce qui
+    intéresse — qui sert aux deux, et scinder en deux écrans obligerait à cocher deux fois.
+
+    La suppression passe par un écran de confirmation, comme toute suppression dans MyENT.
+    L'ajout à une playlist n'en demande pas : rien n'est perdu, et retirer une piste d'une
+    playlist se fait en un clic depuis celle-ci.
+    """
+    chosen = request.POST.getlist("tracks")
+    # Le filtre par propriétaire est ce qui empêche d'agir sur les pistes d'autrui en
+    # forgeant des identifiants dans le formulaire.
+    tracks = list(AudioTrack.objects.filter(owner=request.user, pk__in=chosen).order_by("title"))
+    if not tracks:
+        messages.error(request, "Sélectionnez au moins une piste.")
+        return redirect("sablier:audio")
+
+    action = request.POST.get("action", "")
+    if action == "playlist":
+        return _add_tracks_to_playlist(request, tracks)
+    if action == "delete":
+        return _delete_tracks(request, tracks)
+    messages.error(request, "Action inconnue.")
+    return redirect("sablier:audio")
+
+
+def _add_tracks_to_playlist(request, tracks):
+    playlist = get_object_or_404(Playlist, owner=request.user, pk=request.POST.get("playlist") or 0)
+    # Une piste déjà présente n'est pas ajoutée deux fois : la contrainte d'unicité la
+    # refuserait, et la signaler comme un échec serait un contresens — elle y est déjà.
+    present = set(playlist.playlist_tracks.values_list("track_id", flat=True))
+    missing = [track for track in tracks if track.pk not in present]
+    position = (playlist.playlist_tracks.aggregate(max=Max("position"))["max"] or -1) + 1
+    PlaylistTrack.objects.bulk_create(
+        [
+            PlaylistTrack(playlist=playlist, track=track, position=position + offset)
+            for offset, track in enumerate(missing)
+        ]
+    )
+    already = len(tracks) - len(missing)
+    if missing:
+        messages.success(request, f"{len(missing)} piste(s) ajoutée(s) à « {playlist.title} ».")
+    if already:
+        messages.info(request, f"{already} piste(s) y étaient déjà.")
+    return redirect(safe_next(request, reverse("sablier:playlist_detail", args=[playlist.pk])))
+
+
+def _delete_tracks(request, tracks):
+    if not request.POST.get("confirm"):
+        return render(
+            request,
+            "sablier/audio_bulk_delete.html",
+            {
+                "tracks": tracks,
+                # Une piste rangée dans une playlist en disparaît aussi : la suppression
+                # doit le dire avant, pas le faire découvrir après.
+                "playlists": Playlist.objects.filter(owner=request.user, tracks__in=tracks).distinct(),
+                "back_to": reverse("sablier:audio"),
+            },
+        )
+    # Une par une plutôt que par lot : `post_delete` purge le fichier du stockage, et un
+    # `delete()` de queryset le déclenche aussi, mais l'écriture explicite dit l'intention.
+    for track in tracks:
+        track.delete()
+    messages.success(request, f"{len(tracks)} piste(s) supprimée(s).")
+    return redirect("sablier:audio")
 
 
 @login_required
@@ -280,7 +358,7 @@ def presign_audio(request):
         AudioTrack.objects.filter(owner=request.user).counted_in_quota().aggregate(total=Sum("file_size"))["total"] or 0
     )
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    quota = profile.audio_quota_mb * 1024 * 1024
+    quota = profile.effective_audio_quota_mb * 1024 * 1024
     if used + size > quota:
         return JsonResponse({"error": "Quota audio dépassé."}, status=400)
     key = f"users/{request.user.pk}/audio/{uuid.uuid4().hex}{allowed[mime]}"
