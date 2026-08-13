@@ -36,36 +36,32 @@ class FocusPreference(models.Model):
         ZEN = "zen", "Zen"
 
     class Decor(models.IntegerChoices):
-        """Densité du décor animé, jusqu'à l'absence totale.
+        """Richesse visuelle de l'univers, sans jamais imposer de son.
 
-        Un décor qui bouge aide certains à s'installer et en distrait d'autres ; le
-        choix reste à l'utilisateur plutôt qu'imposé par l'ambiance.
+        Même au niveau zéro le lieu reste visible : seule son animation s'arrête. Un
+        utilisateur sensible au mouvement ne doit pas être renvoyé vers un fond vide.
         """
 
-        NONE = 0, "Aucun décor"
+        NONE = 0, "Statique"
         LIGHT = 1, "Léger"
-        NORMAL = 2, "Normal"
-        DENSE = 3, "Dense"
+        NORMAL = 2, "Immersif"
+        DENSE = 3, "Cinématique"
 
     class Ambience(models.TextChoices):
-        """Palette, décor animé et paysage sonore de chacune sont dans scenes.py.
+        """Univers visuels de Sablier ; leur contrat artistique vit dans scenes.py."""
 
-        Les deux listes doivent rester identiques ; un test s'en assure.
-        """
-
-        CONCENTRATION = "concentration", "Concentration"
-        PRINTEMPS = "printemps", "Printemps"
-        ETE = "ete", "Été"
-        AUTOMNE = "automne", "Automne"
-        HIVER = "hiver", "Hiver"
-        PLUIE = "pluie", "Pluie"
-        OCEAN = "ocean", "Océan"
-        SAHARA = "sahara", "Sahara"
-        FORET = "foret", "Forêt"
-        ORAGE = "orage", "Orage"
-        BRAISES = "braises", "Braises"
-        AURORE = "aurore", "Aurore"
-        NUIT = "nuit", "Nuit"
+        ARBRE_ETOILES = "arbre_etoiles", "Arbre des étoiles"
+        FONTAINE = "fontaine", "Fontaine de l’Éternité"
+        EDEN = "eden", "Éden"
+        FLEUVE_TEMPS = "fleuve_temps", "Fleuve du Temps"
+        SOUVENIRS = "souvenirs", "Souvenirs"
+        INTERSTELLAIRE = "interstellaire", "Interstellaire"
+        GALAXIE = "galaxie", "Galaxie"
+        HEAVEN = "heaven", "Hauts Cieux"
+        OASIS = "oasis", "Oasis des confins"
+        ABYSSES = "abysses", "Sanctuaire abyssal"
+        REFUGE_PLUIE = "refuge_pluie", "Refuge sous la pluie"
+        AURORES = "aurores", "Vallée des aurores"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_preference")
     default_duration_seconds = models.PositiveIntegerField(
@@ -73,19 +69,21 @@ class FocusPreference(models.Model):
     )
     session_intention = models.CharField("intention", max_length=80, blank=True)
     mode = models.CharField("visualisation", max_length=16, choices=Mode.choices, default=Mode.HOURGLASS)
-    ambience = models.CharField("ambiance", max_length=16, choices=Ambience.choices, default=Ambience.CONCENTRATION)
+    ambience = models.CharField("univers", max_length=16, choices=Ambience.choices, default=Ambience.ARBRE_ETOILES)
     focus_level = models.PositiveSmallIntegerField(
         "niveau de concentration", default=2, validators=[MinValueValidator(1), MaxValueValidator(3)]
     )
     warning_seconds = models.PositiveSmallIntegerField(
         "alerte finale (s)", default=60, validators=[MinValueValidator(10), MaxValueValidator(180)]
     )
-    decor_density = models.PositiveSmallIntegerField("densité du décor", choices=Decor.choices, default=Decor.NORMAL)
+    decor_density = models.PositiveSmallIntegerField(
+        "niveau d’immersion", choices=Decor.choices, default=Decor.NORMAL
+    )
     end_sound_enabled = models.BooleanField("son de fin", default=True)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#8878FF", validators=[color_validator])
-    # Sans ce choix explicite, une couleur enregistrée écraserait celle de l'ambiance
-    # et l'on retomberait sur le défaut d'origine : quatre ambiances pour un seul rendu.
-    custom_accent = models.BooleanField("utiliser ma couleur plutôt que celle de l’ambiance", default=False)
+    # La couleur personnelle ne recolore que la visualisation du temps. La palette du
+    # monde reste indépendante dans scenes.py : un univers garde donc son identité.
+    custom_accent = models.BooleanField("utiliser ma couleur pour la visualisation", default=False)
     background_image = models.ImageField("image de fond", upload_to=focus_background_path, blank=True)
     # Sert d'arbitre entre le serveur et le navigateur : voir sablier.js.
     updated_at = models.DateTimeField("enregistré le", auto_now=True)
