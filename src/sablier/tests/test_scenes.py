@@ -71,7 +71,7 @@ class SceneRegistryTests(TestCase):
     def test_world_rendering_has_a_mobile_pixel_budget(self):
         engine = (settings.BASE_DIR / "static" / "sablier" / "decor.js").read_text(encoding="utf-8")
         self.assertIn("mobile ? 1.25 : 1.65", engine)
-        self.assertIn("const cache = document.createElement(\"canvas\")", engine)
+        self.assertIn('const cache = document.createElement("canvas")', engine)
         self.assertIn("ctx.drawImage(cache", engine)
 
     def test_world_engine_never_controls_the_users_music(self):
@@ -112,7 +112,7 @@ class SceneRegistryTests(TestCase):
 
 class SceneRenderingTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user("alice", password="secret")
+        self.user = get_user_model().objects.create_user("alice")
         self.client.force_login(self.user)
 
     def test_the_page_publishes_the_palettes_and_the_universe_table(self):
@@ -204,7 +204,7 @@ class InstantSettingsTests(TestCase):
     """Les réglages enregistrés doivent primer sur la copie locale du navigateur."""
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user("alice", password="secret")
+        self.user = get_user_model().objects.create_user("alice")
         self.client.force_login(self.user)
 
     def test_the_page_publishes_when_preferences_were_saved(self):
