@@ -88,8 +88,11 @@ services:
 
   web:
     <<: *app-service
-    expose:
-      - "8000"
+    # Diagnostic : port hôte libre — 8000 est pris par le tableau de bord Coolify et 8080
+    # par l'API de son proxy. Permet de joindre l'application sans passer par Traefik, et
+    # donc de distinguer « l'application ne démarre pas » de « le proxy ne route pas ».
+    ports:
+      - "8001:8000"
     depends_on:
       migrate:
         condition: service_completed_successfully
