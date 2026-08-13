@@ -32,7 +32,23 @@ RUNNING_TESTS = "test" in sys.argv
 # elle-même, bien avant qu'il soit question de servir quoi que ce soit.
 DATABASE_FREE_COMMANDS = {"collectstatic", "generate_chime", "makemessages", "compilemessages"}
 BUILDING_IMAGE = bool(DATABASE_FREE_COMMANDS.intersection(sys.argv))
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+
+
+def allowed_hosts(raw: list[str]) -> list[str]:
+    """Le domaine configuré, et toujours `127.0.0.1` en plus — jamais à sa place.
+
+    Le `HEALTHCHECK` de l'image sonde le conteneur en interne via
+    `curl http://127.0.0.1:8000/healthz/`, un contrat fixe gravé dans le `Dockerfile`,
+    indépendant de tout domaine. La valeur par défaut de `DJANGO_ALLOWED_HOSTS` couvrait
+    ce cas — mais seulement tant que la variable restait absente : la poser sur un vrai
+    domaine, comme l'exige toute mise en production, faisait disparaître `127.0.0.1` avec
+    elle. Chaque sonde recevait alors un `DisallowedHost`, silencieusement jusqu'à ce
+    qu'une alerte d'erreur existe pour le signaler — ce qui a motivé cette fonction.
+    """
+    return list({*raw, "127.0.0.1"})
+
+
+ALLOWED_HOSTS = allowed_hosts(env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"))
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 CSP_EXTERNAL_MEDIA_SOURCES = env_list("CSP_EXTERNAL_MEDIA_SOURCES")
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8000").rstrip("/")

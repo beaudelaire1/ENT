@@ -5,7 +5,14 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
-from config.settings import DATABASE_FREE_COMMANDS, build_middleware, database_config, force_https, optional_bool
+from config.settings import (
+    DATABASE_FREE_COMMANDS,
+    allowed_hosts,
+    build_middleware,
+    database_config,
+    force_https,
+    optional_bool,
+)
 
 WHITENOISE = "whitenoise.middleware.WhiteNoiseMiddleware"
 POSTGRES_URL = "postgresql://myent:secret@postgres:5432/myent"
@@ -63,6 +70,24 @@ class DatabaseConfigurationTests(SimpleTestCase):
         for command in ("generate_chime", "collectstatic"):
             self.assertIn(command, dockerfile)
             self.assertIn(command, DATABASE_FREE_COMMANDS)
+
+
+class AllowedHostsTests(SimpleTestCase):
+    """Le HEALTHCHECK de l'image sonde toujours 127.0.0.1 : il doit toujours passer.
+
+    Un déploiement qui pose son propre domaine perdait ce nom, puisque le défaut ne
+    s'appliquait que si la variable restait absente — un incident réel en production,
+    signalé par l'alerte d'erreur qui vient d'être branchée.
+    """
+
+    def test_the_healthcheck_host_survives_a_custom_domain(self):
+        self.assertIn("127.0.0.1", allowed_hosts(["myent.example.test"]))
+
+    def test_the_configured_domain_is_kept(self):
+        self.assertIn("myent.example.test", allowed_hosts(["myent.example.test"]))
+
+    def test_it_is_not_duplicated_when_already_present(self):
+        self.assertEqual(allowed_hosts(["localhost", "127.0.0.1"]).count("127.0.0.1"), 1)
 
 
 class OptionalBoolTests(SimpleTestCase):
