@@ -38,6 +38,13 @@ class FocusPreference(models.Model):
         ZEN = "zen", "Zen"
 
     class Decor(models.IntegerChoices):
+        """Richesse visuelle du monde sans jamais imposer de son.
+
+        Même en mode statique, l'univers reste visible. Seuls ses mouvements sont
+        coupés, ce qui respecte les préférences de réduction d'animation sans vider la
+        scène.
+        """
+
         NONE = 0, "Statique"
         LIGHT = 1, "Léger"
         NORMAL = 2, "Immersif"
@@ -82,7 +89,9 @@ class FocusPreference(models.Model):
     warning_seconds = models.PositiveSmallIntegerField(
         "alerte finale (s)", default=60, validators=[MinValueValidator(10), MaxValueValidator(180)]
     )
-    decor_density = models.PositiveSmallIntegerField("niveau d’immersion", choices=Decor.choices, default=Decor.NORMAL)
+    decor_density = models.PositiveSmallIntegerField(
+        "niveau d’immersion", choices=Decor.choices, default=Decor.NORMAL
+    )
     end_sound_enabled = models.BooleanField("son de fin", default=True)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#8878FF", validators=[color_validator])
     custom_accent = models.BooleanField("utiliser ma couleur pour la visualisation", default=False)
@@ -105,6 +114,12 @@ class FocusPreference(models.Model):
 
 class AudioTrackQuerySet(models.QuerySet):
     def counted_in_quota(self):
+        """Seules les pistes utilisables consomment le quota.
+
+        Une piste refusée ou dont le téléversement n'a jamais abouti n'est écoutable
+        nulle part ; la compter reviendrait à retenir du quota pour rien, sans que
+        l'utilisateur puisse comprendre pourquoi son espace se remplit.
+        """
         return self.exclude(status__in=(AudioTrack.Status.REJECTED, AudioTrack.Status.UPLOADING))
 
 
@@ -154,6 +169,16 @@ class Playlist(TimeStampedModel):
 
 
 class FocusSession(TimeStampedModel):
+    """Une session de concentration terminée.
+
+    Le minuteur vivait jusqu'ici dans le seul `localStorage` du navigateur : fermer
+    l'onglet effaçait la séance. Le journal existe pour une raison précise — reporter
+    le temps réellement travaillé sur la compétence visée, plutôt que de le ressaisir
+    de mémoire dans la grille de suivi.
+
+    Il ne sert pas à noter l'utilisateur : aucune statistique n'en est tirée.
+    """
+
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_sessions")
     competency = models.ForeignKey(
         "formations.Competency",
@@ -181,6 +206,7 @@ class FocusSession(TimeStampedModel):
 
     @property
     def hours(self) -> Decimal:
+        """Durée en heures, arrondie au centième — l'unité de la grille de suivi."""
         return (Decimal(self.seconds) / Decimal(3600)).quantize(Decimal("0.01"))
 
     @property
