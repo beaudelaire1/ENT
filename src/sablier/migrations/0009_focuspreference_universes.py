@@ -1,10 +1,37 @@
 from django.db import migrations, models
 
 
+LEGACY = {
+    "concentration": "arbre_etoiles",
+    "printemps": "eden",
+    "ete": "oasis",
+    "automne": "fleuve_temps",
+    "hiver": "aurores",
+    "pluie": "refuge_pluie",
+    "ocean": "abysses",
+    "sahara": "oasis",
+    "foret": "eden",
+    "orage": "interstellaire",
+    "braises": "souvenirs",
+    "aurore": "heaven",
+    "nuit": "galaxie",
+}
+
+
+def migrate_ambiences(apps, schema_editor):
+    preference = apps.get_model("sablier", "FocusPreference")
+    for item in preference.objects.all().iterator():
+        replacement = LEGACY.get(item.ambience)
+        if replacement:
+            item.ambience = replacement
+            item.save(update_fields=["ambience"])
+
+
 class Migration(migrations.Migration):
     dependencies = [("sablier", "0008_focussession_excluded_at")]
 
     operations = [
+        migrations.RunPython(migrate_ambiences, migrations.RunPython.noop),
         migrations.AlterField(
             model_name="focuspreference",
             name="ambience",
