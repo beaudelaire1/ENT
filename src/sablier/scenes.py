@@ -35,6 +35,7 @@ class Scene:
     motion: tuple[str, ...]
     progression: str
     description: str
+    selectable: bool = True
 
     @property
     def art_signature(self) -> tuple[str, tuple[str, ...], str]:
@@ -193,20 +194,23 @@ SCENES: tuple[Scene, ...] = (
         "planet-limb-slides-across-horizon",
         "Une plateforme d'observation dérive près d'une planète géante et de ses anneaux.",
     ),
+    # Identifiant historique conservé uniquement pour les utilisateurs ayant enregistré
+    # « Braises » avant la refonte. Il converge vers Souvenirs et n'est plus proposé.
     Scene(
         "braises",
-        "Bibliothèque hors du temps",
-        "#f0b979",
-        "#70452d",
-        "timeless_library",
-        "#100d12",
-        "#4e3a32",
-        "#120d0b",
-        "#ffd9a0",
-        "endless-library-arches-desk-floating-pages",
-        ("page-drift", "lamp-flicker", "dust-columns"),
-        "distant-aisles-fade-into-dawn",
-        "Une bibliothèque interminable où quelques pages, rayons et poussières semblent suspendus au temps.",
+        "Souvenirs",
+        "#d2b6ff",
+        "#5c4772",
+        "memories",
+        "#15111d",
+        "#55445f",
+        "#100d14",
+        "#f0cba2",
+        "legacy-memory-alias",
+        ("legacy-alias", "no-new-art-direction"),
+        "compatibility-only",
+        "Compatibilité invisible avec l'ancienne préférence Braises ; aucun nouvel univers n'est dupliqué.",
+        False,
     ),
     Scene(
         "aurore",
@@ -241,7 +245,7 @@ SCENES: tuple[Scene, ...] = (
 )
 
 BY_KEY = {scene.key: scene for scene in SCENES}
-CHOICES = [(scene.key, scene.label) for scene in SCENES]
+CHOICES = [(scene.key, scene.label) for scene in SCENES if scene.selectable]
 DEFAULT = "concentration"
 STORAGE_KEYS = tuple(scene.key for scene in SCENES)
 
