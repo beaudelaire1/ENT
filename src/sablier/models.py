@@ -38,13 +38,6 @@ class FocusPreference(models.Model):
         ZEN = "zen", "Zen"
 
     class Decor(models.IntegerChoices):
-        """Richesse visuelle du monde sans jamais imposer de son.
-
-        Même en mode statique, l'univers reste visible. Seuls ses mouvements sont
-        coupés, ce qui respecte les préférences de réduction d'animation sans vider la
-        scène.
-        """
-
         NONE = 0, "Statique"
         LIGHT = 1, "Léger"
         NORMAL = 2, "Immersif"
@@ -63,6 +56,18 @@ class FocusPreference(models.Model):
         ABYSSES = "abysses", "Sanctuaire abyssal"
         REFUGE_PLUIE = "refuge_pluie", "Refuge sous la pluie"
         AURORES = "aurores", "Vallée des aurores"
+        PRINTEMPS = "printemps", "Printemps"
+        ETE = "ete", "Été"
+        AUTOMNE = "automne", "Automne"
+        HIVER = "hiver", "Hiver"
+        PLUIE = "pluie", "Pluie"
+        OCEAN = "ocean", "Océan"
+        SAHARA = "sahara", "Sahara"
+        FORET = "foret", "Forêt"
+        ORAGE = "orage", "Orage"
+        BRAISES = "braises", "Braises"
+        AURORE = "aurore", "Aurore"
+        NUIT = "nuit", "Nuit"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_preference")
     default_duration_seconds = models.PositiveIntegerField(
@@ -100,12 +105,6 @@ class FocusPreference(models.Model):
 
 class AudioTrackQuerySet(models.QuerySet):
     def counted_in_quota(self):
-        """Seules les pistes utilisables consomment le quota.
-
-        Une piste refusée ou dont le téléversement n'a jamais abouti n'est écoutable
-        nulle part ; la compter reviendrait à retenir du quota pour rien, sans que
-        l'utilisateur puisse comprendre pourquoi son espace se remplit.
-        """
         return self.exclude(status__in=(AudioTrack.Status.REJECTED, AudioTrack.Status.UPLOADING))
 
 
@@ -155,16 +154,6 @@ class Playlist(TimeStampedModel):
 
 
 class FocusSession(TimeStampedModel):
-    """Une session de concentration terminée.
-
-    Le minuteur vivait jusqu'ici dans le seul `localStorage` du navigateur : fermer
-    l'onglet effaçait la séance. Le journal existe pour une raison précise — reporter
-    le temps réellement travaillé sur la compétence visée, plutôt que de le ressaisir
-    de mémoire dans la grille de suivi.
-
-    Il ne sert pas à noter l'utilisateur : aucune statistique n'en est tirée.
-    """
-
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_sessions")
     competency = models.ForeignKey(
         "formations.Competency",
@@ -192,7 +181,6 @@ class FocusSession(TimeStampedModel):
 
     @property
     def hours(self) -> Decimal:
-        """Durée en heures, arrondie au centième — l'unité de la grille de suivi."""
         return (Decimal(self.seconds) / Decimal(3600)).quantize(Decimal("0.01"))
 
     @property
