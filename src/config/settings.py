@@ -205,7 +205,9 @@ STORAGES = {
         "BACKEND": (
             "django.contrib.staticfiles.storage.StaticFilesStorage"
             if DEBUG or RUNNING_TESTS
-            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            # Voir `core.storage` : Jazzmin passe un répertoire à `{% static %}`, ce que le
+            # stockage à manifeste refuse en levant — l'administration entière rendait 500.
+            else "core.storage.ForgivingManifestStaticFilesStorage"
         )
     },
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
