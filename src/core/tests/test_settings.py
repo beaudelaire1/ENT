@@ -121,7 +121,8 @@ class ContainerWritablePathsTests(SimpleTestCase):
     def test_that_directory_is_created_by_the_image(self):
         """Docker ne recopie le propriétaire que si le répertoire existe déjà dans l'image."""
         directory = self.schedule_directory()
-        mkdir = re.search(r"mkdir -p ([^\n]+?)\s*\\", self.dockerfile)
+        runtime_stage = self.dockerfile.rsplit("\nFROM ", 1)[-1]
+        mkdir = re.search(r"mkdir -p ([^\n]+?)\s*\\", runtime_stage)
         self.assertIsNotNone(mkdir)
         self.assertIn(directory, mkdir.group(1))
 
