@@ -68,7 +68,7 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
     def test_premium_runtime_protects_the_five_material_visualisations(self):
         engine = self.read_static("premium3d.js")
         for mode in ("hourglass", "candle", "beads", "moon", "sun"):
-            self.assertIn('"' + mode + '"', engine)
+            self.assertIn(f"{mode}:", engine)
         for module in ("hourglass.js", "candle.js", "beads.js", "celestial.js"):
             path = settings.BASE_DIR / "static" / "sablier" / "premium3d" / module
             self.assertTrue(path.is_file())
