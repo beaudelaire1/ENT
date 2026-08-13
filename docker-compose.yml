@@ -123,10 +123,12 @@ services:
 
   beat:
     <<: *app-service
-    command: ["celery", "-A", "config", "beat", "--loglevel=INFO", "--schedule=/var/run/celery/celerybeat-schedule"]
+    # Le calendrier est écrit dans /app/run, répertoire créé et donné à `myent` dans
+    # l'image. Sous /var/run le volume appartenait à root et beat s'arrêtait aussitôt.
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO", "--schedule=/app/run/celerybeat-schedule"]
     volumes:
       - private_media:/app/src/media
-      - celerybeat_data:/var/run/celery
+      - celerybeat_data:/app/run
     depends_on:
       migrate:
         condition: service_completed_successfully

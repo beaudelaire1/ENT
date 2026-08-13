@@ -1,5 +1,6 @@
 """Réglages dont une erreur ne se voit pas à l'exécution."""
 
+import re
 from pathlib import Path
 
 from django.conf import settings
@@ -89,6 +90,43 @@ class AllowedHostsTests(SimpleTestCase):
 
     def test_it_is_not_duplicated_when_already_present(self):
         self.assertEqual(allowed_hosts(["localhost", "127.0.0.1"]).count("127.0.0.1"), 1)
+
+
+class ContainerWritablePathsTests(SimpleTestCase):
+    """Ce que le conteneur écrit doit lui appartenir.
+
+    L'image tourne sous `myent`, mais Docker monte un volume nommé en root. Le calendrier
+    de Celery beat vivait sous `/var/run/celery`, que l'image ne possédait pas : beat
+    s'arrêtait sur « Permission denied » à chaque démarrage, en boucle, jusqu'à ce que
+    l'orchestrateur déclare le déploiement en échec et démonte l'ensemble — y compris
+    l'application, qui n'avait pourtant rien à se reprocher.
+    """
+
+    def setUp(self):
+        root = Path(__file__).resolve().parents[3]
+        self.dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
+        self.compose = (root / "docker-compose.yml").read_text(encoding="utf-8")
+
+    def schedule_directory(self) -> str:
+        match = re.search(r"--schedule=(\S+?)/[^/\s\"]+", self.compose)
+        self.assertIsNotNone(match, "le calendrier de beat n'est pas déclaré dans la composition")
+        return match.group(1)
+
+    def test_the_beat_schedule_lives_in_a_directory_the_image_owns(self):
+        directory = self.schedule_directory()
+        chown = re.search(r"chown -R myent:myent ([^\n]+)", self.dockerfile)
+        self.assertIsNotNone(chown, "l'image ne donne aucun répertoire à myent")
+        self.assertIn(directory, chown.group(1))
+
+    def test_that_directory_is_created_by_the_image(self):
+        """Docker ne recopie le propriétaire que si le répertoire existe déjà dans l'image."""
+        directory = self.schedule_directory()
+        mkdir = re.search(r"mkdir -p ([^\n]+?)\s*\\", self.dockerfile)
+        self.assertIsNotNone(mkdir)
+        self.assertIn(directory, mkdir.group(1))
+
+    def test_the_volume_is_mounted_on_that_same_directory(self):
+        self.assertIn(f"celerybeat_data:{self.schedule_directory()}", self.compose)
 
 
 class AdminSkinTests(SimpleTestCase):

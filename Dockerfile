@@ -14,12 +14,20 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN mkdir -p /app/src/data /app/src/media /app/src/staticfiles \
+# `/app/run` porte le calendrier de Celery beat. Il est créé et donné à `myent` ici, dans
+# l'image : Docker recopie le propriétaire du répertoire de l'image quand il monte un
+# volume nommé vide par-dessus. Sans cela le volume appartient à root, le conteneur
+# tourne sous `myent`, et beat s'arrête sur « Permission denied » — en boucle, jusqu'à ce
+# que l'orchestrateur déclare le déploiement en échec et démonte l'ensemble.
+#
+# Sous `/app` et non sous `/var/run` : ce dernier est un lien symbolique vers `/run` dans
+# les images Debian, et un volume monté à travers un lien n'a pas un comportement évident.
+RUN mkdir -p /app/src/data /app/src/media /app/src/staticfiles /app/run \
     && python src/manage.py generate_chime \
     && python src/manage.py collectstatic --noinput \
     && addgroup --system myent \
     && adduser --system --ingroup myent --home /app myent \
-    && chown -R myent:myent /app/src/data /app/src/media /app/src/staticfiles
+    && chown -R myent:myent /app/src/data /app/src/media /app/src/staticfiles /app/run
 
 USER myent
 WORKDIR /app/src
