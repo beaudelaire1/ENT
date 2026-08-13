@@ -2,6 +2,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from config.settings import addressing_style
+from core.serving import serve_private_file, signed_url
 
 
 class HealthAndSecurityHeadersTests(TestCase):
@@ -61,3 +62,59 @@ class ObjectStorageHostTests(SimpleTestCase):
 
     def test_an_explicit_choice_wins(self):
         self.assertEqual(addressing_style(self.ENDPOINT, "virtual"), "virtual")
+
+
+class FakeBucketFile:
+    """Un fichier de bucket : `url` accepte les en-têtes à imposer, comme S3Storage."""
+
+    class Storage:
+        # `serve_private_file` reconnaît un stockage objet à cet attribut.
+        bucket = "myent-media"
+
+        def url(self, name, parameters=None):
+            query = "&".join(f"{key}={value}" for key, value in sorted((parameters or {}).items()))
+            return f"https://exemple.r2.cloudflarestorage.com/myent-media/{name}?X-Amz-Signature=abc" + (
+                f"&{query}" if query else ""
+            )
+
+    def __init__(self, name):
+        self.name = name
+        self.storage = self.Storage()
+
+    @property
+    def url(self):
+        return self.storage.url(self.name)
+
+
+class SignedAddressTests(SimpleTestCase):
+    """Ce que la vue décide doit survivre à la redirection vers le stockage.
+
+    Une piste déposée dans le bucket autrement que par MyENT — console du fournisseur,
+    `rclone`, restauration — porte le type MIME posé à ce moment-là, souvent
+    `application/octet-stream`. Le navigateur, redirigé droit sur le stockage, ne voit que
+    celui-là : il refuse de décoder une piste pourtant intacte et marquée prête, alors
+    qu'en développement, où Django sert le fichier et pose l'en-tête, elle se lit.
+    """
+
+    def test_the_declared_type_travels_with_the_address(self):
+        url = signed_url(FakeBucketFile("users/2/audio/piste.mp3"), as_attachment=False, content_type="audio/mpeg")
+        self.assertIn("ResponseContentType=audio/mpeg", url)
+
+    def test_a_download_keeps_its_name(self):
+        """`as_attachment` était perdu de la même façon : le fichier s'ouvrait dans l'onglet."""
+        url = signed_url(FakeBucketFile("users/2/library/résumé du cours.pdf"), as_attachment=True, content_type=None)
+        self.assertIn("ResponseContentDisposition=attachment; filename*=UTF-8''r%C3%A9sum%C3%A9%20du%20cours.pdf", url)
+
+    def test_nothing_to_impose_leaves_the_ordinary_address(self):
+        url = signed_url(FakeBucketFile("users/2/audio/piste.mp3"), as_attachment=False, content_type=None)
+        self.assertNotIn("Response", url)
+
+    def test_the_redirection_carries_the_type(self):
+        response = serve_private_file(FakeBucketFile("users/2/audio/piste.mp3"), content_type="audio/mpeg")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("ResponseContentType=audio/mpeg", response["Location"])
+
+    def test_the_host_stays_the_one_the_policy_allows(self):
+        """Imposer un en-tête ne doit pas déplacer le fichier hors de ce que la CSP autorise."""
+        response = serve_private_file(FakeBucketFile("users/2/audio/piste.mp3"), content_type="audio/mpeg")
+        self.assertTrue(response["Location"].startswith("https://exemple.r2.cloudflarestorage.com/"))
