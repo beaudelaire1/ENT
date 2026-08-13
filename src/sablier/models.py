@@ -86,17 +86,15 @@ class FocusPreference(models.Model):
     background_image = models.ImageField("image de fond", upload_to=focus_background_path, blank=True)
     updated_at = models.DateTimeField("enregistré le", auto_now=True)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Compatibilité de déploiement : si la migration de données n'a pas encore
-        # réécrit une ancienne valeur, l'interface reçoit malgré tout la nouvelle clé.
-        current = self.__dict__.get("ambience")
-        if current in scenes.LEGACY_REPLACED:
-            self.ambience = scenes.LEGACY_REPLACED[current]
-
     class Meta:
         verbose_name = "préférence Sablier"
         verbose_name_plural = "préférences Sablier"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        current = self.__dict__.get("ambience")
+        if current in scenes.LEGACY_REPLACED:
+            self.ambience = scenes.LEGACY_REPLACED[current]
 
     def __str__(self):
         return f"Sablier · {self.user}"
