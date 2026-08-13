@@ -10,6 +10,8 @@ from django.db import models
 
 from core.models import TimeStampedModel
 
+from . import scenes
+
 color_validator = RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Couleur hexadécimale invalide.")
 
 
@@ -80,11 +82,17 @@ class FocusPreference(models.Model):
     )
     end_sound_enabled = models.BooleanField("son de fin", default=True)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#8878FF", validators=[color_validator])
-    # La couleur personnelle ne recolore que la visualisation du temps. Le monde garde
-    # sa propre palette dans scenes.py.
     custom_accent = models.BooleanField("utiliser ma couleur pour la visualisation", default=False)
     background_image = models.ImageField("image de fond", upload_to=focus_background_path, blank=True)
     updated_at = models.DateTimeField("enregistré le", auto_now=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Compatibilité de déploiement : si la migration de données n'a pas encore
+        # réécrit une ancienne valeur, l'interface reçoit malgré tout la nouvelle clé.
+        current = self.__dict__.get("ambience")
+        if current in scenes.LEGACY_REPLACED:
+            self.ambience = scenes.LEGACY_REPLACED[current]
 
     class Meta:
         verbose_name = "préférence Sablier"
