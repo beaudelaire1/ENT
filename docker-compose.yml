@@ -3,6 +3,10 @@ x-app-environment: &app-environment
   DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
   DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
   DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
+  # Dérogation explicite à la redirection HTTPS et aux cookies sécurisés, indépendante de
+  # DJANGO_DEBUG — pour un domaine de test sans certificat valable. Laisser vide en usage
+  # normal : le comportement retombe alors sur DJANGO_DEBUG, comme avant ce réglage.
+  DJANGO_FORCE_HTTPS: ${DJANGO_FORCE_HTTPS:-}
   SITE_URL: ${SITE_URL:-http://localhost:8000}
   TIME_ZONE: ${TIME_ZONE:-America/Cayenne}
   DATABASE_URL: postgresql://${POSTGRES_USER:-myent}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-myent}

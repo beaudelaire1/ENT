@@ -5,7 +5,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
-from config.settings import DATABASE_FREE_COMMANDS, build_middleware, database_config, redirect_to_https
+from config.settings import DATABASE_FREE_COMMANDS, build_middleware, database_config, force_https, optional_bool
 
 WHITENOISE = "whitenoise.middleware.WhiteNoiseMiddleware"
 POSTGRES_URL = "postgresql://myent:secret@postgres:5432/myent"
@@ -65,20 +65,42 @@ class DatabaseConfigurationTests(SimpleTestCase):
             self.assertIn(command, DATABASE_FREE_COMMANDS)
 
 
-class HttpsRedirectTests(SimpleTestCase):
-    """La redirection HTTPS est exigée en production et interdite sous les tests.
+class OptionalBoolTests(SimpleTestCase):
+    """Un booléen à trois états, pour distinguer « faux » de « pas posé »."""
+
+    def test_unset_is_none(self):
+        self.assertIsNone(optional_bool(None))
+        self.assertIsNone(optional_bool(""))
+        self.assertIsNone(optional_bool("   "))
+
+    def test_recognized_spellings(self):
+        for value in ("1", "true", "True", "yes", "on"):
+            self.assertIs(optional_bool(value), True)
+        for value in ("0", "false", "False", "no", "off"):
+            self.assertIs(optional_bool(value), False)
+
+
+class ForceHttpsTests(SimpleTestCase):
+    """HTTPS est exigé en production et interdit sous les tests, sauf dérogation explicite.
 
     Le client de test parle en clair : avec la redirection active, chaque requête
     recevait un 301 avant d'atteindre sa vue, et la suite entière tombait — mais
     seulement en intégration continue, où `DJANGO_DEBUG` vaut false.
     """
 
-    def test_production_redirects(self):
-        self.assertTrue(redirect_to_https(debug=False, running_tests=False))
+    def test_production_requires_https(self):
+        self.assertTrue(force_https(debug=False, running_tests=False, override=None))
 
     def test_development_does_not(self):
-        self.assertFalse(redirect_to_https(debug=True, running_tests=False))
+        self.assertFalse(force_https(debug=True, running_tests=False, override=None))
 
-    def test_the_test_suite_never_redirects(self):
-        self.assertFalse(redirect_to_https(debug=False, running_tests=True))
-        self.assertFalse(redirect_to_https(debug=True, running_tests=True))
+    def test_the_test_suite_never_requires_it(self):
+        self.assertFalse(force_https(debug=False, running_tests=True, override=None))
+        self.assertFalse(force_https(debug=True, running_tests=True, override=None))
+
+    def test_an_explicit_override_wins_in_production(self):
+        """Le cas visé : un domaine de test sans certificat valable, DEBUG resté à false."""
+        self.assertFalse(force_https(debug=False, running_tests=False, override=False))
+
+    def test_an_explicit_override_wins_in_development_too(self):
+        self.assertTrue(force_https(debug=True, running_tests=False, override=True))

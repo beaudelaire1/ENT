@@ -287,31 +287,46 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
-def redirect_to_https(debug: bool, running_tests: bool) -> bool:
-    """La redirection HTTPS, sauf sous `manage.py test`.
+def optional_bool(raw: str | None) -> bool | None:
+    """Un booléen à trois états : vrai, faux, ou « la variable n'a pas été posée »."""
+    if raw is None or not raw.strip():
+        return None
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
-    Le client de test parle en clair. Avec la redirection active, `SecurityMiddleware`
-    répondait 301 avant que la requête n'atteigne la vue : ni en-tête de sécurité, ni
-    identifiant de requête, ni contexte de gabarit, et `/healthz/` rendait une page de
-    redirection au lieu de son JSON. La suite entière échouait — mais uniquement en
-    intégration continue, seul endroit où elle tourne avec `DJANGO_DEBUG=false`, ce qui
-    laissait le défaut invisible en local.
 
-    Neutraliser le réglage plutôt que faire parler les tests en HTTPS : la redirection
-    n'est pas ce qu'ils vérifient, et `check --deploy` continue de l'exiger en production.
+def force_https(debug: bool, running_tests: bool, override: bool | None) -> bool:
+    """HTTPS est exigé dès que possible — redirection, cookies, HSTS —, sauf exception explicite.
+
+    `DEBUG` répond à une question — faut-il montrer les erreurs en détail ? — et gouvernait
+    aussi une question sans rapport : ce déploiement reçoit-il vraiment du HTTPS ? Les deux
+    coïncident presque toujours, mais pas dans la fenêtre où l'on teste derrière un nom sans
+    certificat valable — un domaine généré par Coolify sur `sslip.io`, par exemple, que
+    Coolify lui-même déconseille de certifier : le domaine est partagé par un grand nombre
+    d'installations, et Let's Encrypt limite le nombre de certificats émis par domaine
+    enregistré et par semaine. Forcer `DEBUG=true` pour lever la redirection ouvrirait alors
+    les pages d'erreur détaillées de Django sur une adresse déjà publique — un risque bien
+    plus large que celui qu'on cherchait à éviter.
+
+    `DJANGO_FORCE_HTTPS`, explicitement posé, tranche la question sans toucher à `DEBUG`.
+    Laissé absent, le comportement ne change pas : HTTPS reste exigé dès que `DEBUG` est
+    faux, sauf sous les tests, où le client parle en clair et où la redirection court-
+    circuiterait chaque requête avant qu'elle n'atteigne sa vue.
     """
+    if override is not None:
+        return override
     return not debug and not running_tests
 
 
-SECURE_SSL_REDIRECT = redirect_to_https(DEBUG, RUNNING_TESTS)
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+FORCE_HTTPS = force_https(DEBUG, RUNNING_TESTS, optional_bool(os.getenv("DJANGO_FORCE_HTTPS")))
+SECURE_SSL_REDIRECT = FORCE_HTTPS
+SESSION_COOKIE_SECURE = FORCE_HTTPS
+CSRF_COOKIE_SECURE = FORCE_HTTPS
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
-SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if FORCE_HTTPS else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = FORCE_HTTPS
+SECURE_HSTS_PRELOAD = FORCE_HTTPS
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
