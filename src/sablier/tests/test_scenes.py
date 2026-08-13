@@ -1,3 +1,6 @@
+import json
+
+from django.conf import settings
 from django.test import SimpleTestCase
 
 from sablier import scenes
@@ -11,13 +14,24 @@ class SceneRegistryTests(SimpleTestCase):
             list(FocusPreference.Ambience.choices),
         )
 
+    def test_every_universe_has_a_complete_art_direction(self):
+        for scene in scenes.SCENES:
+            with self.subTest(scene=scene.key):
+                for color in (scene.accent, scene.tint, scene.sky, scene.horizon, scene.ground, scene.light):
+                    self.assertRegex(color, r"^#[0-9a-f]{6}$")
+                self.assertTrue(scene.decor)
+                self.assertTrue(scene.composition)
+                self.assertGreaterEqual(len(scene.motion), 2)
+                self.assertTrue(scene.progression)
+                self.assertGreaterEqual(len(scene.description), 30)
+
     def test_artistic_signatures_are_unique(self):
         signatures = [scene.art_signature for scene in scenes.SCENES]
         renderers = [scene.decor for scene in scenes.SCENES]
         self.assertEqual(len(signatures), len(set(signatures)))
         self.assertEqual(len(renderers), len(set(renderers)))
 
-    def test_historical_univers_are_preserved(self):
+    def test_historical_universes_are_preserved(self):
         expected = {
             "printemps",
             "ete",
@@ -36,3 +50,52 @@ class SceneRegistryTests(SimpleTestCase):
 
     def test_only_generic_concentration_is_legacy(self):
         self.assertEqual(scenes.LEGACY_REPLACED, {"concentration": "arbre_etoiles"})
+
+
+class PremiumVisualRuntimeTests(SimpleTestCase):
+    def read_static(self, relative_path):
+        return (settings.BASE_DIR / "static" / "sablier" / relative_path).read_text(encoding="utf-8")
+
+    def test_premium_runtime_protects_the_five_material_visualisations(self):
+        engine = self.read_static("premium3d.js")
+        for mode in ("hourglass", "candle", "beads", "moon", "sun"):
+            self.assertIn(f'"[mode]}'", engine)
+        for module in ("hourglass.js", "candle.js", "beads.js", "celestial.js"):
+            self.assertTrue((settings.BASE_DIR / "static" / "sablier" / "premium3d" / module).is_file())
+
+    def test_canvas_visualisations_remain_as_a_webgl_fallback(self):
+        engine = self.read_static("sablier.js")
+        for function in ("drawHourglass", "drawCandle", "drawBeads", "drawMoon", "drawSun"):
+            self.assertIn(f"function {function}", engine)
+        premium = self.read_static("premium3d.js")
+        self.assertIn('app.dataset.renderer3d = "fallback"', premium)
+        self.assertIn("webglcontextlost", premium)
+        self.assertIn("fallbackCanvas.style.visibility", premium)
+
+    def test_visual_runtime_never_controls_the_users_music(self):
+        files = [
+            "decor-core.js",
+            "seasonal-worlds.js",
+            "premium3d.js",
+            "premium3d/hourglass.js",
+            "premium3d/candle.js",
+            "premium3d/beads.js",
+            "premium3d/celestial.js",
+        ]
+        engine = "".join(self.read_static(path) for path in files)
+        for forbidden in ("new Audio(", ".play(", ".pause(", "#playlist-audio", "player-volume", "soundscape"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, engine)
+
+    def test_three_is_pinned_and_vendored_locally(self):
+        package = json.loads((settings.BASE_DIR.parent / "package.json").read_text(encoding="utf-8"))
+        self.assertEqual(package["dependencies"]["three"], "0.184.0")
+        dockerfile = (settings.BASE_DIR.parent / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("node_modules/three/build/three.module.js", dockerfile)
+        self.assertIn("/app/src/static/vendor/three.module.js", dockerfile)
+        self.assertNotIn("cdn", self.read_static("premium3d.js").lower())
+
+    def test_decor_loader_boots_seasonal_worlds_before_3d(self):
+        loader = self.read_static("decor.js")
+        self.assertIn('load("decor-core.js").then(() => load("seasonal-worlds.js"))', loader)
+        self.assertIn('import(new URL("premium3d.js" + version, here).href)', loader)
