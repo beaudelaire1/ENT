@@ -63,6 +63,18 @@ class FocusPreference(models.Model):
         ABYSSES = "abysses", "Sanctuaire abyssal"
         REFUGE_PLUIE = "refuge_pluie", "Refuge sous la pluie"
         AURORES = "aurores", "Vallée des aurores"
+        PRINTEMPS = "printemps", "Printemps"
+        ETE = "ete", "Été"
+        AUTOMNE = "automne", "Automne"
+        HIVER = "hiver", "Hiver"
+        PLUIE = "pluie", "Pluie"
+        OCEAN = "ocean", "Océan"
+        SAHARA = "sahara", "Sahara"
+        FORET = "foret", "Forêt"
+        ORAGE = "orage", "Orage"
+        BRAISES = "braises", "Braises"
+        AURORE = "aurore", "Aurore"
+        NUIT = "nuit", "Nuit"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_preference")
     default_duration_seconds = models.PositiveIntegerField(

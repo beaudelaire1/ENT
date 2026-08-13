@@ -31,6 +31,22 @@ jobs:
       REDIS_URL: redis://127.0.0.1:6379/0
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run vendor
+      - name: Vérifier la syntaxe des moteurs visuels
+        run: |
+          test -s src/static/vendor/three.module.js
+          node --check src/static/sablier/decor.js
+          node --check src/static/sablier/decor-core.js
+          node --check src/static/sablier/seasonal-worlds.js
+          node --input-type=module --check < src/static/sablier/premium3d.js
+          node --input-type=module --check < src/static/sablier/premium3d/hourglass.js
+          node --input-type=module --check < src/static/sablier/premium3d/candle.js
+          node --input-type=module --check < src/static/sablier/premium3d/beads.js
+          node --input-type=module --check < src/static/sablier/premium3d/celestial.js
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
