@@ -62,7 +62,6 @@ class SceneRegistryTests(TestCase):
                 self.assertRegex(engine, rf"\n    {scene.decor}: \{{ static:")
 
     def test_static_immersion_keeps_the_world_but_stops_motion(self):
-        """Réduire les animations ne doit jamais ramener l'utilisateur à un fond vide."""
         engine = (settings.BASE_DIR / "static" / "sablier" / "decor.js").read_text(encoding="utf-8")
         self.assertIn("0: { detail: 0.78, motion: 0 }", engine)
         self.assertIn("WORLDS[name].static", engine)
@@ -149,7 +148,6 @@ class SceneRenderingTests(TestCase):
         self.assertGreaterEqual(engine.count("limb("), 8)
 
     def test_hourglass_beads_and_candle_remain_first_class_visualisations(self):
-        """Les univers ne doivent pas remplacer trois visualisations déjà solides."""
         engine = (settings.BASE_DIR / "static" / "sablier" / "sablier.js").read_text(encoding="utf-8")
         self.assertIn("function drawHourglass", engine)
         self.assertIn("function drawBeads", engine)
@@ -198,7 +196,6 @@ class SceneRenderingTests(TestCase):
 
     def test_no_ambient_sound_is_left_behind(self):
         page = self.client.get(reverse("sablier:home")).content.decode()
-
         self.assertNotIn("soundscape", page)
         self.assertIn("finished.wav", page)
 
@@ -238,6 +235,6 @@ class InstantSettingsTests(TestCase):
         page = self.client.get(reverse("sablier:home")).content.decode()
         stylesheet = (settings.BASE_DIR / "static" / "sablier" / "sablier.css").read_text(encoding="utf-8")
 
-        self.assertIn('role="group" aria-label="Densité du décor"', page)
+        self.assertIn('role="group" aria-label="Niveau d’immersion"', page)
         self.assertEqual(page.count('type="button" data-decor='), len(FocusPreference.Decor.values))
         self.assertIn(".decor-levels button.active", stylesheet)
