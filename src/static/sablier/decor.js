@@ -41,4 +41,7 @@
 
   window.SablierDecor = stub;
   window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"));
+  window.SablierDecorReady
+    .then(() => import(new URL("premium3d.js" + version, here).href))
+    .catch(() => {});
 })();
