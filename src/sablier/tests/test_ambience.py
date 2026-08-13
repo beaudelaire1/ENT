@@ -14,7 +14,7 @@ class AmbiencePaletteTests(TestCase):
     """
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user("alice", password="secret")
+        self.user = get_user_model().objects.create_user("alice")
         self.client.force_login(self.user)
 
     def page(self):
@@ -29,9 +29,7 @@ class AmbiencePaletteTests(TestCase):
         self.assertNotIn("--focus-accent", self.scene_style())
 
     def test_the_chosen_universe_reaches_the_markup(self):
-        FocusPreference.objects.update_or_create(
-            user=self.user, defaults={"ambience": FocusPreference.Ambience.OASIS}
-        )
+        FocusPreference.objects.update_or_create(user=self.user, defaults={"ambience": FocusPreference.Ambience.OASIS})
         self.assertIn('data-ambience="oasis"', self.page())
 
     def test_a_custom_colour_is_published_under_its_own_variable(self):
