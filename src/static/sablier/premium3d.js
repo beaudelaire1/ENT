@@ -60,7 +60,7 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     return;
   }
 
-  renderer.setElearColor(0x000000, 0);
+  renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.2 : 1.65));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
