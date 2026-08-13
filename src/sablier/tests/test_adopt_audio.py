@@ -84,3 +84,13 @@ class AdoptAudioTests(TestCase):
     def test_an_empty_prefix_says_so(self):
         sortie = self.adopter()
         self.assertIn("Aucun fichier", sortie)
+
+    def test_the_bucket_root_can_be_scanned(self):
+        """`--prefix ''` désigne la racine ; `or` la confondait avec « non fourni »."""
+        with override_settings(MEDIA_ROOT=self.media):
+            default_storage.save("a-la-racine.mp3", ContentFile(b"des octets"))
+        sortie = StringIO()
+        with override_settings(MEDIA_ROOT=self.media):
+            call_command("adopt_audio", user="masterjay", prefix="", stdout=sortie)
+        self.assertEqual(AudioTrack.objects.count(), 1)
+        self.assertEqual(AudioTrack.objects.get().title, "a-la-racine")

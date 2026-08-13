@@ -43,8 +43,11 @@ class Command(BaseCommand):
         parser.add_argument("--user", required=True, help="Nom d'utilisateur propriétaire des pistes.")
         parser.add_argument(
             "--prefix",
-            default="",
-            help="Préfixe à parcourir. Par défaut, `users/<id>/audio/`, où les téléversements atterrissent.",
+            default=None,
+            help=(
+                "Préfixe à parcourir. Par défaut, `users/<id>/audio/`, où atterrissent les "
+                "téléversements. Passer `--prefix ''` parcourt la racine du bucket."
+            ),
         )
         parser.add_argument(
             "--dry-run",
@@ -56,7 +59,9 @@ class Command(BaseCommand):
         user = get_user_model().objects.filter(username=options["user"]).first()
         if user is None:
             raise CommandError(f"Aucun compte nommé « {options['user']} ».")
-        prefix = options["prefix"] or f"users/{user.pk}/audio/"
+        # `is None` et non `or` : une chaîne vide désigne la racine du bucket, ce que
+        # `or` confondait avec « non fourni » — la racine était alors inatteignable.
+        prefix = options["prefix"] if options["prefix"] is not None else f"users/{user.pk}/audio/"
 
         keys = self.storage_keys(prefix)
         if not keys:
@@ -115,9 +120,12 @@ class Command(BaseCommand):
                 directories, files = default_storage.listdir(current)
             except (FileNotFoundError, OSError):
                 continue
-            to_visit.extend(f"{current}/{name}" for name in directories)
+            # À la racine, `current` est vide : joindre sans condition produirait
+            # « /fichier.mp3 », une clé que le stockage ne connaît pas.
+            base = f"{current}/" if current else ""
+            to_visit.extend(f"{base}{name}" for name in directories)
             for name in files:
-                key = f"{current}/{name}"
+                key = f"{base}{name}"
                 try:
                     size = default_storage.size(key)
                 except (FileNotFoundError, OSError):
