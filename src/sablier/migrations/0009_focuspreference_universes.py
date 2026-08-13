@@ -1,12 +1,30 @@
 from django.db import migrations, models
 
 
-LEGACY = {"concentration": "arbre_etoiles"}
+LEGACY = {
+    "concentration": "arbre_etoiles",
+    "printemps": "eden",
+    "ete": "oasis",
+    "automne": "fleuve_temps",
+    "hiver": "aurores",
+    "pluie": "refuge_pluie",
+    "ocean": "abysses",
+    "sahara": "oasis",
+    "foret": "eden",
+    "orage": "interstellaire",
+    "braises": "souvenirs",
+    "aurore": "heaven",
+    "nuit": "galaxie",
+}
 
 
 def migrate_ambiences(apps, schema_editor):
     preference = apps.get_model("sablier", "FocusPreference")
-    preference.objects.filter(ambience="concentration").update(ambience="arbre_etoiles")
+    for item in preference.objects.all().iterator():
+        replacement = LEGACY.get(item.ambience)
+        if replacement:
+            item.ambience = replacement
+            item.save(update_fields=["ambience"])
 
 
 class Migration(migrations.Migration):
@@ -31,18 +49,6 @@ class Migration(migrations.Migration):
                     ("abysses", "Sanctuaire abyssal"),
                     ("refuge_pluie", "Refuge sous la pluie"),
                     ("aurores", "Vallée des aurores"),
-                    ("printemps", "Printemps"),
-                    ("ete", "Été"),
-                    ("automne", "Automne"),
-                    ("hiver", "Hiver"),
-                    ("pluie", "Pluie"),
-                    ("ocean", "Océan"),
-                    ("sahara", "Sahara"),
-                    ("foret", "Forêt"),
-                    ("orage", "Orage"),
-                    ("braises", "Braises"),
-                    ("aurore", "Aurore"),
-                    ("nuit", "Nuit"),
                 ],
                 default="arbre_etoiles",
                 max_length=16,
