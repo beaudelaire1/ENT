@@ -403,6 +403,14 @@ LOGGING = {
         ),
     },
     "root": {"handlers": ["console", "admins"], "level": os.getenv("LOG_LEVEL", "INFO")},
+    "loggers": {
+        # Un `DisallowedHost` ne dit rien de l'application : il dit qu'un tiers l'a
+        # jointe par un nom qu'elle ne sert pas — un robot qui scanne l'adresse IP, le
+        # plus souvent. Django le journalise en ERROR, ce qui déclenchait une alerte par
+        # courriel et une entrée Sentry à chaque passage. Laisser ce bruit aurait fini
+        # par noyer les incidents réels ; la trace reste écrite dans la console.
+        "django.security.DisallowedHost": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+    },
 }
 
 # Collecte des erreurs. Sans DSN, rien n'est monté et l'application se comporte comme
