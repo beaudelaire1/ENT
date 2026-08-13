@@ -69,9 +69,32 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         engine = self.read_static("premium3d.js")
         for mode in ("hourglass", "candle", "beads", "moon", "sun"):
             self.assertIn(f"{mode}:", engine)
-        for module in ("hourglass.js", "candle.js", "beads.js", "celestial.js"):
+        expected = (
+            "hourglass.js",
+            "hourglass-realistic.js",
+            "candle.js",
+            "candle-realistic.js",
+            "beads.js",
+            "beads-realistic.js",
+            "celestial.js",
+            "celestial-realistic.js",
+            "material-kit.js",
+            "flame-texture.js",
+        )
+        for module in expected:
             path = settings.BASE_DIR / "static" / "sablier" / "premium3d" / module
-            self.assertTrue(path.is_file())
+            self.assertTrue(path.is_file(), module)
+
+    def test_material_visualisations_delegate_to_realistic_renderers(self):
+        delegates = {
+            "hourglass.js": "hourglass-realistic.js",
+            "candle.js": "candle-realistic.js",
+            "beads.js": "beads-realistic.js",
+            "celestial.js": "celestial-realistic.js",
+        }
+        for entry, target in delegates.items():
+            with self.subTest(entry=entry):
+                self.assertIn(target, self.read_static(f"premium3d/{entry}"))
 
     def test_canvas_visualisations_remain_as_a_webgl_fallback(self):
         engine = self.read_static("sablier.js")
@@ -87,10 +110,12 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "decor-core.js",
             "seasonal-worlds.js",
             "premium3d.js",
-            "premium3d/hourglass.js",
-            "premium3d/candle.js",
-            "premium3d/beads.js",
-            "premium3d/celestial.js",
+            "premium3d/material-kit.js",
+            "premium3d/flame-texture.js",
+            "premium3d/hourglass-realistic.js",
+            "premium3d/candle-realistic.js",
+            "premium3d/beads-realistic.js",
+            "premium3d/celestial-realistic.js",
         ]
         engine = "".join(self.read_static(path) for path in files)
         forbidden_fragments = (
@@ -114,13 +139,15 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn("/app/src/static/vendor/three.module.js", dockerfile)
         self.assertNotIn("cdn", self.read_static("premium3d.js").lower())
 
-    def test_decor_loader_boots_seasonal_worlds_before_3d(self):
+    def test_premium_runtime_boot_is_independent_from_decor_worlds(self):
         loader = self.read_static("decor.js")
         self.assertIn(
-            'load("decor-core.js").then(() => load("seasonal-worlds.js"))',
+            'window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)',
             loader,
         )
         self.assertIn(
-            'import(new URL("premium3d.js" + version, here).href)',
+            'window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"))',
             loader,
         )
+        self.assertLess(loader.index("SablierPremium3DReady"), loader.index("SablierDecorReady ="))
+        self.assertNotIn('.then(() => import(new URL("premium3d.js" + version, here).href))', loader)
