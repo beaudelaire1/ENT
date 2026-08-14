@@ -61,21 +61,32 @@ class SceneRegistryTests(SimpleTestCase):
 
 
 class PremiumVisualRuntimeTests(SimpleTestCase):
+    GRAPHICAL_MODES = ("ring", "hourglass", "wave", "candle", "beads", "moon", "bars", "spiral", "sun")
+
     def read_static(self, relative_path):
         path = settings.BASE_DIR / "static" / "sablier" / relative_path
         return path.read_text(encoding="utf-8")
 
-    def test_premium_runtime_protects_the_five_material_visualisations(self):
+    def test_premium_runtime_protects_all_graphical_visualisations(self):
         engine = self.read_static("premium3d.js")
-        for mode in ("hourglass", "candle", "beads", "moon", "sun"):
+        for mode in self.GRAPHICAL_MODES:
             self.assertIn(f"{mode}:", engine)
+
         expected = (
+            "ring.js",
+            "ring-realistic.js",
             "hourglass.js",
             "hourglass-realistic.js",
+            "wave.js",
+            "wave-realistic.js",
             "candle.js",
             "candle-realistic.js",
             "beads.js",
             "beads-realistic.js",
+            "bars.js",
+            "bars-realistic.js",
+            "spiral.js",
+            "spiral-realistic.js",
             "celestial.js",
             "celestial-realistic.js",
             "material-kit.js",
@@ -85,11 +96,15 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             path = settings.BASE_DIR / "static" / "sablier" / "premium3d" / module
             self.assertTrue(path.is_file(), module)
 
-    def test_material_visualisations_delegate_to_realistic_renderers(self):
+    def test_graphical_visualisations_delegate_to_realistic_renderers(self):
         delegates = {
+            "ring.js": "ring-realistic.js",
             "hourglass.js": "hourglass-realistic.js",
+            "wave.js": "wave-realistic.js",
             "candle.js": "candle-realistic.js",
             "beads.js": "beads-realistic.js",
+            "bars.js": "bars-realistic.js",
+            "spiral.js": "spiral-realistic.js",
             "celestial.js": "celestial-realistic.js",
         }
         for entry, target in delegates.items():
@@ -98,12 +113,29 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
 
     def test_canvas_visualisations_remain_as_a_webgl_fallback(self):
         engine = self.read_static("sablier.js")
-        for function in ("drawHourglass", "drawCandle", "drawBeads", "drawMoon", "drawSun"):
+        for function in (
+            "drawRing",
+            "drawHourglass",
+            "drawWave",
+            "drawCandle",
+            "drawBeads",
+            "drawMoon",
+            "drawBars",
+            "drawSpiral",
+            "drawSun",
+        ):
             self.assertIn(f"function {function}", engine)
         premium = self.read_static("premium3d.js")
         self.assertIn('app.dataset.renderer3d = "fallback"', premium)
         self.assertIn("webglcontextlost", premium)
         self.assertIn("fallbackCanvas.style.visibility", premium)
+
+    def test_digital_and_zen_remain_native_non_webgl_modes(self):
+        engine = self.read_static("premium3d.js")
+        self.assertNotIn('"digital", "zen"', engine)
+        css = self.read_static("sablier.css")
+        self.assertIn('.visual-wrap[data-mode="digital"] .digital-visual', css)
+        self.assertIn('.visual-wrap[data-mode="zen"] .zen-visual', css)
 
     def test_visual_runtime_never_controls_the_users_music(self):
         files = [
@@ -112,9 +144,13 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "premium3d.js",
             "premium3d/material-kit.js",
             "premium3d/flame-texture.js",
+            "premium3d/ring-realistic.js",
             "premium3d/hourglass-realistic.js",
+            "premium3d/wave-realistic.js",
             "premium3d/candle-realistic.js",
             "premium3d/beads-realistic.js",
+            "premium3d/bars-realistic.js",
+            "premium3d/spiral-realistic.js",
             "premium3d/celestial-realistic.js",
         ]
         engine = "".join(self.read_static(path) for path in files)
