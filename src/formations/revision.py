@@ -74,7 +74,7 @@ def to_revisit(user, path, period=None, *, limit: int = 6) -> list[Revision]:
         if record.target_is_late:
             found.append(Revision(record, f"objectif « {record.target_label.lower()} » dépassé", rank=0))
         elif assessment is not None and record.mastery_level < ProgressRecord.Mastery.ACQUIRED:
-            days = (assessment.scheduled_for.date() - timezone.localdate()).days
+            days = (timezone.localdate(assessment.scheduled_for) - timezone.localdate()).days
             when = "aujourd’hui" if days <= 0 else ("demain" if days == 1 else f"dans {days} jours")
             found.append(Revision(record, f"{assessment.title} {when}", rank=1))
         elif record.assessed_at is not None and now - record.assessed_at > STALE_AFTER:
