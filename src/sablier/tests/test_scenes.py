@@ -67,8 +67,8 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         path = settings.BASE_DIR / "static" / "sablier" / relative_path
         return path.read_text(encoding="utf-8")
 
-    def test_premium_runtime_protects_all_graphical_visualisations(self):
-        engine = self.read_static("premium3d.js")
+    def test_canonical_runtime_protects_all_graphical_visualisations(self):
+        engine = self.read_static("sablier.js")
         for mode in self.GRAPHICAL_MODES:
             self.assertIn(f"{mode}:", engine)
 
@@ -162,6 +162,7 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         files = [
             "decor-core.js",
             "seasonal-worlds.js",
+            "world3d.js",
             "premium3d.js",
             "premium3d/material-kit.js",
             "premium3d/flame-texture.js",
@@ -187,6 +188,77 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, engine)
 
+    def test_sahara_reference_world_uses_a_temporal_webgl_scene(self):
+        world = self.read_static("world3d.js")
+        loader = self.read_static("decor.js")
+        css = self.read_static("sablier.css")
+        for fragment in (
+            "new THREE.WebGLRenderer",
+            "new THREE.ShaderMaterial",
+            "new THREE.MeshPhysicalMaterial",
+            "new THREE.InstancedMesh",
+            "new THREE.FogExp2",
+            'app.dataset.ambience === "sahara"',
+            "date.getHours()",
+            'matchMedia("(prefers-reduced-motion: reduce)")',
+            'canvas.addEventListener("webglcontextlost"',
+        ):
+            self.assertIn(fragment, world)
+        self.assertIn('import(new URL("world3d.js" + version, here).href)', loader)
+        self.assertIn('[data-world3d="ready"][data-ambience="sahara"]', css)
+        self.assertIn('[data-world3d-active="true"]', css)
+        self.assertNotIn("cdn", world.lower())
+
+    def test_beads_are_a_dynamic_glass_chronometer_not_a_photo_sprite(self):
+        beads = self.read_static("premium3d/beads-realistic.js")
+        fallback = self.read_static("sablier.js")
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        for fragment in (
+            "new THREE.InstancedMesh",
+            "new THREE.LatheGeometry",
+            "transmission: 0.34",
+            "makePearl(THREE)",
+            "transferred = (1 - progress) * count",
+            "pearls.instanceMatrix.needsUpdate = true",
+        ):
+            self.assertIn(fragment, beads)
+        self.assertNotIn("drawBeadsPhoto", fallback)
+        self.assertNotIn('"pearl":', template)
+
+    def test_candle_uses_the_original_photo_without_a_renderer_swap(self):
+        fallback = self.read_static("sablier.js")
+        loader = self.read_static("decor.js")
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        for fragment in (
+            "function drawCandlePhoto(progress)",
+            "candle:drawCandlePhoto",
+            'ready("candle")',
+            "ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh)",
+        ):
+            self.assertIn(fragment, fallback)
+        self.assertIn('"candle":"{{ static_prefix }}sablier/img/9d0bd271', template)
+        self.assertNotIn('if(!ready("candle")){drawCandle', fallback)
+        self.assertIn("SablierPremium3DReady = Promise.resolve(null)", loader)
+        self.assertNotIn('import(new URL("premium3d.js"', loader)
+
+    def test_all_time_objects_use_one_canonical_renderer(self):
+        engine = self.read_static("sablier.js")
+        loader = self.read_static("decor.js")
+        expected = (
+            "ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,"
+            "beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto"
+        )
+        self.assertIn(expected, engine)
+        self.assertIn("SablierPremium3DReady = Promise.resolve(null)", loader)
+        self.assertNotIn('import(new URL("premium3d.js"', loader)
+
+    def test_heavy_sahara_world_is_lazily_created(self):
+        world = self.read_static("world3d.js")
+        self.assertIn('if (app.dataset.ambience === "sahara")', world)
+        self.assertIn("const start = async () =>", world)
+        self.assertIn("new MutationObserver(maybeStart)", world)
+        self.assertLess(world.index('if (app.dataset.ambience === "sahara")'), world.index("await start();"))
+
     def test_three_is_pinned_and_vendored_locally(self):
         package_path = settings.BASE_DIR.parent / "package.json"
         package = json.loads(package_path.read_text(encoding="utf-8"))
@@ -196,15 +268,12 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn("/app/src/static/vendor/three.module.js", dockerfile)
         self.assertNotIn("cdn", self.read_static("premium3d.js").lower())
 
-    def test_premium_runtime_boot_is_independent_from_decor_worlds(self):
+    def test_canonical_timer_is_independent_from_decor_worlds(self):
         loader = self.read_static("decor.js")
-        self.assertIn(
-            'window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)',
-            loader,
-        )
+        self.assertIn("window.SablierPremium3DReady = Promise.resolve(null)", loader)
         self.assertIn(
             'window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"))',
             loader,
         )
         self.assertLess(loader.index("SablierPremium3DReady"), loader.index("SablierDecorReady ="))
-        self.assertNotIn('.then(() => import(new URL("premium3d.js" + version, here).href))', loader)
+        self.assertNotIn('import(new URL("premium3d.js"', loader)

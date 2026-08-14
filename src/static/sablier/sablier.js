@@ -32,9 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
   const decor=window.SablierDecor.create($("#decor-canvas"));
-  // Visuels photoréalistes : les photos des objets (sablier, bougie, lune…) sont
-  // chargées une fois. Tant qu'une photo n'est pas prête, le rendu vectoriel
-  // historique prend le relais — l'écran ne reste jamais vide.
+  // Les rendus historiques sont les références canoniques. Les images locales
+  // apportent leur matière, tandis que Canvas conserve les animations temporelles.
+  // Aucun second moteur ne peut ensuite les remplacer par une réinterprétation.
   const assets={};
   try{
     const manifest=window.SABLIER_ASSETS||JSON.parse(document.querySelector("#asset-data")?.textContent||"{}");
@@ -138,71 +138,58 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.globalAlpha=.2;ctx.strokeStyle=text;for(let i=0;i<7;i++){const y=level+18+i*18,width=r*(.12+i*.035);ctx.beginPath();ctx.moveTo(cx-width,y);ctx.lineTo(cx+width,y);ctx.stroke();}
     ctx.restore();ctx.globalAlpha=1;ctx.strokeStyle=rgba(text,.55);ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=rgba(text,.1);ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r-5,0,Math.PI*2);ctx.stroke();
   }
-  // Bougie : la silhouette d'origine reste tracée, seule la cire se consume à
-  // l'intérieur. Faire rétrécir la bougie elle-même effaçait la mesure : on ne voyait
-  // plus quelle part du temps avait été brûlée, comme un sablier dont le verre
-  // rapetisserait avec le sable.
+  // Bougie mince canonique : sa matière et sa largeur ne dépendent jamais de
+  // l'univers. Seule sa hauteur traduit le temps restant.
   function drawCandle(progress){
-    const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,
-      bodyW=Math.min(w,h)*.27,full=h*.6,base=h*.83,ceiling=base-full,
+    const {w,h}=resize(),cx=w/2,
+      bodyW=Math.min(w,h)*.235,full=h*.6,base=h*.83,
       top=base-full*progress,radius=bodyW*.16;
     ctx.clearRect(0,0,w,h);
     // Le halo de la flamme est peint d'abord : il baigne la scène, la cire s'y détache.
     if(progress>.004){
-      glow(ctx,cx,top-bodyW*.8,bodyW*3.6,accent,.3);
-      glow(ctx,cx,top-bodyW*.42,bodyW*1.4,text,.13);
+      glow(ctx,cx,top-bodyW*.48,bodyW*2.45,"#ff9d32",.24);
+      glow(ctx,cx,top-bodyW*.25,bodyW*1.05,"#fff1c2",.12);
     }
     // Bougeoir : assise, fût, et le reflet chaud que la flamme y dépose.
-    const holder=ctx.createLinearGradient(cx-bodyW*1.6,0,cx+bodyW*1.6,0);
-    holder.addColorStop(0,rgba(border,.98));holder.addColorStop(.3,rgba(text,.5));
-    holder.addColorStop(.5,surface);holder.addColorStop(.72,rgba(text,.4));holder.addColorStop(1,rgba(border,.98));
+    const holder=ctx.createLinearGradient(cx-bodyW*1.15,0,cx+bodyW*1.15,0);
+    holder.addColorStop(0,"#4a2608");holder.addColorStop(.2,"#a96512");
+    holder.addColorStop(.46,"#f5d477");holder.addColorStop(.62,"#a66110");holder.addColorStop(1,"#3a1d07");
     ctx.fillStyle=holder;
-    ctx.beginPath();ctx.ellipse(cx,base+9,bodyW*1.58,14,0,0,Math.PI*2);ctx.fill();
-    limb(text,1.2,.3);
-    ctx.beginPath();ctx.roundRect(cx-bodyW*1.6,base-3,bodyW*3.2,15,8);ctx.fill();limb(text,1.2,.34);
-    if(progress>.004){ctx.globalAlpha=.5;glow(ctx,cx,base,bodyW*1.7,accent,.3);ctx.globalAlpha=1;}
-    // Hauteur d'origine : ce qui a déjà fondu reste mesurable, en pointillé plutôt qu'en
-    // aplat fantôme — un bloc translucide se lisait comme une deuxième bougie.
-    ctx.setLineDash([7,7]);ctx.globalAlpha=.55;
-    ctx.beginPath();ctx.roundRect(cx-bodyW/2,ceiling,bodyW,full,radius);limb(text,1.4,.5);
-    ctx.setLineDash([]);ctx.globalAlpha=1;
+    ctx.beginPath();ctx.ellipse(cx,base+9,bodyW*1.08,12,0,0,Math.PI*2);ctx.fill();
+    limb("#f8d980",1.2,.5);
+    ctx.beginPath();ctx.roundRect(cx-bodyW*1.1,base-3,bodyW*2.2,14,7);ctx.fill();limb("#f8d980",1.2,.56);
+    ctx.strokeStyle="#d79b32";ctx.lineWidth=Math.max(2,bodyW*.025);
+    for(const side of [-1,1]){ctx.beginPath();ctx.ellipse(cx+side*bodyW*1.08,base+4,bodyW*.26,8,0,0,Math.PI*2);ctx.stroke();}
+    if(progress>.004){ctx.globalAlpha=.45;glow(ctx,cx,base,bodyW*1.28,"#ffae42",.24);ctx.globalAlpha=1;}
     if(progress>.004){
-      ctx.fillStyle=litColumn(cx-bodyW/2,cx+bodyW/2,{accent,text,border});
+      const wax=ctx.createLinearGradient(cx-bodyW/2,0,cx+bodyW/2,0);
+      wax.addColorStop(0,"#d7c38b");wax.addColorStop(.2,"#f2e3b5");wax.addColorStop(.48,"#fff8dc");wax.addColorStop(.72,"#f2dfac");wax.addColorStop(1,"#c9b476");
+      ctx.fillStyle=wax;
       ctx.beginPath();ctx.roundRect(cx-bodyW/2,top,bodyW,base-top,radius);ctx.fill();
       // Liseré : c'est lui qui donne sa taille apparente à la bougie.
-      limb(text,2,.62);
+      limb("#fff5d2",2,.72);
       // Cuvette de cire autour de la mèche, creusée par la flamme.
-      ctx.fillStyle=rgba(border,.85);ctx.beginPath();ctx.ellipse(cx,top+bodyW*.06,bodyW*.5,bodyW*.14,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=rgba(text,.9);ctx.globalAlpha=.5;ctx.beginPath();ctx.ellipse(cx,top+bodyW*.04,bodyW*.34,bodyW*.08,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-      ctx.fillStyle=rgba(accent,.9);ctx.beginPath();ctx.ellipse(cx,top+bodyW*.09,bodyW*.2,bodyW*.05,0,0,Math.PI*2);ctx.fill();
-      // Coulures : la cire fondue déborde à mesure qu'elle descend.
-      const spill=(1-progress)*bodyW*.3;
-      if(spill>1){
-        ctx.beginPath();
-        ctx.moveTo(cx-bodyW/2,top+bodyW*.14);
-        ctx.quadraticCurveTo(cx-bodyW/2-spill,top+bodyW*.5,cx-bodyW/2,top+bodyW*.92);
-        ctx.moveTo(cx+bodyW/2,top+bodyW*.22);
-        ctx.quadraticCurveTo(cx+bodyW/2+spill,top+bodyW*.7,cx+bodyW/2,top+bodyW*1.15);
-        ctx.lineWidth=spill;ctx.strokeStyle=rgba(accent,.92);ctx.lineCap="round";ctx.stroke();
-      }
+      ctx.fillStyle="#f5e5b7";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.06,bodyW*.49,bodyW*.12,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#d6a85c";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.065,bodyW*.22,bodyW*.055,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#f2c46d";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.062,bodyW*.12,bodyW*.028,0,0,Math.PI*2);ctx.fill();
       // Mèche puis flamme : cœur blanc, manteau coloré, halo. Trois valeurs, sinon la
       // flamme n'est qu'une tache de la couleur d'ambiance.
-      const flicker=state.running?Math.sin(Date.now()/90)*bodyW*.035:0,flameH=bodyW*1.15;
-      ctx.strokeStyle=rgba(border,.95);ctx.lineWidth=Math.max(2,bodyW*.035);
-      ctx.beginPath();ctx.moveTo(cx,top+2);ctx.quadraticCurveTo(cx+bodyW*.04,top-bodyW*.16,cx-bodyW*.03,top-bodyW*.3);ctx.stroke();
+      const flicker=state.running?Math.sin(Date.now()/90)*bodyW*.02:0,flameH=bodyW*.62;
+      ctx.strokeStyle="#24170c";ctx.lineWidth=Math.max(2,bodyW*.035);
+      ctx.beginPath();ctx.moveTo(cx,top+2);ctx.quadraticCurveTo(cx+bodyW*.03,top-bodyW*.08,cx-bodyW*.02,top-bodyW*.17);ctx.stroke();
       ctx.beginPath();ctx.moveTo(cx,top-flameH-flicker);
-      ctx.quadraticCurveTo(cx+bodyW*.44,top-flameH*.33,cx,top-2);
-      ctx.quadraticCurveTo(cx-bodyW*.44,top-flameH*.33,cx,top-flameH-flicker);
-      ctx.fillStyle=accent;ctx.shadowColor=accent;ctx.shadowBlur=bodyW*.55;ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle=rgba(text,.97);
+      ctx.quadraticCurveTo(cx+bodyW*.22,top-flameH*.33,cx,top-2);
+      ctx.quadraticCurveTo(cx-bodyW*.22,top-flameH*.33,cx,top-flameH-flicker);
+      ctx.fillStyle="#ff9d32";ctx.shadowColor="#ff8b25";ctx.shadowBlur=bodyW*.55;ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle="#fff0b8";
       ctx.beginPath();ctx.moveTo(cx,top-flameH*.66-flicker*.5);
-      ctx.quadraticCurveTo(cx+bodyW*.17,top-flameH*.26,cx,top-bodyW*.06);
-      ctx.quadraticCurveTo(cx-bodyW*.17,top-flameH*.26,cx,top-flameH*.66-flicker*.5);ctx.fill();
-      ctx.fillStyle=rgba(border,.55);
+      ctx.quadraticCurveTo(cx+bodyW*.09,top-flameH*.26,cx,top-bodyW*.035);
+      ctx.quadraticCurveTo(cx-bodyW*.09,top-flameH*.26,cx,top-flameH*.66-flicker*.5);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.82)";
       ctx.beginPath();ctx.ellipse(cx,top-bodyW*.1,bodyW*.06,bodyW*.13,0,0,Math.PI*2);ctx.fill();
     }else{
       // Mèche éteinte : un filet de fumée plutôt qu'une bougie disparue.
-      ctx.globalAlpha=.45;ctx.strokeStyle=text;ctx.lineWidth=Math.max(2,bodyW*.03);ctx.lineCap="round";
+      ctx.globalAlpha=.45;ctx.strokeStyle="#d9dee2";ctx.lineWidth=Math.max(2,bodyW*.03);ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(cx,base-6);
       ctx.quadraticCurveTo(cx+bodyW*.28,base-bodyW*.7,cx-bodyW*.12,base-bodyW*1.3);
       ctx.stroke();ctx.globalAlpha=1;
@@ -388,10 +375,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     ctx.drawImage(img,ix,iy,iw,ih);
   }
-  // Bougie : la photo est rognée par le haut à mesure que la cire brûle, le
-  // bougeoir reste fixe ; la flamme, elle, reste dessinée pour vivre (vaciller).
+  // Bougie de référence : la cire photographique reste mince et le bougeoir reste
+  // fixe. Seuls la hauteur, la flamme et la fumée évoluent avec le temps.
   function drawCandlePhoto(progress){
-    if(!ready("candle")){drawCandle(progress);return;}
+    if(!ready("candle")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
     const img=assets.candle,{w,h}=resize(),{accent,text}=palette();
     ctx.clearRect(0,0,w,h);
     const baseY=h*.87,fullH=h*.7,iw=Math.min(w*.46,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
@@ -400,24 +387,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if(progress>.004){glow(ctx,fx,dy-iw*.12,iw*1.1,accent,.28);glow(ctx,fx,dy-iw*.05,iw*.45,"#ffd98a",.2);}
     ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);
     if(progress>.004){
-      // mèche
       ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(fx,dy+1);ctx.lineTo(fx+iw*.006,dy-iw*.028);ctx.stroke();
-      // flamme : halo, manteau, cœur — trois valeurs comme une vraie flamme
       const fh=iw*.3,flick=state.running?Math.sin(Date.now()/90)*iw*.012+Math.sin(Date.now()/47)*iw*.006:0;
       ctx.save();ctx.translate(fx,dy-iw*.03);
       ctx.fillStyle="rgba(255,150,40,.9)";ctx.shadowColor="#ff9b30";ctx.shadowBlur=iw*.22;
       ctx.beginPath();ctx.moveTo(0,-fh-flick);
       ctx.quadraticCurveTo(iw*.075,-fh*.38,0,0);ctx.quadraticCurveTo(-iw*.075,-fh*.38,0,-fh-flick);ctx.fill();
-      ctx.shadowBlur=0;
-      ctx.fillStyle="#ffe9b0";
+      ctx.shadowBlur=0;ctx.fillStyle="#ffe9b0";
       ctx.beginPath();ctx.moveTo(0,-fh*.62-flick*.5);
       ctx.quadraticCurveTo(iw*.038,-fh*.24,0,-iw*.004);ctx.quadraticCurveTo(-iw*.038,-fh*.24,0,-fh*.62-flick*.5);ctx.fill();
       ctx.fillStyle="rgba(255,255,255,.95)";
       ctx.beginPath();ctx.ellipse(0,-fh*.16,iw*.014,fh*.1,0,0,Math.PI*2);ctx.fill();
       ctx.restore();
     }else{
-      // mèche éteinte : filet de fumée
       ctx.globalAlpha=.4;ctx.strokeStyle=text;ctx.lineWidth=Math.max(1.2,iw*.008);ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(fx,dy-2);
       ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;
@@ -447,23 +430,6 @@ document.addEventListener("DOMContentLoaded", () => {
     for(let x=cx-rx;x<=cx+rx;x+=4){const y=level+Math.sin(x/30+phase)*5+Math.sin(x/15-phase*.55)*1.6;x===cx-rx?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
     ctx.restore();ctx.globalAlpha=1;
     ctx.drawImage(img,ix,iy,iw,ih);
-  }
-  // Perles : la photo d'une vraie perle sert de sprite ; les perles écoulées
-  // sont assombries par un filtre, les vivantes gardent leur éclat nacré.
-  function drawBeadsPhoto(progress){
-    if(!ready("pearl")){drawBeads(progress);return;}
-    const img=assets.pearl,{w,h}=resize(),{accent,text}=palette(),cols=6,rows=6,total=cols*rows;
-    const span=Math.min(w,h)*.7,step=span/(cols-1),ox=w/2-span/2,oy=h*.42-span/2,r=step*.3,alive=progress*total;
-    ctx.clearRect(0,0,w,h);glow(ctx,w/2,h*.42,span*.62,accent,.06);
-    ctx.strokeStyle=rgba(text,.16);ctx.lineWidth=Math.max(1,r*.1);
-    ctx.beginPath();for(let row=0;row<rows;row++){const y=oy+row*step;if(row===0)ctx.moveTo(ox,y);if(row%2===0){ctx.lineTo(ox+span,y);if(row<rows-1)ctx.quadraticCurveTo(ox+span+step*.25,y+step*.5,ox+span,y+step);}else{ctx.lineTo(ox,y);if(row<rows-1)ctx.quadraticCurveTo(ox-step*.25,y+step*.5,ox,y+step);}}ctx.stroke();
-    for(let i=0;i<total;i++){
-      const row=Math.floor(i/cols),column=row%2===0?i%cols:cols-1-i%cols,x=ox+column*step,y=oy+row*step,lit=i<alive;
-      if(lit){ctx.shadowColor=accent;ctx.shadowBlur=r*.9;}
-      else ctx.filter="brightness(.3) saturate(.45)";
-      ctx.drawImage(img,x-r,y-r,r*2,r*2);
-      ctx.shadowBlur=0;ctx.filter="none";
-    }
   }
   // Lune : la photo fournit les mers et cratères ; l'ombre qui la mange est un
   // disque sombre à bord doux qui glisse depuis la gauche, comme la nuit.
@@ -542,7 +508,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
     if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
-    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeadsPhoto,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
+    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);

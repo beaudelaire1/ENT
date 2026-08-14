@@ -1,13 +1,15 @@
 import { makeRingRuntime } from "./premium3d/ring.js";
 import { makeHourglassRuntime } from "./premium3d/hourglass.js";
 import { makeWaveRuntime } from "./premium3d/wave.js";
-import { makeCandleRuntime } from "./premium3d/candle.js";
 import { makeBeadsRuntime } from "./premium3d/beads.js";
 import { makeBarsRuntime } from "./premium3d/bars.js";
 import { makeSpiralRuntime } from "./premium3d/spiral.js";
 import { makeCelestialRuntime } from "./premium3d/celestial.js";
 
-const SUPPORTED = new Set(["ring", "hourglass", "wave", "candle", "beads", "moon", "bars", "spiral", "sun"]);
+// Bougie reste volontairement un rendu Canvas procédural : c'est la silhouette
+// mince validée par l'utilisateur. L'ajouter ici réintroduirait un remplacement
+// asynchrone par un second objet, donc une rupture visuelle et un coût GPU inutile.
+const SUPPORTED = new Set(["ring", "hourglass", "wave", "beads", "moon", "bars", "spiral", "sun"]);
 
 function createStudioEnvironment(THREE, renderer, mobile) {
   const environmentScene = new THREE.Scene();
@@ -88,33 +90,53 @@ async function boot() {
   const liveChip = document.querySelector("#live-chip");
   if (!app || !visual || !fallbackCanvas || !progressNode) return;
 
-  const canvas = document.createElement("canvas");
-  canvas.className = "premium-3d-canvas";
-  canvas.setAttribute("aria-hidden", "true");
-  canvas.style.cssText = [
-    "position:absolute",
-    "inset:0",
-    "width:100%",
-    "height:100%",
-    "max-width:none",
-    "max-height:none",
-    "pointer-events:none",
-    "display:none",
-    "z-index:1",
-  ].join(";");
-  visual.prepend(canvas);
+  let started = false;
+  let observer;
+  const start = async () => {
+    if (started) return;
+    started = true;
+    observer?.disconnect();
+    const canvas = document.createElement("canvas");
+    canvas.className = "premium-3d-canvas";
+    canvas.setAttribute("aria-hidden", "true");
+    canvas.style.cssText = [
+      "position:absolute",
+      "inset:0",
+      "width:100%",
+      "height:100%",
+      "max-width:none",
+      "max-height:none",
+      "pointer-events:none",
+      "display:none",
+      "z-index:1",
+    ].join(";");
+    visual.prepend(canvas);
 
-  let THREE;
-  try {
-    THREE = await import(new URL("../vendor/three.module.js", import.meta.url).href);
-  } catch (_) {
-    app.dataset.renderer3d = "fallback";
-    app.dataset.renderer3dReason = "three-module-load";
-    canvas.remove();
-    return;
+    let THREE;
+    try {
+      THREE = await import(new URL("../vendor/three.module.js", import.meta.url).href);
+    } catch (_) {
+      app.dataset.renderer3d = "fallback";
+      app.dataset.renderer3dReason = "three-module-load";
+      canvas.remove();
+      return;
+    }
+
+    createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode, liveChip);
+  };
+  const maybeStart = () => {
+    const mode = visual.dataset.mode || app.dataset.mode;
+    if (SUPPORTED.has(mode)) start();
+  };
+
+  if (SUPPORTED.has(visual.dataset.mode || app.dataset.mode)) {
+    await start();
+  } else {
+    observer = new MutationObserver(maybeStart);
+    observer.observe(visual, { attributes: true, attributeFilter: ["data-mode"] });
+    observer.observe(app, { attributes: true, attributeFilter: ["data-mode"] });
+    window.addEventListener("pagehide", () => observer?.disconnect(), { once: true });
   }
-
-  createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode, liveChip);
 }
 
 function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode, liveChip) {
@@ -138,12 +160,14 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   }
 
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.2 : 1.65));
+  // Un DPR élevé doublait presque le coût GPU sans différence perceptible dans la
+  // scène du minuteur. La définition reste nette, y compris sur écran Retina.
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.1 : 1.35));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = !mobile;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
 
   const scene = new THREE.Scene();
   let studioEnvironment = null;
@@ -205,6 +229,7 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   let active = null;
   let lastWidth = 0;
   let lastHeight = 0;
+  let lastRenderTime = 0;
   let raf = 0;
   let firstThreeFrame = false;
   let rimBaseHex = 0x84bfff;
@@ -273,7 +298,6 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     ring: () => makeRingRuntime(THREE, helpers),
     hourglass: () => makeHourglassRuntime(THREE, helpers, state),
     wave: () => makeWaveRuntime(THREE, helpers, state),
-    candle: () => makeCandleRuntime(THREE, helpers, state),
     beads: () => makeBeadsRuntime(THREE, helpers),
     moon: celestial.moon,
     bars: () => makeBarsRuntime(THREE, helpers),
@@ -312,7 +336,11 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     key.intensity = mode === "moon" ? 0.04 : mode === "sun" ? 0.3 : 4.1;
     rim.intensity = mode === "moon" ? 0.42 : mode === "sun" ? 0.55 : 2.2;
     fill.intensity = mode === "candle" ? 4 : ["sun", "moon"].includes(mode) ? 0 : 12;
-    floor.visible = !["sun", "moon"].includes(mode);
+    floor.visible = !["candle", "sun", "moon"].includes(mode);
+    // La bougie possède déjà sa lumière et son assise sombre : une shadow-map de
+    // 1024 px sur chaque image n'ajoutait rien, mais coûtait beaucoup.
+    key.castShadow = !mobile && !["candle", "moon", "sun"].includes(mode);
+    floor.receiveShadow = key.castShadow;
 
     if (mode === "wave") {
       key.color.set(0xdff8ff);
@@ -346,6 +374,7 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     }
 
     firstThreeFrame = false;
+    lastRenderTime = 0;
     fallbackCanvas.style.opacity = "1";
     fallbackCanvas.style.visibility = "visible";
     canvas.style.display = supported ? "block" : "none";
@@ -392,8 +421,20 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   }
 
   function render(time) {
+    if (document.hidden) {
+      raf = requestAnimationFrame(render);
+      return;
+    }
     readState();
     if (active) {
+      // Le temps change une fois par seconde. 40 i/s en marche et 20 i/s au repos
+      // suffisent largement aux flammes et évitent une boucle GPU à 60/120 i/s.
+      const minimumFrameTime = state.running ? (mobile ? 34 : 24) : (mobile ? 82 : 48);
+      if (firstThreeFrame && time - lastRenderTime < minimumFrameTime) {
+        raf = requestAnimationFrame(render);
+        return;
+      }
+      lastRenderTime = time;
       resize();
       tintWorld();
       active.update(state.progress, time);

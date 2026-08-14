@@ -45,14 +45,17 @@
   };
 
   window.SablierDecor = stub;
-  window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)
+  // L'objet temporel possède un unique renderer canonique dans sablier.js.
+  // Les univers restent indépendants et ne peuvent donc plus remplacer sa forme.
+  window.SablierPremium3DReady = Promise.resolve(null);
+  window.SablierWorld3DReady = import(new URL("world3d.js" + version, here).href)
     .catch((error) => {
       const app = document.querySelector("#focus-app");
       if (app) {
-        app.dataset.renderer3d = "fallback";
-        app.dataset.renderer3dReason = "premium-module-load";
+        app.dataset.world3d = "fallback";
+        app.dataset.world3dReason = "world-module-load";
       }
-      console.error("Sablier premium 3D indisponible", error);
+      console.error("Univers 3D indisponible", error);
       return null;
     });
   window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"));
