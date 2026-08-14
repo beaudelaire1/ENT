@@ -32,6 +32,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
   const decor=window.SablierDecor.create($("#decor-canvas"));
+  // Visuels photoréalistes : les photos des objets (sablier, bougie, lune…) sont
+  // chargées une fois. Tant qu'une photo n'est pas prête, le rendu vectoriel
+  // historique prend le relais — l'écran ne reste jamais vide.
+  const assets={};
+  try{
+    const manifest=window.SABLIER_ASSETS||JSON.parse(document.querySelector("#asset-data")?.textContent||"{}");
+    for(const [name,url] of Object.entries(manifest)){
+      const img=new Image();img.decoding="async";img.src=url;assets[name]=img;
+    }
+  }catch(_){}
+  const ready=(name)=>Boolean(assets[name]?.complete&&assets[name].naturalWidth>0);
 
   function parseDuration(value){
     value=value.trim().replace(",","."); let seconds;
@@ -319,6 +330,195 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.strokeStyle=rgba(text,.3);ctx.lineWidth=1;for(let i=0;i<12;i++){const a=i*Math.PI/6,inner=r*1.25,outer=r*(1.42+(i%2)*.1);ctx.beginPath();ctx.moveTo(x+Math.cos(a)*inner,y+Math.sin(a)*inner);ctx.lineTo(x+Math.cos(a)*outer,y+Math.sin(a)*outer);ctx.stroke();}
     }
   }
+  // ------------------------------------------------------------------
+  // Rendus photoréalistes : la photo fournit la matière (verre, chrome, cire,
+  // nacre…), le canvas n'anime que ce qui vit — sable, eau, flamme, ombre.
+  // Chaque renderer retombe sur le tracé vectoriel tant que sa photo n'est
+  // pas chargée : jamais d'écran vide, même hors-ligne.
+  // ------------------------------------------------------------------
+  // Sablier : le sable est peint DERRIÈRE la photo, dans l'empreinte des
+  // ampoules ; la vitre lui garde ainsi ses reflets et ses épaisseurs.
+  function drawHourglassPhoto(progress){
+    if(!ready("hourglass")){drawHourglass(progress);return;}
+    const img=assets.hourglass,{w,h}=resize(),{accent}=palette();
+    ctx.clearRect(0,0,w,h);
+    const ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight,ix=w/2-iw/2,iy=h*.04;
+    const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;
+    glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);
+    // Profil réel des ampoules, mesuré sur la photo : t=0 au col, t=1 à
+    // l'extrémité. Le tracé épouse le verre au lieu de le dépasser.
+    const profile=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];
+    const bulbPath=(yNeck,yEnd)=>{
+      const H=yEnd-yNeck;
+      ctx.beginPath();
+      profile.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+      for(let i=profile.length-1;i>=0;i--){const [t,f]=profile[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}
+      ctx.closePath();
+    };
+    // Sable doré : dégradé horizontal, éclairé au centre comme la photo.
+    const sand=ctx.createLinearGradient(cx-hw,0,cx+hw,0);
+    sand.addColorStop(0,"#9a6826");sand.addColorStop(.28,"#dfae55");sand.addColorStop(.5,"#f6d891");sand.addColorStop(.74,"#d9a04a");sand.addColorStop(1,"#8d5f22");
+    ctx.fillStyle=sand;
+    const received=1-progress;
+    if(progress>.001){
+      ctx.save();bulbPath(neckY,topY);ctx.clip();
+      const surface=neckY-(neckY-topY)*progress;
+      ctx.fillRect(cx-hw,surface,hw*2,neckY-surface+1);
+      // creux que le filet creuse à la surface
+      ctx.fillStyle="rgba(120,80,30,.5)";ctx.beginPath();ctx.ellipse(cx,surface,hw*.16,Math.max(2,hw*.03),0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+    let peak=floorY;
+    if(received>.001){
+      ctx.save();bulbPath(neckY,floorY);ctx.clip();
+      ctx.fillStyle=sand;
+      const level=floorY-(floorY-neckY)*received;
+      const mound=Math.min(hw*.5,(floorY-neckY)*.32*Math.min(1,received*3.5));
+      peak=level-mound;
+      ctx.fillRect(cx-hw,level,hw*2,floorY-level+1);
+      ctx.beginPath();ctx.moveTo(cx-hw*.75,level+1);ctx.lineTo(cx,peak);ctx.lineTo(cx+hw*.75,level+1);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    if(state.running&&progress>.001){
+      const stream=ctx.createLinearGradient(0,neckY,0,peak);
+      stream.addColorStop(0,"#f8e0a2");stream.addColorStop(1,"#d99f49");
+      ctx.strokeStyle=stream;ctx.lineCap="round";
+      ctx.lineWidth=Math.max(1.2,iw*.005);ctx.beginPath();ctx.moveTo(cx,neckY+1);ctx.lineTo(cx,peak);ctx.stroke();
+      ctx.lineWidth=Math.max(.6,iw*.002);ctx.strokeStyle="rgba(255,240,200,.9)";ctx.beginPath();ctx.moveTo(cx-iw*.002,neckY+1);ctx.lineTo(cx-iw*.002,peak);ctx.stroke();
+    }
+    ctx.drawImage(img,ix,iy,iw,ih);
+  }
+  // Bougie : la photo est rognée par le haut à mesure que la cire brûle, le
+  // bougeoir reste fixe ; la flamme, elle, reste dessinée pour vivre (vaciller).
+  function drawCandlePhoto(progress){
+    if(!ready("candle")){drawCandle(progress);return;}
+    const img=assets.candle,{w,h}=resize(),{accent,text}=palette();
+    ctx.clearRect(0,0,w,h);
+    const baseY=h*.87,fullH=h*.7,iw=Math.min(w*.46,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
+    const waxTop=img.naturalHeight*.058,base=img.naturalHeight*.975;
+    const topSrc=waxTop+(1-progress)*(base-waxTop),srcH=base-topSrc,dh=srcH*scale,dx=w/2-iw/2,dy=baseY-dh,fx=w/2;
+    if(progress>.004){glow(ctx,fx,dy-iw*.12,iw*1.1,accent,.28);glow(ctx,fx,dy-iw*.05,iw*.45,"#ffd98a",.2);}
+    ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);
+    if(progress>.004){
+      // mèche
+      ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(fx,dy+1);ctx.lineTo(fx+iw*.006,dy-iw*.028);ctx.stroke();
+      // flamme : halo, manteau, cœur — trois valeurs comme une vraie flamme
+      const fh=iw*.3,flick=state.running?Math.sin(Date.now()/90)*iw*.012+Math.sin(Date.now()/47)*iw*.006:0;
+      ctx.save();ctx.translate(fx,dy-iw*.03);
+      ctx.fillStyle="rgba(255,150,40,.9)";ctx.shadowColor="#ff9b30";ctx.shadowBlur=iw*.22;
+      ctx.beginPath();ctx.moveTo(0,-fh-flick);
+      ctx.quadraticCurveTo(iw*.075,-fh*.38,0,0);ctx.quadraticCurveTo(-iw*.075,-fh*.38,0,-fh-flick);ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle="#ffe9b0";
+      ctx.beginPath();ctx.moveTo(0,-fh*.62-flick*.5);
+      ctx.quadraticCurveTo(iw*.038,-fh*.24,0,-iw*.004);ctx.quadraticCurveTo(-iw*.038,-fh*.24,0,-fh*.62-flick*.5);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.95)";
+      ctx.beginPath();ctx.ellipse(0,-fh*.16,iw*.014,fh*.1,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }else{
+      // mèche éteinte : filet de fumée
+      ctx.globalAlpha=.4;ctx.strokeStyle=text;ctx.lineWidth=Math.max(1.2,iw*.008);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(fx,dy-2);
+      ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;
+    }
+  }
+  // Marée : l'eau est peinte derrière la photo du bocal, découpée sur son
+  // ellipse intérieure ; la surface ondule seulement pendant le décompte.
+  function drawWavePhoto(progress){
+    if(!ready("wave")){drawWave(progress);return;}
+    const img=assets.wave,{w,h}=resize(),{accent,border,text}=palette();
+    ctx.clearRect(0,0,w,h);
+    const iw=Math.min(w*.84,h*.8),ih=iw*img.naturalHeight/img.naturalWidth,ix=w/2-iw/2,iy=h*.44-ih/2;
+    const cx=w/2,cy=iy+ih*.52,rx=iw*.46,ry=ih*.42,bottom=cy+ry*.92;
+    glow(ctx,cx,cy,iw*.6,accent,.07);
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.clip();
+    const level=bottom-2*ry*.92*progress,phase=state.running?Date.now()/850:0;
+    const water=ctx.createLinearGradient(0,level,0,bottom);
+    water.addColorStop(0,rgba(text,.8));water.addColorStop(.07,accent);water.addColorStop(.6,rgba(accent,.78));water.addColorStop(1,rgba(border,.95));
+    for(let layer=2;layer>=0;layer--){
+      const offset=layer*5,amp=5+layer*2.5;
+      ctx.globalAlpha=1-layer*.2;ctx.fillStyle=layer===0?water:rgba(accent,.55-layer*.08);
+      ctx.beginPath();ctx.moveTo(cx-rx,bottom+4);
+      for(let x=cx-rx;x<=cx+rx;x+=4){const wave=Math.sin(x/(30+layer*17)+phase*(1-layer*.12)+layer*1.7)*amp+Math.sin(x/15-phase*.55)*1.6;ctx.lineTo(x,level+offset+wave);}
+      ctx.lineTo(cx+rx,bottom+4);ctx.closePath();ctx.fill();
+    }
+    ctx.globalAlpha=.75;ctx.strokeStyle=rgba(text,.8);ctx.lineWidth=1.4;ctx.beginPath();
+    for(let x=cx-rx;x<=cx+rx;x+=4){const y=level+Math.sin(x/30+phase)*5+Math.sin(x/15-phase*.55)*1.6;x===cx-rx?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+    ctx.restore();ctx.globalAlpha=1;
+    ctx.drawImage(img,ix,iy,iw,ih);
+  }
+  // Perles : la photo d'une vraie perle sert de sprite ; les perles écoulées
+  // sont assombries par un filtre, les vivantes gardent leur éclat nacré.
+  function drawBeadsPhoto(progress){
+    if(!ready("pearl")){drawBeads(progress);return;}
+    const img=assets.pearl,{w,h}=resize(),{accent,text}=palette(),cols=6,rows=6,total=cols*rows;
+    const span=Math.min(w,h)*.7,step=span/(cols-1),ox=w/2-span/2,oy=h*.42-span/2,r=step*.3,alive=progress*total;
+    ctx.clearRect(0,0,w,h);glow(ctx,w/2,h*.42,span*.62,accent,.06);
+    ctx.strokeStyle=rgba(text,.16);ctx.lineWidth=Math.max(1,r*.1);
+    ctx.beginPath();for(let row=0;row<rows;row++){const y=oy+row*step;if(row===0)ctx.moveTo(ox,y);if(row%2===0){ctx.lineTo(ox+span,y);if(row<rows-1)ctx.quadraticCurveTo(ox+span+step*.25,y+step*.5,ox+span,y+step);}else{ctx.lineTo(ox,y);if(row<rows-1)ctx.quadraticCurveTo(ox-step*.25,y+step*.5,ox,y+step);}}ctx.stroke();
+    for(let i=0;i<total;i++){
+      const row=Math.floor(i/cols),column=row%2===0?i%cols:cols-1-i%cols,x=ox+column*step,y=oy+row*step,lit=i<alive;
+      if(lit){ctx.shadowColor=accent;ctx.shadowBlur=r*.9;}
+      else ctx.filter="brightness(.3) saturate(.45)";
+      ctx.drawImage(img,x-r,y-r,r*2,r*2);
+      ctx.shadowBlur=0;ctx.filter="none";
+    }
+  }
+  // Lune : la photo fournit les mers et cratères ; l'ombre qui la mange est un
+  // disque sombre à bord doux qui glisse depuis la gauche, comme la nuit.
+  function drawMoonPhoto(progress){
+    if(!ready("moon")){drawMoon(progress);return;}
+    const img=assets.moon,{w,h}=resize(),{accent}=palette();
+    ctx.clearRect(0,0,w,h);
+    const d=Math.min(w,h)*.74,cx=w/2,cy=h*.44,r=d/2;
+    glow(ctx,cx,cy,r*1.8,accent,.2);
+    ctx.drawImage(img,cx-r,cy-r,d,d);
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+    ctx.fillStyle="rgba(3,6,12,.97)";ctx.shadowColor="rgba(3,6,12,1)";ctx.shadowBlur=r*.14;
+    ctx.beginPath();ctx.arc(cx-2.2*r*progress,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  // Soleil : le disque photographique parcourt son arc, du lever au coucher.
+  function drawSunPhoto(progress){
+    if(!ready("sun")){drawSun(progress);return;}
+    const img=assets.sun,{w,h}=resize(),{accent,border}=palette();
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2,horizon=h*.66,arc=Math.min(w,h)*.35,d=Math.min(w,h)*.2,r=d/2;
+    const dusk=ctx.createLinearGradient(0,h*.1,0,horizon);dusk.addColorStop(0,rgba(accent,0));dusk.addColorStop(1,rgba(accent,.12));
+    ctx.fillStyle=dusk;ctx.fillRect(cx-arc*1.3,h*.08,arc*2.6,horizon-h*.08);
+    ctx.strokeStyle=border;ctx.lineWidth=1.5;ctx.globalAlpha=.4;
+    ctx.beginPath();ctx.arc(cx,horizon,arc,Math.PI,0);ctx.stroke();
+    ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(cx-arc*1.25,horizon);ctx.lineTo(cx+arc*1.25,horizon);ctx.stroke();
+    ctx.globalAlpha=1;
+    const angle=Math.PI*(1-progress),x=cx+Math.cos(angle)*arc,y=horizon-Math.sin(angle)*arc;
+    if(y<=horizon+r*.4){
+      glow(ctx,x,y,d*1.15,accent,.3);
+      ctx.shadowColor=accent;ctx.shadowBlur=d*.5;
+      ctx.drawImage(img,x-r,y-r,d,d);
+      ctx.shadowBlur=0;
+    }
+  }
+  // Anneau : une vraie jauge d'horlogerie porte les graduations ; le temps
+  // restant est un arc lumineux posé dans sa gorge.
+  function drawRingPhoto(progress){
+    if(!ready("ring")){drawRing(progress);return;}
+    const img=assets.ring,{w,h}=resize(),{accent,text}=palette();
+    ctx.clearRect(0,0,w,h);
+    const d=Math.min(w,h)*.72,cx=w/2,cy=h*.42,r=d*.395;
+    glow(ctx,cx,cy,d*.62,accent,.09);
+    ctx.drawImage(img,cx-d/2,cy-d/2,d,d);
+    if(progress>.001){
+      const end=-Math.PI/2+Math.PI*2*progress;
+      const active=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+      active.addColorStop(0,rgba(accent,.75));active.addColorStop(.55,accent);active.addColorStop(1,rgba(text,.98));
+      ctx.strokeStyle=active;ctx.lineWidth=d*.035;ctx.lineCap="round";
+      ctx.shadowColor=accent;ctx.shadowBlur=d*.06;
+      ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,end);ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.fillStyle=text;ctx.beginPath();ctx.arc(cx+Math.cos(end)*r,cy+Math.sin(end)*r,d*.012,0,Math.PI*2);ctx.fill();
+    }
+  }
   function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
   function finish(){state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});logSession();}
   // Une session achevée est envoyée au serveur : c'est ce qui alimente le temps réel de
@@ -342,7 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
     if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
-    const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,candle:drawCandle,beads:drawBeads,moon:drawMoon,bars:drawBars,spiral:drawSpiral,sun:drawSun};
+    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeadsPhoto,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);

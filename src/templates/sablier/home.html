@@ -74,5 +74,6 @@
 </div>
 {{ playlist_payload|json_script:"playlist-data" }}
 {{ decors|json_script:"decor-data" }}
+<script id="asset-data" type="application/json">{"hourglass":"{% static 'sablier/img/hourglass-vessel.webp' %}?v={{ asset_version }}","candle":"{% static 'sablier/img/candle-body.webp' %}?v={{ asset_version }}","wave":"{% static 'sablier/img/wave-sphere.webp' %}?v={{ asset_version }}","pearl":"{% static 'sablier/img/pearl.webp' %}?v={{ asset_version }}","moon":"{% static 'sablier/img/moon.webp' %}?v={{ asset_version }}","sun":"{% static 'sablier/img/sun.webp' %}?v={{ asset_version }}","ring":"{% static 'sablier/img/ring.webp' %}?v={{ asset_version }}"}</script>
 {% endblock %}
 {% block scripts %}<script src="{% static 'sablier/decor.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/sablier.js' %}?v={{ asset_version }}" defer></script>{% endblock %}
