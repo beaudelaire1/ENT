@@ -72,14 +72,8 @@ jobs:
       - run: python src/manage.py collectstatic --noinput
       - run: ruff check src
       - run: ruff format --check src
-      - name: Run test suite
-        shell: bash
-        run: |
-          set +e
-          coverage run src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests notifications.tests planner.tests sablier.tests 2>&1 | tee /tmp/test-output.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            python -c 'from pathlib import Path; import re; lines=Path("/tmp/test-output.log").read_text(encoding="utf-8", errors="replace").splitlines(); indexes=[i for i,line in enumerate(lines) if re.match(r"^(FAIL|ERROR): ", line)]; selected=[]; [selected.extend(lines[max(0,i-2):min(len(lines),i+28)]) for i in indexes]; selected.extend(line for line in lines if line.startswith("Ran ") or line.startswith("FAILED (") or line.startswith("FAILED ")); summary="\n".join(selected if selected else lines[-60:]); summary=summary[-6000:]; escaped=summary.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"); print("::error title=Django test failure::" + escaped)'
-          fi
-          exit "$status"
+      - run: >-
+          coverage run src/manage.py test
+          accounts.tests core.tests dashboard.tests formations.tests
+          library.tests notifications.tests planner.tests sablier.tests
       - run: coverage report
