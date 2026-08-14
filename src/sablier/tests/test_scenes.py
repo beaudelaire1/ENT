@@ -243,12 +243,14 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
 
     def test_hourglass_keeps_its_canonical_image_with_a_readable_shape(self):
         engine = self.read_static("sablier.js")
+        css = self.read_static("sablier.css")
         template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
         self.assertIn("hourglass:drawHourglassPhoto", engine)
         self.assertIn("const shapeWidth=1.34", engine)
         self.assertIn("function getHourglassGrainPattern()", engine)
         self.assertIn("for(let i=0;i<1650;i++)", engine)
         self.assertIn("for(let i=0;i<18;i++)", engine)
+        self.assertIn(".visual-wrap .canvas-time { bottom:-4px; }", css)
         self.assertIn('"hourglass":"{{ static_prefix }}sablier/img/7073fefb', template)
 
     def test_all_time_objects_use_one_canonical_renderer(self):
