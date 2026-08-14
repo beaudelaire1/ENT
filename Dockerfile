@@ -3,7 +3,8 @@ WORKDIR /visual
 COPY package.json ./
 RUN npm install --ignore-scripts --no-audit --no-fund \
     && mkdir -p /vendor \
-    && cp node_modules/three/build/three.module.js /vendor/three.module.js
+    && cp node_modules/three/build/three.module.js /vendor/three.module.js \
+    && cp node_modules/three/build/three.core.js /vendor/three.core.js
 
 FROM python:3.12.11-slim-bookworm
 
@@ -22,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 COPY --from=visual-runtime /vendor/three.module.js /app/src/static/vendor/three.module.js
+COPY --from=visual-runtime /vendor/three.core.js /app/src/static/vendor/three.core.js
 RUN mkdir -p /app/src/data /app/src/media /app/src/staticfiles /app/run \
     && python src/manage.py generate_chime \
     && python src/manage.py collectstatic --noinput \
