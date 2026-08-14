@@ -130,6 +130,18 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn('app.dataset.renderer3d = "fallback"', premium)
         self.assertIn("webglcontextlost", premium)
         self.assertIn("fallbackCanvas.style.visibility", premium)
+        self.assertIn("renderer3dReason", premium)
+
+    def test_physical_materials_receive_a_procedural_studio_environment(self):
+        engine = self.read_static("premium3d.js")
+        for fragment in (
+            "new THREE.PMREMGenerator(renderer)",
+            "scene.environment = studioEnvironment.texture",
+            "scene.environmentIntensity",
+            "createStudioBackdrop(THREE)",
+            'app.dataset.renderer3dEnvironment = "studio"',
+        ):
+            self.assertIn(fragment, engine)
 
     def test_digital_and_zen_remain_native_non_webgl_modes(self):
         engine = self.read_static("premium3d.js")
