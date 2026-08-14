@@ -325,11 +325,28 @@ document.addEventListener("DOMContentLoaded", () => {
   // ------------------------------------------------------------------
   // Sablier : le sable est peint DERRIÈRE la photo, dans l'empreinte des
   // ampoules ; la vitre lui garde ainsi ses reflets et ses épaisseurs.
+  let hourglassGrainPattern=null;
+  function getHourglassGrainPattern(){
+    if(hourglassGrainPattern)return hourglassGrainPattern;
+    const tile=document.createElement("canvas"),grain=tile.getContext("2d");
+    tile.width=128;tile.height=128;
+    let seed=0x51ab1e;
+    const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+    for(let i=0;i<1650;i++){
+      const x=random()*tile.width,y=random()*tile.height,r=.22+random()*.88,tone=random();
+      grain.fillStyle=tone>.78?`rgba(255,239,179,${.28+random()*.5})`:tone>.34?`rgba(210,151,61,${.25+random()*.5})`:`rgba(112,70,22,${.18+random()*.38})`;
+      grain.beginPath();grain.arc(x,y,r,0,Math.PI*2);grain.fill();
+    }
+    hourglassGrainPattern=ctx.createPattern(tile,"repeat");
+    return hourglassGrainPattern;
+  }
   function drawHourglassPhoto(progress){
     if(!ready("hourglass")){drawHourglass(progress);return;}
     const img=assets.hourglass,{w,h}=resize(),{accent}=palette();
     ctx.clearRect(0,0,w,h);
-    const ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight,ix=w/2-iw/2,iy=h*.04;
+    // Le fichier source est cadré très verticalement. Une correction horizontale
+    // restitue les épaules du verre et l'assise métallique sans rogner l'objet.
+    const shapeWidth=1.34,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04;
     const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;
     glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);
     // Profil réel des ampoules, mesuré sur la photo : t=0 au col, t=1 à
@@ -345,25 +362,30 @@ document.addEventListener("DOMContentLoaded", () => {
     // Sable doré : dégradé horizontal, éclairé au centre comme la photo.
     const sand=ctx.createLinearGradient(cx-hw,0,cx+hw,0);
     sand.addColorStop(0,"#9a6826");sand.addColorStop(.28,"#dfae55");sand.addColorStop(.5,"#f6d891");sand.addColorStop(.74,"#d9a04a");sand.addColorStop(1,"#8d5f22");
-    ctx.fillStyle=sand;
+    const grain=getHourglassGrainPattern();
+    const fillSand=(path)=>{
+      ctx.fillStyle=sand;path();ctx.fill();
+      if(grain){ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=grain;path();ctx.fill();ctx.restore();}
+    };
     const received=1-progress;
     if(progress>.001){
       ctx.save();bulbPath(neckY,topY);ctx.clip();
       const surface=neckY-(neckY-topY)*progress;
-      ctx.fillRect(cx-hw,surface,hw*2,neckY-surface+1);
-      // creux que le filet creuse à la surface
-      ctx.fillStyle="rgba(120,80,30,.5)";ctx.beginPath();ctx.ellipse(cx,surface,hw*.16,Math.max(2,hw*.03),0,0,Math.PI*2);ctx.fill();
+      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,surface,hw*2,neckY-surface+1);});
+      // Surface irrégulière et petit creux que le filet creuse dans les grains.
+      ctx.strokeStyle="rgba(255,231,165,.72)";ctx.lineWidth=Math.max(.8,iw*.0024);ctx.beginPath();
+      for(let x=cx-hw*.9;x<=cx+hw*.9;x+=3){const y=surface+Math.sin(x*.19)*1.15+Math.sin(x*.047)*.75;x===cx-hw*.9?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+      ctx.fillStyle="rgba(92,53,17,.32)";ctx.beginPath();ctx.ellipse(cx,surface+1,hw*.14,Math.max(1.5,hw*.025),0,0,Math.PI*2);ctx.fill();
       ctx.restore();
     }
     let peak=floorY;
     if(received>.001){
       ctx.save();bulbPath(neckY,floorY);ctx.clip();
-      ctx.fillStyle=sand;
       const level=floorY-(floorY-neckY)*received;
       const mound=Math.min(hw*.5,(floorY-neckY)*.32*Math.min(1,received*3.5));
       peak=level-mound;
-      ctx.fillRect(cx-hw,level,hw*2,floorY-level+1);
-      ctx.beginPath();ctx.moveTo(cx-hw*.75,level+1);ctx.lineTo(cx,peak);ctx.lineTo(cx+hw*.75,level+1);ctx.closePath();ctx.fill();
+      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,level,hw*2,floorY-level+1);ctx.moveTo(cx-hw*.84,level+2);ctx.bezierCurveTo(cx-hw*.48,level-mound*.12,cx-hw*.2,peak+mound*.16,cx,peak);ctx.bezierCurveTo(cx+hw*.22,peak+mound*.14,cx+hw*.52,level-mound*.1,cx+hw*.84,level+2);ctx.closePath();});
+      ctx.strokeStyle="rgba(255,229,160,.52)";ctx.lineWidth=Math.max(.8,iw*.002);ctx.beginPath();ctx.moveTo(cx-hw*.78,level);ctx.quadraticCurveTo(cx-hw*.18,peak+mound*.08,cx,peak);ctx.quadraticCurveTo(cx+hw*.2,peak+mound*.08,cx+hw*.78,level);ctx.stroke();
       ctx.restore();
     }
     if(state.running&&progress>.001){
@@ -372,6 +394,11 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.strokeStyle=stream;ctx.lineCap="round";
       ctx.lineWidth=Math.max(1.2,iw*.005);ctx.beginPath();ctx.moveTo(cx,neckY+1);ctx.lineTo(cx,peak);ctx.stroke();
       ctx.lineWidth=Math.max(.6,iw*.002);ctx.strokeStyle="rgba(255,240,200,.9)";ctx.beginPath();ctx.moveTo(cx-iw*.002,neckY+1);ctx.lineTo(cx-iw*.002,peak);ctx.stroke();
+      const phase=Date.now()/46;
+      for(let i=0;i<18;i++){
+        const travel=((phase+i*7.17)%18)/18,y=neckY+(peak-neckY)*travel,x=cx+Math.sin(i*12.7+phase*.15)*iw*.0045;
+        ctx.fillStyle=i%3===0?"rgba(255,239,188,.95)":"rgba(205,143,54,.92)";ctx.beginPath();ctx.arc(x,y,Math.max(.55,iw*(.0014+(i%4)*.00028)),0,Math.PI*2);ctx.fill();
+      }
     }
     ctx.drawImage(img,ix,iy,iw,ih);
   }
