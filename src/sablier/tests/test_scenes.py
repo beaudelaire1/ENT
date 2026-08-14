@@ -91,6 +91,7 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "celestial-realistic.js",
             "material-kit.js",
             "flame-texture.js",
+            "native-modes.css",
         )
         for module in expected:
             path = settings.BASE_DIR / "static" / "sablier" / "premium3d" / module
@@ -132,10 +133,18 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
 
     def test_digital_and_zen_remain_native_non_webgl_modes(self):
         engine = self.read_static("premium3d.js")
-        self.assertNotIn('"digital", "zen"', engine)
-        css = self.read_static("sablier.css")
+        supported = next(line for line in engine.splitlines() if line.startswith("const SUPPORTED"))
+        self.assertNotIn('"digital"', supported)
+        self.assertNotIn('"zen"', supported)
+        css = self.read_static("premium3d/native-modes.css")
         self.assertIn('.visual-wrap[data-mode="digital"] .digital-visual', css)
-        self.assertIn('.visual-wrap[data-mode="zen"] .zen-visual', css)
+        self.assertIn('.visual-wrap[data-mode="zen"] .zen-rings', css)
+        loader = self.read_static("decor.js")
+        self.assertIn("premium3d/native-modes.css", loader)
+
+    def test_nested_premium_assets_participate_in_cache_versioning(self):
+        views = (settings.BASE_DIR / "sablier" / "views.py").read_text(encoding="utf-8")
+        self.assertIn('folder.rglob("*")', views)
 
     def test_visual_runtime_never_controls_the_users_music(self):
         files = [

@@ -121,6 +121,9 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   let lastHeight = 0;
   let raf = 0;
   let firstThreeFrame = false;
+  let rimBaseHex = 0x84bfff;
+  const rimBase = new THREE.Color(rimBaseHex);
+  const worldTint = new THREE.Color();
 
   const mesh = (geometry, material, { cast = true, receive = true } = {}) => {
     const item = new THREE.Mesh(geometry, material);
@@ -215,7 +218,8 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
 
   function configureLighting(mode) {
     key.color.set(0xffe8cb);
-    rim.color.set(0x84bfff);
+    rimBaseHex = 0x84bfff;
+    rim.color.set(rimBaseHex);
     fill.color.set(0xffaa63);
 
     hemi.intensity = mode === "moon" ? 0.14 : mode === "sun" ? 0.5 : 1.55;
@@ -226,14 +230,16 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
 
     if (mode === "wave") {
       key.color.set(0xdff8ff);
-      rim.color.set(0x62d8ff);
+      rimBaseHex = 0x62d8ff;
+      rim.color.set(rimBaseHex);
       fill.color.set(0x3da8c9);
       key.intensity = 3.2;
       rim.intensity = 2.8;
       fill.intensity = 7;
     } else if (["ring", "bars", "spiral"].includes(mode)) {
       key.color.set(0xf7f3e9);
-      rim.color.set(0x8fb8ff);
+      rimBaseHex = 0x8fb8ff;
+      rim.color.set(rimBaseHex);
       fill.color.set(0xe2a55b);
       key.intensity = 4.5;
       rim.intensity = 2.5;
@@ -290,8 +296,12 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   function tintWorld() {
     const style = getComputedStyle(app);
     const raw = style.getPropertyValue("--world-light").trim();
+    rimBase.setHex(rimBaseHex);
     if (/^#[0-9a-f]{6}$/i.test(raw)) {
-      rim.color.lerp(new THREE.Color(raw), 0.28);
+      worldTint.set(raw);
+      rim.color.copy(rimBase).lerp(worldTint, 0.28);
+    } else {
+      rim.color.copy(rimBase);
     }
   }
 
