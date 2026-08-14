@@ -36,7 +36,7 @@ from .tasks import validate_audio_track
 def sablier_asset_version() -> str:
     """Empreinte des ressources de Sablier : la date de la plus récente."""
     folder = settings.BASE_DIR / "static" / "sablier"
-    stamps = [path.stat().st_mtime for path in folder.glob("*.*") if path.suffix in {".js", ".css"}]
+    stamps = [path.stat().st_mtime for path in folder.rglob("*") if path.is_file() and path.suffix in {".js", ".css"}]
     return str(int(max(stamps))) if stamps else "0"
 
 

@@ -11,6 +11,11 @@
     document.head.append(script);
   });
 
+  const nativeStyles = document.createElement("link");
+  nativeStyles.rel = "stylesheet";
+  nativeStyles.href = new URL("premium3d/native-modes.css" + version, here).href;
+  document.head.append(nativeStyles);
+
   const stub = {
     names: [],
     backdrops: [],

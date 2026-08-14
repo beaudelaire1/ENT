@@ -318,7 +318,7 @@ class Assessment(TimeStampedModel):
     def days_left(self) -> int | None:
         if not self.scheduled_for:
             return None
-        return (self.scheduled_for.date() - timezone.localdate()).days
+        return (timezone.localdate(self.scheduled_for) - timezone.localdate()).days
 
 
 class AssessmentResult(TimeStampedModel):

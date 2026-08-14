@@ -1,9 +1,13 @@
+import { makeRingRuntime } from "./premium3d/ring.js";
 import { makeHourglassRuntime } from "./premium3d/hourglass.js";
+import { makeWaveRuntime } from "./premium3d/wave.js";
 import { makeCandleRuntime } from "./premium3d/candle.js";
 import { makeBeadsRuntime } from "./premium3d/beads.js";
+import { makeBarsRuntime } from "./premium3d/bars.js";
+import { makeSpiralRuntime } from "./premium3d/spiral.js";
 import { makeCelestialRuntime } from "./premium3d/celestial.js";
 
-const SUPPORTED = new Set(["hourglass", "candle", "beads", "moon", "sun"]);
+const SUPPORTED = new Set(["ring", "hourglass", "wave", "candle", "beads", "moon", "bars", "spiral", "sun"]);
 
 async function boot() {
   const app = document.querySelector("#focus-app");
@@ -64,7 +68,7 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.2 : 1.65));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.08;
   renderer.shadowMap.enabled = !mobile;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -117,6 +121,9 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   let lastHeight = 0;
   let raf = 0;
   let firstThreeFrame = false;
+  let rimBaseHex = 0x84bfff;
+  const rimBase = new THREE.Color(rimBaseHex);
+  const worldTint = new THREE.Color();
 
   const mesh = (geometry, material, { cast = true, receive = true } = {}) => {
     const item = new THREE.Mesh(geometry, material);
@@ -177,10 +184,14 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
 
   const celestial = makeCelestialRuntime(THREE, helpers);
   const factories = {
+    ring: () => makeRingRuntime(THREE, helpers),
     hourglass: () => makeHourglassRuntime(THREE, helpers, state),
+    wave: () => makeWaveRuntime(THREE, helpers, state),
     candle: () => makeCandleRuntime(THREE, helpers, state),
     beads: () => makeBeadsRuntime(THREE, helpers),
     moon: celestial.moon,
+    bars: () => makeBarsRuntime(THREE, helpers),
+    spiral: () => makeSpiralRuntime(THREE, helpers),
     sun: celestial.sun,
   };
 
@@ -206,11 +217,34 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   }
 
   function configureLighting(mode) {
+    key.color.set(0xffe8cb);
+    rimBaseHex = 0x84bfff;
+    rim.color.set(rimBaseHex);
+    fill.color.set(0xffaa63);
+
     hemi.intensity = mode === "moon" ? 0.14 : mode === "sun" ? 0.5 : 1.55;
     key.intensity = mode === "moon" ? 0.04 : mode === "sun" ? 0.3 : 4.1;
     rim.intensity = mode === "moon" ? 0.42 : mode === "sun" ? 0.55 : 2.2;
     fill.intensity = mode === "candle" ? 4 : ["sun", "moon"].includes(mode) ? 0 : 12;
     floor.visible = !["sun", "moon"].includes(mode);
+
+    if (mode === "wave") {
+      key.color.set(0xdff8ff);
+      rimBaseHex = 0x62d8ff;
+      rim.color.set(rimBaseHex);
+      fill.color.set(0x3da8c9);
+      key.intensity = 3.2;
+      rim.intensity = 2.8;
+      fill.intensity = 7;
+    } else if (["ring", "bars", "spiral"].includes(mode)) {
+      key.color.set(0xf7f3e9);
+      rimBaseHex = 0x8fb8ff;
+      rim.color.set(rimBaseHex);
+      fill.color.set(0xe2a55b);
+      key.intensity = 4.5;
+      rim.intensity = 2.5;
+      fill.intensity = 7.5;
+    }
   }
 
   function setMode(mode) {
@@ -262,8 +296,12 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   function tintWorld() {
     const style = getComputedStyle(app);
     const raw = style.getPropertyValue("--world-light").trim();
+    rimBase.setHex(rimBaseHex);
     if (/^#[0-9a-f]{6}$/i.test(raw)) {
-      rim.color.set(raw).lerp(new THREE.Color(0x7aaeff), 0.55);
+      worldTint.set(raw);
+      rim.color.copy(rimBase).lerp(worldTint, 0.28);
+    } else {
+      rim.color.copy(rimBase);
     }
   }
 

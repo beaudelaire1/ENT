@@ -45,12 +45,20 @@ jobs:
           node --input-type=module --check < src/static/sablier/premium3d.js
           node --input-type=module --check < src/static/sablier/premium3d/material-kit.js
           node --input-type=module --check < src/static/sablier/premium3d/flame-texture.js
+          node --input-type=module --check < src/static/sablier/premium3d/ring.js
+          node --input-type=module --check < src/static/sablier/premium3d/ring-realistic.js
           node --input-type=module --check < src/static/sablier/premium3d/hourglass.js
           node --input-type=module --check < src/static/sablier/premium3d/hourglass-realistic.js
+          node --input-type=module --check < src/static/sablier/premium3d/wave.js
+          node --input-type=module --check < src/static/sablier/premium3d/wave-realistic.js
           node --input-type=module --check < src/static/sablier/premium3d/candle.js
           node --input-type=module --check < src/static/sablier/premium3d/candle-realistic.js
           node --input-type=module --check < src/static/sablier/premium3d/beads.js
           node --input-type=module --check < src/static/sablier/premium3d/beads-realistic.js
+          node --input-type=module --check < src/static/sablier/premium3d/bars.js
+          node --input-type=module --check < src/static/sablier/premium3d/bars-realistic.js
+          node --input-type=module --check < src/static/sablier/premium3d/spiral.js
+          node --input-type=module --check < src/static/sablier/premium3d/spiral-realistic.js
           node --input-type=module --check < src/static/sablier/premium3d/celestial.js
           node --input-type=module --check < src/static/sablier/premium3d/celestial-realistic.js
       - uses: actions/setup-python@v5
