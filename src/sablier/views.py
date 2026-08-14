@@ -69,6 +69,8 @@ def home(request):
         }
         for playlist in playlists
     ]
+    # Rattacher une session à une compétence reste facultatif : Sablier fonctionne
+    # entièrement sans le module Formations.
     competencies = (
         Competency.objects.filter(path__owner=request.user)
         .select_related("path", "period")
@@ -97,7 +99,11 @@ def home(request):
             "ambience_choices": FocusPreference.Ambience.choices,
             "palette_css": scenes.palette_css(),
             "decors": {scene.key: scene.decor for scene in scenes.SCENES},
+            # Les feuilles et scripts de Sablier changent souvent : sans cette empreinte,
+            # le navigateur servirait l'ancienne version après chaque correction.
             "asset_version": sablier_asset_version(),
+            # À la seconde près, un enregistrement survenu dans la même seconde que
+            # le chargement serait indétectable côté navigateur.
             "saved_at": f"{preference.updated_at.timestamp():.6f}",
             "competencies": competencies,
             "selected_competency": selected.pk if selected else None,
@@ -182,6 +188,8 @@ def audio_library(request):
         {
             "form": form,
             "tracks": AudioTrack.objects.filter(owner=request.user),
+            # Pour la barre d'actions groupées : sans playlist, le bouton d'ajout n'a
+            # nulle part où ranger et ne s'affiche pas.
             "playlists": Playlist.objects.filter(owner=request.user),
             "used": human_mb(used_mb),
             "quota": human_mb(profile.effective_audio_quota_mb),
@@ -199,11 +207,23 @@ def audio_library(request):
 @login_required
 @require_POST
 def audio_bulk(request):
+    """Agir sur plusieurs pistes d'un coup : les ranger dans une playlist, ou les supprimer.
+
+    Une seule sélection, deux boutons : c'est le même geste de la main — cocher ce qui
+    intéresse — qui sert aux deux, et scinder en deux écrans obligerait à cocher deux fois.
+
+    La suppression passe par un écran de confirmation, comme toute suppression dans MyENT.
+    L'ajout à une playlist n'en demande pas : rien n'est perdu, et retirer une piste d'une
+    playlist se fait en un clic depuis celle-ci.
+    """
     chosen = request.POST.getlist("tracks")
+    # Le filtre par propriétaire est ce qui empêche d'agir sur les pistes d'autrui en
+    # forgeant des identifiants dans le formulaire.
     tracks = list(AudioTrack.objects.filter(owner=request.user, pk__in=chosen).order_by("title"))
     if not tracks:
         messages.error(request, "Sélectionnez au moins une piste.")
         return redirect("sablier:audio")
+
     action = request.POST.get("action", "")
     if action == "playlist":
         return _add_tracks_to_playlist(request, tracks)
@@ -215,6 +235,8 @@ def audio_bulk(request):
 
 def _add_tracks_to_playlist(request, tracks):
     playlist = get_object_or_404(Playlist, owner=request.user, pk=request.POST.get("playlist") or 0)
+    # Une piste déjà présente n'est pas ajoutée deux fois : la contrainte d'unicité la
+    # refuserait, et la signaler comme un échec serait un contresens — elle y est déjà.
     present = set(playlist.playlist_tracks.values_list("track_id", flat=True))
     missing = [track for track in tracks if track.pk not in present]
     position = (playlist.playlist_tracks.aggregate(max=Max("position"))["max"] or -1) + 1
@@ -239,10 +261,14 @@ def _delete_tracks(request, tracks):
             "sablier/audio_bulk_delete.html",
             {
                 "tracks": tracks,
+                # Une piste rangée dans une playlist en disparaît aussi : la suppression
+                # doit le dire avant, pas le faire découvrir après.
                 "playlists": Playlist.objects.filter(owner=request.user, tracks__in=tracks).distinct(),
                 "back_to": reverse("sablier:audio"),
             },
         )
+    # Une par une plutôt que par lot : `post_delete` purge le fichier du stockage, et un
+    # `delete()` de queryset le déclenche aussi, mais l'écriture explicite dit l'intention.
     for track in tracks:
         track.delete()
     messages.success(request, f"{len(tracks)} piste(s) supprimée(s).")
@@ -255,6 +281,8 @@ def audio_stream(request, pk):
     if not track.file:
         raise Http404
     response = serve_private_file(track.file, content_type=track.mime_type)
+    # Sans cet en-tête, le navigateur refuse de déplacer la lecture dans la piste. Django
+    # et le proxy savent tous deux répondre à une requête partielle.
     response.setdefault("Accept-Ranges", "bytes")
     return response
 
@@ -362,6 +390,7 @@ def presign_audio(request):
 @login_required
 @require_POST
 def log_session(request):
+    """Enregistre une session terminée, envoyée par le minuteur."""
     try:
         data = json.loads(request.body)
         seconds = int(data["seconds"])
@@ -371,11 +400,13 @@ def log_session(request):
         return JsonResponse({"error": "Requête invalide."}, status=400)
     if not 1 <= seconds <= 86400:
         return JsonResponse({"error": "Durée hors limites."}, status=400)
+
     competency = None
     if competency_id:
         competency = Competency.objects.filter(pk=competency_id, path__owner=request.user).first()
         if competency is None:
             return JsonResponse({"error": "Compétence inconnue."}, status=400)
+
     session = record_session(
         request.user,
         seconds=seconds,
