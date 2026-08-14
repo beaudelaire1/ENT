@@ -13,7 +13,7 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 @keyframes breathe{0%,100%{transform:scale(.94)}48%{transform:scale(1.07)}}@keyframes flash{0%{opacity:0}15%{opacity:.18}100%{opacity:0}}
 @media(max-width:1400px){.focus-layout{grid-template-columns:1fr}.focus-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start}.focus-sidebar h1,.shortcut-help,.preference-panel{grid-column:1/-1}.focus-player{grid-template-columns:1fr repeat(3,auto)}.focus-player>*:nth-child(n+6){display:none}}
 @media(max-width:700px){.focus-app{padding:10px}.focus-header{align-items:flex-start}.focus-tagline,.live-chip{display:none}.focus-sidebar{display:flex}.focus-layout{min-height:0}.visual-wrap{min-height:430px}.focus-controls{display:grid;grid-template-columns:1fr 1fr}.focus-controls .primary{min-width:0}.focus-player{grid-template-columns:1fr repeat(3,auto)}.zen-rings{width:230px;height:230px}.mode-grid{grid-template-columns:repeat(2,1fr)}}
-@media(prefers-reduced-motion:reduce){.zen-rings{animation:none}}
+@media(prefers-reduced-motion:reduce){.zen-rings,.zen-rings::before{animation:none}}
 .session-log { list-style:none; margin:0 0 18px; padding:0; display:grid; gap:7px; }
 .session-log li { display:flex; justify-content:space-between; gap:10px; font-size:12px; }
 .session-log strong { white-space:nowrap; }
@@ -111,24 +111,6 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
   transform-origin:50% 50%;
   filter:drop-shadow(0 28px 48px rgba(13,7,4,.5));
 }
-@media(min-width:900px){
-  .focus-app.stage-mode .visual-wrap[data-mode="beads"] .premium-3d-canvas,
-  .focus-app.stage-mode .visual-wrap[data-mode="beads"] #timer-canvas {
-    transform:translateX(16%) scale(1.04);
-    transform-origin:50% 50%;
-  }
-  .focus-app.stage-mode .visual-wrap[data-mode="beads"] .canvas-time {
-    left:clamp(-220px,-14vw,-100px);
-    right:auto;
-    bottom:36%;
-    min-width:190px;
-    text-align:left;
-  }
-  .focus-app.stage-mode .visual-wrap[data-mode="beads"] .canvas-time strong {
-    font-size:clamp(58px,6vw,82px);
-  }
-}
-
 /* Sur écran étroit la barre latérale passe en deux colonnes, et un intitulé se
    retrouvait seul dans une cellule pendant que ses boutons partaient dans l'autre :
    la zone « VISUALISATION » paraissait vide. Chaque intitulé et son groupe de
@@ -168,17 +150,30 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 .digital-visual strong { font-variant-numeric:tabular-nums lining-nums;text-shadow:0 0 28px color-mix(in srgb,var(--focus-accent) 30%,transparent); }
 .digital-visual i { box-shadow:inset 0 1px 3px color-mix(in srgb,var(--focus-bg) 45%,transparent); }
 .digital-visual i::before { box-shadow:0 0 14px color-mix(in srgb,var(--focus-accent) 45%,transparent);transition:width .8s linear; }
-.zen-rings { width:min(400px,62vw); height:min(400px,62vw);position:relative;background:radial-gradient(circle,color-mix(in srgb,var(--focus-accent) 8%,transparent),transparent 62%);box-shadow:0 0 0 45px color-mix(in srgb,var(--focus-accent) 4%,transparent),0 0 0 90px color-mix(in srgb,var(--focus-accent) 2%,transparent),0 24px 80px color-mix(in srgb,var(--focus-bg) 42%,transparent); }
-.zen-rings::before,.zen-rings::after { content:"";position:absolute;border-radius:50%;border:1px solid color-mix(in srgb,var(--focus-accent) 24%,transparent); }
-.zen-rings::before { inset:9%; }
-.zen-rings::after { inset:22%;border-color:color-mix(in srgb,var(--focus-text) 9%,transparent); }
-.zen-rings>div { position:relative;z-index:1;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--focus-text) 9%,transparent),0 0 45px color-mix(in srgb,var(--focus-accent) 12%,transparent); }
+.zen-visual { position:relative;isolation:isolate; }
+.zen-rings {
+  width:min(390px,62vw);height:min(390px,62vw);position:relative;overflow:visible;
+  border:1px solid color-mix(in srgb,var(--focus-text) 26%,transparent);
+  background:
+    radial-gradient(circle at 38% 30%,color-mix(in srgb,var(--focus-text) 20%,transparent),transparent 18%),
+    radial-gradient(circle at 50% 58%,color-mix(in srgb,var(--focus-accent) 25%,transparent),transparent 56%),
+    radial-gradient(circle,color-mix(in srgb,var(--focus-bg) 52%,transparent),color-mix(in srgb,var(--focus-bg) 84%,transparent) 72%);
+  box-shadow:inset 0 0 70px color-mix(in srgb,var(--focus-accent) 16%,transparent),inset 0 1px 0 color-mix(in srgb,var(--focus-text) 28%,transparent),0 0 55px color-mix(in srgb,var(--focus-accent) 18%,transparent),0 34px 90px color-mix(in srgb,var(--focus-bg) 52%,transparent);
+  backdrop-filter:blur(10px);animation:zen-breathe 8.1s cubic-bezier(.45,.05,.55,.95) infinite;
+}
+.zen-rings::before,.zen-rings::after { content:"";position:absolute;border-radius:50%;pointer-events:none; }
+.zen-rings::before { inset:-12%;border:1px solid color-mix(in srgb,var(--focus-accent) 28%,transparent);background:conic-gradient(from 20deg,transparent,color-mix(in srgb,var(--focus-accent) 18%,transparent),transparent 24%,color-mix(in srgb,var(--focus-text) 10%,transparent),transparent 58%);-webkit-mask:radial-gradient(closest-side,transparent 97%,#000 97.4%);mask:radial-gradient(closest-side,transparent 97%,#000 97.4%);animation:zen-orbit 24s linear infinite; }
+.zen-rings::after { inset:10%;border:1px solid color-mix(in srgb,var(--focus-text) 12%,transparent);box-shadow:0 0 0 28px color-mix(in srgb,var(--focus-accent) 3%,transparent),inset 0 0 45px color-mix(in srgb,var(--focus-accent) 10%,transparent); }
+.zen-rings>div { width:52%;height:52%;position:relative;z-index:3;border:1px solid color-mix(in srgb,var(--focus-text) 14%,transparent);background:radial-gradient(circle at 38% 30%,color-mix(in srgb,var(--focus-text) 16%,transparent),transparent 22%),radial-gradient(circle,color-mix(in srgb,var(--focus-accent) 13%,var(--focus-surface)),color-mix(in srgb,var(--focus-bg) 92%,transparent));box-shadow:inset 0 1px 0 color-mix(in srgb,var(--focus-text) 20%,transparent),inset 0 -24px 48px color-mix(in srgb,var(--focus-bg) 45%,transparent),0 0 50px color-mix(in srgb,var(--focus-accent) 18%,transparent);backdrop-filter:blur(14px); }
+.zen-rings span,.zen-visual p { display:none; }
+@keyframes zen-breathe { 0%,100%{transform:scale(.985)} 50%{transform:scale(1.025)} }
+@keyframes zen-orbit { to{transform:rotate(360deg)} }
 /* Le temps restant, montré sans être compté : un arc qui se referme sur l'anneau
    extérieur, sans graduation ni repère. Zen était la seule visualisation à ne rien dire
    du temps qui passe — les anneaux respiraient sur un cycle fixe, identique à la première
    et à la dernière minute. Le masque radial ne garde du disque que son bord : un
    `conic-gradient` plein remplirait toute la surface et écraserait la scène. */
-.zen-progress { position:absolute;inset:0;border-radius:50%;opacity:.55;background:conic-gradient(from -90deg,var(--focus-accent) calc(var(--progress,1) * 360deg),transparent 0);-webkit-mask:radial-gradient(closest-side,transparent 95%,#000 95.6%);mask:radial-gradient(closest-side,transparent 95%,#000 95.6%); }
+.zen-progress { position:absolute;inset:-2px;z-index:2;border-radius:50%;opacity:.88;background:conic-gradient(from -90deg,color-mix(in srgb,var(--focus-text) 82%,var(--focus-accent)) calc(var(--progress,1) * 360deg),color-mix(in srgb,var(--focus-border) 55%,transparent) 0);filter:drop-shadow(0 0 8px color-mix(in srgb,var(--focus-accent) 50%,transparent));-webkit-mask:radial-gradient(closest-side,transparent 96.6%,#000 97%);mask:radial-gradient(closest-side,transparent 96.6%,#000 97%); }
 .canvas-time strong { font-variant-numeric:tabular-nums lining-nums;text-shadow:0 3px 24px color-mix(in srgb,var(--focus-bg) 72%,transparent); }
 .canvas-time strong,.digital-visual strong { font-size:clamp(44px,6vw,64px); }
 @media(max-width:700px){ .visual-wrap { min-height:min(58vh,460px); } }

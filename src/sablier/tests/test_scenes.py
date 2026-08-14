@@ -258,12 +258,46 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         engine = self.read_static("sablier.js")
         loader = self.read_static("decor.js")
         expected = (
-            "ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,"
+            "ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawTide,candle:drawCandlePhoto,"
             "beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto"
         )
         self.assertIn(expected, engine)
         self.assertIn("SablierPremium3DReady = Promise.resolve(null)", loader)
         self.assertNotIn('import(new URL("premium3d.js"', loader)
+
+    def test_validated_visuals_remain_locked_to_their_existing_sources(self):
+        engine = self.read_static("sablier.js")
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        for fragment in (
+            "ring:drawRingPhoto",
+            "hourglass:drawHourglassPhoto",
+            "candle:drawCandlePhoto",
+            "moon:drawMoonPhoto",
+            'id="digital-time"',
+            '"ring":"{{ static_prefix }}sablier/img/7cfca4f4',
+            '"hourglass":"{{ static_prefix }}sablier/img/7073fefb',
+            '"candle":"{{ static_prefix }}sablier/img/9d0bd271',
+            '"moon":"{{ static_prefix }}sablier/img/1b9b150c',
+        ):
+            self.assertIn(fragment, engine if "draw" in fragment else template)
+
+    def test_reworked_visuals_have_material_depth_and_no_tide_container(self):
+        engine = self.read_static("sablier.js")
+        css = self.read_static("sablier.css")
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        for fragment in (
+            "function drawTide(progress)",
+            'ctx.globalCompositeOperation="destination-in"',
+            "const pearl=(x,y,active,index,scale=1)=>",
+            "une banque de tubes de verre gradués",
+            "un ressort d'horlogerie sous verre",
+            "atmosphereMask",
+        ):
+            self.assertIn(fragment, engine)
+        self.assertNotIn('"wave":', template)
+        self.assertNotIn("drawWavePhoto", engine)
+        self.assertIn("@keyframes zen-breathe", css)
+        self.assertIn(".zen-rings span,.zen-visual p { display:none; }", css)
 
     def test_heavy_sahara_world_is_lazily_created(self):
         world = self.read_static("world3d.js")
