@@ -39,25 +39,44 @@ class SceneRegistryTests(SimpleTestCase):
         self.assertEqual(len(signatures), len(set(signatures)))
         self.assertEqual(len(renderers), len(set(renderers)))
 
-    def test_historical_universes_are_preserved(self):
+    def test_catalog_restores_every_distinct_historical_universe(self):
         expected = {
+            "arbre_etoiles",
+            "fontaine",
+            "eden",
+            "fleuve_temps",
+            "souvenirs",
+            "interstellaire",
+            "galaxie",
+            "heaven",
+            "oasis",
+            "abysses",
+            "refuge_pluie",
+            "aurores",
             "printemps",
             "ete",
             "automne",
             "hiver",
             "pluie",
+            "foret",
             "ocean",
             "sahara",
-            "foret",
             "orage",
             "braises",
             "aurore",
             "nuit",
         }
-        self.assertTrue(expected.issubset({scene.key for scene in scenes.SCENES}))
+        self.assertEqual({scene.key for scene in scenes.SCENES}, expected)
+        self.assertEqual(len(scenes.SCENES), 24)
 
-    def test_only_generic_concentration_is_legacy(self):
+    def test_only_the_pre_catalogue_concentration_alias_is_replaced(self):
         self.assertEqual(scenes.LEGACY_REPLACED, {"concentration": "arbre_etoiles"})
+
+    def test_browser_storage_also_converges_to_the_curated_catalog(self):
+        engine = (settings.BASE_DIR / "static" / "sablier" / "sablier.js").read_text(encoding="utf-8")
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        self.assertIn('ambienceAliases[state.ambience]||state.ambience', engine)
+        self.assertIn('json_script:"ambience-alias-data"', template)
 
 
 class PremiumVisualRuntimeTests(SimpleTestCase):
@@ -188,7 +207,7 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, engine)
 
-    def test_sahara_reference_world_uses_a_temporal_webgl_scene(self):
+    def test_complete_catalogue_uses_temporal_webgl_scenes(self):
         world = self.read_static("world3d.js")
         loader = self.read_static("decor.js")
         css = self.read_static("sablier.css")
@@ -198,14 +217,20 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "new THREE.MeshPhysicalMaterial",
             "new THREE.InstancedMesh",
             "new THREE.FogExp2",
-            'app.dataset.ambience === "sahara"',
             "date.getHours()",
             'matchMedia("(prefers-reduced-motion: reduce)")',
             'canvas.addEventListener("webglcontextlost"',
         ):
             self.assertIn(fragment, world)
+        for scene in scenes.SCENES:
+            with self.subTest(scene=scene.key):
+                self.assertIn(f'"{scene.key}"', world)
+        self.assertIn("function buildCosmos", world)
+        self.assertIn("function buildTimeRiver", world)
+        self.assertIn("galaxie: (THREE, mobile, environment) => buildCosmos", world)
+        self.assertIn("fleuve_temps: (THREE, mobile, environment) => buildTimeRiver", world)
         self.assertIn('import(new URL("world3d.js" + version, here).href)', loader)
-        self.assertIn('[data-world3d="ready"][data-ambience="sahara"]', css)
+        self.assertIn('[data-world3d="ready"][data-world3d-active="true"]', css)
         self.assertIn('[data-world3d-active="true"]', css)
         self.assertNotIn("cdn", world.lower())
 
@@ -293,11 +318,9 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "Math.sin(Math.PI*journey)",
             "ctx.filter=",
             "brightness(${74+38*daylight}%)",
-            'ctx.globalCompositeOperation="destination-in"',
             "const pearl=(x,y,active,index,scale=1)=>",
             "une banque de tubes de verre gradués",
             "un ressort d'horlogerie sous verre",
-            "atmosphereMask",
         ):
             self.assertIn(fragment, engine)
         self.assertIn('"wave":"{{ static_prefix }}sablier/img/dbb9148a', template)
@@ -309,17 +332,22 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertNotIn("sunHalo", sun)
         self.assertNotIn("horizonGlow", sun)
         self.assertNotIn("drawSun(progress)", sun)
+        self.assertNotIn("fillRect", sun)
+        self.assertNotIn("destination-in", sun)
+        self.assertIn("canvas transparent", sun)
+        self.assertIn("ctx.rect(0,0,w,horizon+unit*.018);ctx.clip()", sun)
         self.assertNotIn('if(!ready("wave")){drawWave', engine)
-        self.assertLess(sun.index("ctx.drawImage(img,x-r,y-r,d,d)"), sun.index("Le premier plan est dessiné après le soleil"))
+        self.assertIn("ctx.drawImage(img,x-r,y-r,d,d)", sun)
         self.assertIn("@keyframes zen-breathe", css)
         self.assertIn(".zen-rings span,.zen-visual p { display:none; }", css)
 
-    def test_heavy_sahara_world_is_lazily_created(self):
+    def test_heavy_worlds_are_created_only_when_selected(self):
         world = self.read_static("world3d.js")
-        self.assertIn('if (app.dataset.ambience === "sahara")', world)
+        self.assertIn("if (!packs.has(key))", world)
+        self.assertIn("BUILDERS[key](THREE, mobile, environmentTexture)", world)
         self.assertIn("const start = async () =>", world)
-        self.assertIn("new MutationObserver(maybeStart)", world)
-        self.assertLess(world.index('if (app.dataset.ambience === "sahara")'), world.index("await start();"))
+        self.assertIn("WORLD_KEYS.has(app.dataset.ambience)", world)
+        self.assertIn("const packs = new Map()", world)
 
     def test_three_is_pinned_and_vendored_locally(self):
         package_path = settings.BASE_DIR.parent / "package.json"

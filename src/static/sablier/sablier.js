@@ -31,6 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let lastSecond = -1, warningCue=false, frame=0;
   const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
+  const ambienceAliases=JSON.parse(document.querySelector("#ambience-alias-data")?.textContent||"{}");
+  state.ambience=ambienceAliases[state.ambience]||state.ambience;
+  if(!Object.prototype.hasOwnProperty.call(decorNames,state.ambience))state.ambience=app.dataset.ambience;
   const decor=window.SablierDecor.create($("#decor-canvas"));
   // Les rendus historiques sont les références canoniques. Les images locales
   // apportent leur matière, tandis que Canvas conserve les animations temporelles.
@@ -67,7 +70,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return {w:rect.width,h:rect.height};
   }
   function palette(){const css=getComputedStyle(app);return {accent:css.getPropertyValue("--focus-accent").trim(),border:css.getPropertyValue("--focus-border").trim(),text:css.getPropertyValue("--focus-text").trim(),surface:css.getPropertyValue("--focus-surface").trim()};}
-  function rgba(color,alpha){const match=/^#([0-9a-f]{6})$/i.exec(color||"");if(!match)return color;const value=Number.parseInt(match[1],16);return `rgba(${value>>16},${(value>>8)&255},${value&255},${alpha})`;}
+  function rgba(color,alpha){
+    const valueColor=color||"",match=/^#([0-9a-f]{6})$/i.exec(valueColor);
+    if(match){const value=Number.parseInt(match[1],16);return `rgba(${value>>16},${(value>>8)&255},${value&255},${alpha})`;}
+    const hsl=/^hsl\((.+)\)$/i.exec(valueColor);
+    return hsl?`hsla(${hsl[1]},${alpha})`:valueColor;
+  }
   function glow(ctx,x,y,r,color,alpha=.22){const gradient=ctx.createRadialGradient(x,y,0,x,y,r);gradient.addColorStop(0,rgba(color,alpha));gradient.addColorStop(.45,rgba(color,alpha*.35));gradient.addColorStop(1,rgba(color,0));ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
   // Contraste des volumes. Chaque visuel réglait ses dégradés au cas par cas et finissait
   // par s'éteindre sur les bords : une forme dont les flancs se fondent dans le fond
@@ -521,28 +529,16 @@ document.addEventListener("DOMContentLoaded", () => {
       x=cx-arcX+2*arcX*journey,
       y=horizon+r*.62+r*.58*journey-Math.sin(Math.PI*journey)*(arcY+r*.72),
       sunHue=42-20*warmth-8*journey;
-    // Le ciel et la lumière au ras de l'horizon changent à chaque image du cycle.
-    const skyTopHue=206+12*daylight-9*journey,skyBottomHue=34-18*journey,
-      sky=ctx.createLinearGradient(0,h*.03,0,horizon+unit*.08);
-    sky.addColorStop(0,`hsla(${skyTopHue},${48+24*daylight}%,${8+27*daylight}%,.88)`);
-    sky.addColorStop(.58,`hsla(${skyTopHue-15},${46+20*daylight}%,${13+32*daylight}%,.74)`);
-    sky.addColorStop(1,`hsla(${skyBottomHue},${78+12*warmth}%,${22+32*daylight}%,.9)`);
-    ctx.fillStyle=sky;ctx.fillRect(cx-unit*.56,h*.02,unit*1.12,horizon+unit*.09);
     const glowColor=`hsl(${sunHue},96%,62%)`;
-    // Une crête lointaine reste derrière l'astre et donne de la profondeur au paysage.
-    ctx.fillStyle=`hsla(${191-12*journey},38%,${13+9*daylight}%,.72)`;ctx.beginPath();ctx.moveTo(cx-unit*.56,horizon+unit*.035);ctx.quadraticCurveTo(cx-unit*.31,horizon-unit*.055,cx-unit*.08,horizon+unit*.012);ctx.quadraticCurveTo(cx+unit*.18,horizon-unit*.06,cx+unit*.56,horizon+unit*.03);ctx.lineTo(cx+unit*.56,horizon+unit*.13);ctx.lineTo(cx-unit*.56,horizon+unit*.13);ctx.closePath();ctx.fill();
-    // Le disque reste la photographie validée ; seul son éclairage atmosphérique varie.
+    // L'univers WebGL fournit désormais le ciel et le relief. Seul l'astre validé
+    // reste dans ce canvas transparent : aucun rectangle ne peut se détacher du décor.
+    ctx.save();ctx.beginPath();ctx.rect(0,0,w,horizon+unit*.018);ctx.clip();
+    glow(ctx,x,y,d*(.82+.18*daylight),glowColor,.22+.12*daylight);
     ctx.filter=`sepia(${20+52*warmth}%) saturate(${108+118*warmth}%) hue-rotate(${-2-13*journey}deg) brightness(${74+38*daylight}%) contrast(${96+12*warmth}%)`;
     ctx.shadowColor=glowColor;ctx.shadowBlur=d*(.3+.26*daylight);ctx.drawImage(img,x-r,y-r,d,d);ctx.shadowBlur=0;ctx.filter="none";
-    // Le premier plan est dessiné après le soleil : il le masque physiquement au lever
-    // et l'engloutit totalement à la fin du coucher.
-    const landHue=190-17*journey,landLight=7+5*daylight;
-    ctx.fillStyle=`hsl(${landHue},38%,${landLight}%)`;ctx.beginPath();ctx.moveTo(cx-unit*.56,horizon+unit*.004);ctx.bezierCurveTo(cx-unit*.41,horizon-unit*.018,cx-unit*.3,horizon+unit*.02,cx-unit*.17,horizon-unit*.008);ctx.bezierCurveTo(cx-unit*.03,horizon-unit*.036,cx+unit*.08,horizon+unit*.016,cx+unit*.2,horizon-unit*.006);ctx.bezierCurveTo(cx+unit*.33,horizon-unit*.03,cx+unit*.43,horizon+unit*.018,cx+unit*.56,horizon-unit*.004);ctx.lineTo(cx+unit*.56,h);ctx.lineTo(cx-unit*.56,h);ctx.closePath();ctx.fill();
-    ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.18+.24*warmth})`;ctx.lineWidth=Math.max(1,unit*.0025);ctx.beginPath();ctx.moveTo(cx-unit*.56,horizon+unit*.004);ctx.bezierCurveTo(cx-unit*.41,horizon-unit*.018,cx-unit*.3,horizon+unit*.02,cx-unit*.17,horizon-unit*.008);ctx.bezierCurveTo(cx-unit*.03,horizon-unit*.036,cx+unit*.08,horizon+unit*.016,cx+unit*.2,horizon-unit*.006);ctx.bezierCurveTo(cx+unit*.33,horizon-unit*.03,cx+unit*.43,horizon+unit*.018,cx+unit*.56,horizon-unit*.004);ctx.stroke();
-    // L'atmosphère se fond dans le décor sans exposer le rectangle du canvas.
-    ctx.globalCompositeOperation="destination-in";const atmosphereMask=ctx.createRadialGradient(cx,h*.42,unit*.18,cx,h*.42,unit*.67);atmosphereMask.addColorStop(0,"#000");atmosphereMask.addColorStop(.7,"#000");atmosphereMask.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=atmosphereMask;ctx.fillRect(0,0,w,h);
-    const horizontalFade=ctx.createLinearGradient(0,0,w,0);horizontalFade.addColorStop(0,"rgba(0,0,0,0)");horizontalFade.addColorStop(.07,"#000");horizontalFade.addColorStop(.93,"#000");horizontalFade.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=horizontalFade;ctx.fillRect(0,0,w,h);
-    const verticalFade=ctx.createLinearGradient(0,0,0,h);verticalFade.addColorStop(0,"rgba(0,0,0,0)");verticalFade.addColorStop(.08,"#000");verticalFade.addColorStop(.84,"#000");verticalFade.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=verticalFade;ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation="source-over";
+    ctx.restore();
+    ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.14+.18*warmth})`;ctx.lineWidth=Math.max(1,unit*.0022);
+    ctx.beginPath();ctx.moveTo(cx-unit*.43,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.43,horizon);ctx.stroke();
   }
   // Anneau : une vraie jauge d'horlogerie porte les graduations ; le temps
   // restant est un arc lumineux posé dans sa gorge.

@@ -97,6 +97,7 @@ def home(request):
             "playlists": playlists,
             "playlist_payload": playlist_payload,
             "ambience_choices": FocusPreference.Ambience.choices,
+            "ambience_aliases": scenes.LEGACY_REPLACED,
             "palette_css": scenes.palette_css(),
             "decors": {scene.key: scene.decor for scene in scenes.SCENES},
             # Les feuilles et scripts de Sablier changent souvent : sans cette empreinte,
