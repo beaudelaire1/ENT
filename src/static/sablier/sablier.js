@@ -457,30 +457,43 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;
     }
   }
-  // Marée : une véritable étendue d'eau recule vers l'horizon. Aucun récipient :
-  // le niveau, l'écume et l'estran portent directement l'écoulement du temps.
-  function drawTide(progress){
-    const {w,h}=resize(),{accent,text}=palette(),unit=Math.min(w,h),cx=w/2,horizon=h*.27,
-      shoreline=h*(.43+.24*progress),bottom=h*.78,phase=state.running?Date.now()/760:0,
-      shoreY=(x)=>shoreline+Math.sin(x/(unit*.075)+phase)*unit*.007+Math.sin(x/(unit*.031)-phase*.58)*unit*.0025;
-    ctx.clearRect(0,0,w,h);glow(ctx,cx,horizon,unit*.72,accent,.12);
-    const haze=ctx.createLinearGradient(0,horizon-unit*.1,0,horizon+unit*.16);haze.addColorStop(0,"rgba(189,235,244,0)");haze.addColorStop(.45,"rgba(177,228,239,.16)");haze.addColorStop(1,"rgba(31,81,91,0)");ctx.fillStyle=haze;ctx.fillRect(0,horizon-unit*.1,w,unit*.27);
-    // L'estran apparaît sous le front de mer lorsque l'eau recule.
-    const wetSand=ctx.createLinearGradient(0,shoreline,0,bottom);wetSand.addColorStop(0,"rgba(54,91,92,.5)");wetSand.addColorStop(.32,"rgba(89,77,61,.38)");wetSand.addColorStop(1,"rgba(23,26,28,.05)");ctx.fillStyle=wetSand;ctx.beginPath();ctx.moveTo(0,shoreY(0));for(let x=0;x<=w;x+=4)ctx.lineTo(x,shoreY(x));ctx.lineTo(w,bottom);ctx.lineTo(0,bottom);ctx.closePath();ctx.fill();
-    // La mer est une nappe en perspective : étroite à l'horizon, large au rivage.
-    const sea=ctx.createLinearGradient(0,horizon,0,shoreline);sea.addColorStop(0,"rgba(177,231,240,.72)");sea.addColorStop(.12,rgba(accent,.82));sea.addColorStop(.58,"rgba(17,105,126,.9)");sea.addColorStop(1,"rgba(8,61,78,.94)");ctx.fillStyle=sea;ctx.beginPath();ctx.moveTo(0,horizon);ctx.lineTo(w,horizon);ctx.lineTo(w,shoreY(w));for(let x=w;x>=0;x-=4)ctx.lineTo(x,shoreY(x));ctx.closePath();ctx.fill();
-    // Rides de perspective : leur largeur et leur amplitude augmentent vers l'avant.
-    for(let layer=1;layer<=8;layer++){
-      const t=layer/9,yBase=horizon+(shoreline-horizon)*t,span=Math.min(w*.49,unit*(.25+t*.3)),amp=unit*(.0015+t*.0045),alpha=.16+t*.15;
-      ctx.strokeStyle=layer%2?`rgba(207,245,248,${alpha})`:rgba(text,alpha*.58);ctx.lineWidth=Math.max(.8,unit*(.0015+t*.003));ctx.beginPath();
-      for(let x=cx-span;x<=cx+span;x+=4){const y=yBase+Math.sin(x/(unit*(.035+t*.04))+phase*(.42+t*.35)+layer)*amp;x===cx-span?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+  // Marée : le récipient d'origine reste intact. L'eau est teintée dans le verre
+  // (et non derrière son fond blanc), afin que son niveau soit immédiatement lisible.
+  function drawWavePhoto(progress){
+    if(!ready("wave")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.wave,{w,h}=resize(),{accent}=palette(),unit=Math.min(w,h);
+    ctx.clearRect(0,0,w,h);
+    const iw=Math.min(w*.84,h*.8),ih=iw*img.naturalHeight/img.naturalWidth,
+      ix=w/2-iw/2,iy=h*.44-ih/2,cx=w/2,cy=iy+ih*.52,rx=iw*.46,ry=ih*.42,
+      bottom=cy+ry*.92,top=cy-ry*.76,phase=state.running?Date.now()/620:0;
+    glow(ctx,cx,cy,iw*.58,accent,.08);
+    // L'image du bocal contient un intérieur blanc, contrairement au verre transparent
+    // du sablier. On conserve sa forme, puis on évide optiquement ce blanc avant de
+    // reconstruire les arêtes froides et métalliques du même langage de matière.
+    ctx.save();ctx.globalAlpha=.42;ctx.filter="grayscale(1) contrast(1.32) brightness(.7)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.84,ry*.82,0,0,Math.PI*2);ctx.clip();ctx.globalCompositeOperation="destination-out";ctx.globalAlpha=.78;ctx.fillStyle="#000";ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);ctx.restore();
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.clip();
+    if(progress>.002){
+      const level=bottom-(bottom-top)*Math.pow(progress,.72),wave=(x)=>level+Math.sin((x-cx)/(unit*.055)+phase)*unit*.008+Math.sin((x-cx)/(unit*.022)-phase*.7)*unit*.003;
+      const water=ctx.createLinearGradient(0,level,0,bottom);water.addColorStop(0,"rgba(91,229,246,.96)");water.addColorStop(.28,"rgba(21,158,190,.96)");water.addColorStop(1,"rgba(3,59,96,.98)");
+      ctx.globalCompositeOperation="source-over";ctx.fillStyle=water;ctx.beginPath();ctx.moveTo(cx-rx,level);for(let x=cx-rx;x<=cx+rx;x+=3)ctx.lineTo(x,wave(x));ctx.lineTo(cx+rx,bottom+ry);ctx.lineTo(cx-rx,bottom+ry);ctx.closePath();ctx.fill();
+      // Une surface lumineuse et des caustiques mobiles rendent la matière liquide.
+      ctx.strokeStyle="rgba(151,225,236,.74)";ctx.lineWidth=Math.max(1.5,unit*.0045);ctx.shadowColor="rgba(48,171,199,.48)";ctx.shadowBlur=unit*.014;ctx.beginPath();for(let x=cx-rx*.94;x<=cx+rx*.94;x+=3){const y=wave(x);x===cx-rx*.94?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.shadowBlur=0;
+      for(let i=0;i<18;i++){
+        const px=cx+Math.sin(i*13.7+phase*.18)*rx*.76,py=level+(bottom-level)*(.16+(i%7)/8),span=unit*(.016+(i%4)*.006);
+        ctx.strokeStyle=i%3===0?"rgba(221,252,255,.52)":"rgba(128,230,244,.34)";ctx.lineWidth=i%4===0?2:1;ctx.beginPath();ctx.moveTo(px-span,py);ctx.quadraticCurveTo(px,py-unit*.008,px+span,py);ctx.stroke();
+      }
+      for(let i=0;i<13;i++){
+        const px=cx+Math.sin(i*9.31)*rx*.72,py=bottom-(bottom-level)*(.08+(i%9)/10),br=unit*(.0025+(i%4)*.0013);
+        ctx.strokeStyle="rgba(225,253,255,.62)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,br,0,Math.PI*2);ctx.stroke();
+      }
     }
-    // Front d'écume : c'est lui qui avance vers l'utilisateur à marée haute.
-    ctx.strokeStyle="rgba(238,253,252,.94)";ctx.lineWidth=Math.max(2,unit*.007);ctx.shadowColor=rgba(accent,.65);ctx.shadowBlur=unit*.03;ctx.beginPath();for(let x=0;x<=w;x+=3){const y=shoreY(x);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.shadowBlur=0;
-    ctx.strokeStyle="rgba(255,255,255,.55)";ctx.lineWidth=1;for(let i=0;i<22;i++){const x=w*(i/21),y=shoreY(x)+unit*(.011+.005*Math.sin(i*2.2));ctx.beginPath();ctx.arc(x,y,unit*(.005+(i%4)*.0014),Math.PI*.08,Math.PI*.92);ctx.stroke();}
-    for(let i=0;i<32;i++){const t=.12+(i%7)/8,x=cx+Math.sin(i*15.73)*unit*(.22+t*.25),y=horizon+(shoreline-horizon)*t+Math.cos(i*8.4)*unit*.006;ctx.strokeStyle=i%4===0?"rgba(230,250,251,.5)":"rgba(118,207,220,.28)";ctx.lineWidth=i%5===0?2:1;ctx.beginPath();ctx.moveTo(x-unit*.016,y);ctx.lineTo(x+unit*(.018+(i%3)*.008),y);ctx.stroke();}
-    ctx.strokeStyle=rgba(text,.16);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-unit*.28,horizon);ctx.lineTo(cx+unit*.28,horizon);ctx.stroke();
-    ctx.globalCompositeOperation="destination-in";const edgeFade=ctx.createLinearGradient(0,0,w,0);edgeFade.addColorStop(0,"rgba(0,0,0,0)");edgeFade.addColorStop(.055,"#000");edgeFade.addColorStop(.945,"#000");edgeFade.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=edgeFade;ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation="source-over";
+    ctx.restore();
+    // Une passe très légère de la photo restitue ses reflets sans réintroduire le blanc.
+    ctx.save();ctx.globalCompositeOperation="screen";ctx.globalAlpha=.11;ctx.filter="grayscale(1) contrast(1.38) brightness(.9)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
+    const glassEdge=ctx.createLinearGradient(cx-rx,0,cx+rx,0);glassEdge.addColorStop(0,"rgba(111,148,163,.84)");glassEdge.addColorStop(.22,"rgba(231,246,250,.72)");glassEdge.addColorStop(.5,"rgba(148,181,192,.3)");glassEdge.addColorStop(.78,"rgba(238,250,252,.76)");glassEdge.addColorStop(1,"rgba(91,129,146,.86)");
+    ctx.strokeStyle=glassEdge;ctx.lineWidth=Math.max(1.4,unit*.004);ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle="rgba(173,207,218,.48)";ctx.lineWidth=Math.max(1,unit*.0025);ctx.beginPath();ctx.ellipse(cx,cy-rx*.015,rx*.89,ry*.87,0,Math.PI*.72,Math.PI*1.25);ctx.stroke();
   }
   // Lune : la photo fournit les mers et cratères ; l'ombre qui la mange est un
   // disque sombre à bord doux qui glisse depuis la gauche, comme la nuit.
@@ -496,24 +509,38 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.beginPath();ctx.arc(cx-2.2*r*progress,cy,r,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
-  // Soleil : le disque photographique traverse une atmosphère et éclaire un horizon,
-  // au lieu de flotter comme une petite icône isolée.
+  // Soleil : le disque photographique effectue un cycle continu. Il naît derrière
+  // le relief, monte dans un ciel qui s'éclaircit, puis disparaît entièrement derrière
+  // l'horizon pendant que la lumière vire progressivement vers le rouge du couchant.
   function drawSunPhoto(progress){
-    if(!ready("sun")){drawSun(progress);return;}
-    const img=assets.sun,{w,h}=resize(),{accent,border,text}=palette(),unit=Math.min(w,h);
+    if(!ready("sun")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.sun,{w,h}=resize(),unit=Math.min(w,h),journey=1-progress,
+      daylight=Math.sin(Math.PI*journey),warmth=Math.abs(journey-.5)*2;
     ctx.clearRect(0,0,w,h);
-    const cx=w/2,horizon=h*.62,arc=unit*.34,d=unit*.31,r=d/2,
-      angle=Math.PI*(.08+.64*progress),x=cx+Math.cos(angle)*arc,y=horizon-Math.sin(angle)*arc;
-    const sky=ctx.createRadialGradient(x,y,r*.18,x,y,unit*.72);sky.addColorStop(0,"rgba(255,218,125,.38)");sky.addColorStop(.28,"rgba(255,143,57,.16)");sky.addColorStop(1,"rgba(255,104,32,0)");ctx.fillStyle=sky;ctx.beginPath();ctx.ellipse(cx,h*.38,unit*.54,unit*.39,0,0,Math.PI*2);ctx.fill();
-    const horizonGlow=ctx.createRadialGradient(cx,horizon,unit*.02,cx,horizon,unit*.5);horizonGlow.addColorStop(0,"rgba(255,190,96,.22)");horizonGlow.addColorStop(.56,"rgba(255,153,63,.09)");horizonGlow.addColorStop(1,"rgba(91,46,25,0)");ctx.fillStyle=horizonGlow;ctx.beginPath();ctx.ellipse(cx,horizon,unit*.5,unit*.16,0,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=rgba(text,.1);ctx.lineWidth=1.2;ctx.setLineDash([5,9]);ctx.beginPath();ctx.arc(cx,horizon,arc,Math.PI*.08,Math.PI*.72,true);ctx.stroke();ctx.setLineDash([]);
-    ctx.strokeStyle=rgba(border,.55);ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(cx-unit*.46,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.46,horizon);ctx.stroke();
-    // Reflet solaire sur l'horizon, resserré à mesure que le soleil descend.
-    const reflection=ctx.createLinearGradient(0,horizon,0,h*.77);reflection.addColorStop(0,"rgba(255,226,155,.48)");reflection.addColorStop(1,"rgba(255,139,48,0)");ctx.fillStyle=reflection;ctx.beginPath();ctx.moveTo(x-r*.2,horizon);ctx.lineTo(x+r*.2,horizon);ctx.lineTo(x+r*.62,h*.77);ctx.lineTo(x-r*.62,h*.77);ctx.closePath();ctx.fill();
-    glow(ctx,x,y,d*1.45,"#ff9d32",.34);ctx.shadowColor="#ff9d32";ctx.shadowBlur=d*.55;ctx.drawImage(img,x-r,y-r,d,d);ctx.shadowBlur=0;
-    ctx.strokeStyle="rgba(255,234,183,.3)";ctx.lineWidth=1;for(let i=0;i<18;i++){const a=i*Math.PI/9,inner=r*1.03,outer=r*(1.2+(i%3)*.05);ctx.beginPath();ctx.moveTo(x+Math.cos(a)*inner,y+Math.sin(a)*inner);ctx.lineTo(x+Math.cos(a)*outer,y+Math.sin(a)*outer);ctx.stroke();}
-    // L'atmosphère se dissout dans le décor au lieu de révéler le rectangle du canvas.
-    ctx.globalCompositeOperation="destination-in";const atmosphereMask=ctx.createRadialGradient(cx,h*.39,unit*.2,cx,h*.39,unit*.63);atmosphereMask.addColorStop(0,"#000");atmosphereMask.addColorStop(.68,"#000");atmosphereMask.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=atmosphereMask;ctx.fillRect(0,0,w,h);
+    const cx=w/2,horizon=h*.62,arcX=unit*.4,arcY=unit*.35,d=unit*.31,r=d/2,
+      x=cx-arcX+2*arcX*journey,
+      y=horizon+r*.62+r*.58*journey-Math.sin(Math.PI*journey)*(arcY+r*.72),
+      sunHue=42-20*warmth-8*journey;
+    // Le ciel et la lumière au ras de l'horizon changent à chaque image du cycle.
+    const skyTopHue=206+12*daylight-9*journey,skyBottomHue=34-18*journey,
+      sky=ctx.createLinearGradient(0,h*.03,0,horizon+unit*.08);
+    sky.addColorStop(0,`hsla(${skyTopHue},${48+24*daylight}%,${8+27*daylight}%,.88)`);
+    sky.addColorStop(.58,`hsla(${skyTopHue-15},${46+20*daylight}%,${13+32*daylight}%,.74)`);
+    sky.addColorStop(1,`hsla(${skyBottomHue},${78+12*warmth}%,${22+32*daylight}%,.9)`);
+    ctx.fillStyle=sky;ctx.fillRect(cx-unit*.56,h*.02,unit*1.12,horizon+unit*.09);
+    const glowColor=`hsl(${sunHue},96%,62%)`;
+    // Une crête lointaine reste derrière l'astre et donne de la profondeur au paysage.
+    ctx.fillStyle=`hsla(${191-12*journey},38%,${13+9*daylight}%,.72)`;ctx.beginPath();ctx.moveTo(cx-unit*.56,horizon+unit*.035);ctx.quadraticCurveTo(cx-unit*.31,horizon-unit*.055,cx-unit*.08,horizon+unit*.012);ctx.quadraticCurveTo(cx+unit*.18,horizon-unit*.06,cx+unit*.56,horizon+unit*.03);ctx.lineTo(cx+unit*.56,horizon+unit*.13);ctx.lineTo(cx-unit*.56,horizon+unit*.13);ctx.closePath();ctx.fill();
+    // Le disque reste la photographie validée ; seul son éclairage atmosphérique varie.
+    ctx.filter=`sepia(${20+52*warmth}%) saturate(${108+118*warmth}%) hue-rotate(${-2-13*journey}deg) brightness(${74+38*daylight}%) contrast(${96+12*warmth}%)`;
+    ctx.shadowColor=glowColor;ctx.shadowBlur=d*(.3+.26*daylight);ctx.drawImage(img,x-r,y-r,d,d);ctx.shadowBlur=0;ctx.filter="none";
+    // Le premier plan est dessiné après le soleil : il le masque physiquement au lever
+    // et l'engloutit totalement à la fin du coucher.
+    const landHue=190-17*journey,landLight=7+5*daylight;
+    ctx.fillStyle=`hsl(${landHue},38%,${landLight}%)`;ctx.beginPath();ctx.moveTo(cx-unit*.56,horizon+unit*.004);ctx.bezierCurveTo(cx-unit*.41,horizon-unit*.018,cx-unit*.3,horizon+unit*.02,cx-unit*.17,horizon-unit*.008);ctx.bezierCurveTo(cx-unit*.03,horizon-unit*.036,cx+unit*.08,horizon+unit*.016,cx+unit*.2,horizon-unit*.006);ctx.bezierCurveTo(cx+unit*.33,horizon-unit*.03,cx+unit*.43,horizon+unit*.018,cx+unit*.56,horizon-unit*.004);ctx.lineTo(cx+unit*.56,h);ctx.lineTo(cx-unit*.56,h);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.18+.24*warmth})`;ctx.lineWidth=Math.max(1,unit*.0025);ctx.beginPath();ctx.moveTo(cx-unit*.56,horizon+unit*.004);ctx.bezierCurveTo(cx-unit*.41,horizon-unit*.018,cx-unit*.3,horizon+unit*.02,cx-unit*.17,horizon-unit*.008);ctx.bezierCurveTo(cx-unit*.03,horizon-unit*.036,cx+unit*.08,horizon+unit*.016,cx+unit*.2,horizon-unit*.006);ctx.bezierCurveTo(cx+unit*.33,horizon-unit*.03,cx+unit*.43,horizon+unit*.018,cx+unit*.56,horizon-unit*.004);ctx.stroke();
+    // L'atmosphère se fond dans le décor sans exposer le rectangle du canvas.
+    ctx.globalCompositeOperation="destination-in";const atmosphereMask=ctx.createRadialGradient(cx,h*.42,unit*.18,cx,h*.42,unit*.67);atmosphereMask.addColorStop(0,"#000");atmosphereMask.addColorStop(.7,"#000");atmosphereMask.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=atmosphereMask;ctx.fillRect(0,0,w,h);
     const horizontalFade=ctx.createLinearGradient(0,0,w,0);horizontalFade.addColorStop(0,"rgba(0,0,0,0)");horizontalFade.addColorStop(.07,"#000");horizontalFade.addColorStop(.93,"#000");horizontalFade.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=horizontalFade;ctx.fillRect(0,0,w,h);
     const verticalFade=ctx.createLinearGradient(0,0,0,h);verticalFade.addColorStop(0,"rgba(0,0,0,0)");verticalFade.addColorStop(.08,"#000");verticalFade.addColorStop(.84,"#000");verticalFade.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=verticalFade;ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation="source-over";
   }
@@ -560,7 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
     if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
-    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawTide,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
+    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);

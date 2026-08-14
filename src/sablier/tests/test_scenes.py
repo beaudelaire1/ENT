@@ -258,7 +258,7 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         engine = self.read_static("sablier.js")
         loader = self.read_static("decor.js")
         expected = (
-            "ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawTide,candle:drawCandlePhoto,"
+            "ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,"
             "beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto"
         )
         self.assertIn(expected, engine)
@@ -281,12 +281,18 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         ):
             self.assertIn(fragment, engine if "draw" in fragment else template)
 
-    def test_reworked_visuals_have_material_depth_and_no_tide_container(self):
+    def test_reworked_visuals_keep_material_depth_and_visible_tide_water(self):
         engine = self.read_static("sablier.js")
         css = self.read_static("sablier.css")
         template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
         for fragment in (
-            "function drawTide(progress)",
+            "function drawWavePhoto(progress)",
+            'ctx.globalCompositeOperation="destination-out"',
+            'ctx.globalAlpha=.42',
+            "journey=1-progress",
+            "Math.sin(Math.PI*journey)",
+            "ctx.filter=",
+            "brightness(${74+38*daylight}%)",
             'ctx.globalCompositeOperation="destination-in"',
             "const pearl=(x,y,active,index,scale=1)=>",
             "une banque de tubes de verre gradués",
@@ -294,8 +300,17 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "atmosphereMask",
         ):
             self.assertIn(fragment, engine)
-        self.assertNotIn('"wave":', template)
-        self.assertNotIn("drawWavePhoto", engine)
+        self.assertIn('"wave":"{{ static_prefix }}sablier/img/dbb9148a', template)
+        self.assertNotIn("function drawTide", engine)
+        sun_start = engine.index("function drawSunPhoto(progress)")
+        sun_end = engine.index("function drawRingPhoto(progress)")
+        sun = engine[sun_start:sun_end]
+        self.assertNotIn("setLineDash", sun)
+        self.assertNotIn("sunHalo", sun)
+        self.assertNotIn("horizonGlow", sun)
+        self.assertNotIn("drawSun(progress)", sun)
+        self.assertNotIn('if(!ready("wave")){drawWave', engine)
+        self.assertLess(sun.index("ctx.drawImage(img,x-r,y-r,d,d)"), sun.index("Le premier plan est dessiné après le soleil"))
         self.assertIn("@keyframes zen-breathe", css)
         self.assertIn(".zen-rings span,.zen-visual p { display:none; }", css)
 
