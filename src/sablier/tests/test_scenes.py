@@ -250,7 +250,8 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn("function getHourglassGrainPattern()", engine)
         self.assertIn("for(let i=0;i<1650;i++)", engine)
         self.assertIn("for(let i=0;i<18;i++)", engine)
-        self.assertIn(".visual-wrap .canvas-time { bottom:-4px; }", css)
+        self.assertIn(".visual-wrap .canvas-time { bottom:-18px; }", css)
+        self.assertIn(".focus-stage .stage-message { display:none; }", css)
         self.assertIn('"hourglass":"{{ static_prefix }}sablier/img/7073fefb', template)
 
     def test_all_time_objects_use_one_canonical_renderer(self):
