@@ -1,7 +1,7 @@
 FROM node:22-alpine AS visual-runtime
 WORKDIR /visual
-COPY package.json ./
-RUN npm install --ignore-scripts --no-audit --no-fund \
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund \
     && mkdir -p /vendor \
     && cp node_modules/three/build/three.module.js /vendor/three.module.js \
     && cp node_modules/three/build/three.core.js /vendor/three.core.js
