@@ -7,101 +7,191 @@ export function makeBarsRuntime(THREE, helpers) {
   const chrome = makeChrome(THREE);
   const steel = makeSteel(THREE);
   const glass = makeGlass(THREE);
-  const activeMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xf2bc71,
-    emissive: 0x4e2107,
-    emissiveIntensity: 0.72,
-    metalness: 0.18,
-    roughness: 0.2,
-    clearcoat: 0.9,
-    clearcoatRoughness: 0.055,
+  const amber = new THREE.MeshPhysicalMaterial({
+    color: 0xe9a957,
+    emissive: 0x5c2606,
+    emissiveIntensity: 0.82,
+    metalness: 0.03,
+    roughness: 0.12,
+    transmission: 0.18,
+    thickness: 0.42,
+    clearcoat: 1,
+    clearcoatRoughness: 0.035,
+    attenuationColor: new THREE.Color(0xb45d18),
+    attenuationDistance: 2.4,
   });
-  const inactiveMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x1a2029,
-    metalness: 0.72,
-    roughness: 0.34,
-    clearcoat: 0.42,
-    clearcoatRoughness: 0.18,
+  const graphite = new THREE.MeshPhysicalMaterial({
+    color: 0x111720,
+    metalness: 0.78,
+    roughness: 0.28,
+    clearcoat: 0.72,
+    clearcoatRoughness: 0.12,
+  });
+  const tickMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd9e4ef,
+    metalness: 0.75,
+    roughness: 0.3,
+  });
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffb45e,
+    transparent: true,
+    opacity: 0.18,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
   });
 
-  const base = mesh(new THREE.BoxGeometry(4.7, 0.22, 1.45), inactiveMaterial);
-  base.position.y = -1.7;
+  const base = mesh(new THREE.BoxGeometry(4.9, 0.28, 1.58), graphite);
+  base.position.y = -1.77;
   group.add(base);
 
-  const frontRail = mesh(new THREE.BoxGeometry(4.82, 0.065, 0.12), chrome);
-  frontRail.position.set(0, -1.55, 0.76);
+  const baseInset = mesh(new THREE.BoxGeometry(4.58, 0.08, 1.27), steel);
+  baseInset.position.y = -1.61;
+  group.add(baseInset);
+
+  const frontRail = mesh(new THREE.BoxGeometry(5.02, 0.065, 0.11), chrome);
+  frontRail.position.set(0, -1.55, 0.81);
   group.add(frontRail);
+  const backRail = frontRail.clone();
+  backRail.position.z = -0.81;
+  group.add(backRail);
+
+  const lightShelf = mesh(new THREE.PlaneGeometry(4.5, 0.72), glowMaterial, { cast: false, receive: false });
+  lightShelf.rotation.x = -Math.PI / 2;
+  lightShelf.position.set(0, -1.57, 0.02);
+  group.add(lightShelf);
 
   const fills = [];
-  const caps = [];
+  const menisci = [];
   const heights = [];
+  const barLights = [];
   const span = 4.25;
   const step = span / count;
   const width = step * 0.48;
   const left = -span / 2 + step / 2;
 
   for (let i = 0; i < count; i += 1) {
-    const fullHeight = 1.45 + seeded(i, 61) * 1.75;
+    const fullHeight = 1.5 + seeded(i, 61) * 1.68;
     const x = left + i * step;
     heights.push(fullHeight);
 
-    const shell = mesh(new THREE.BoxGeometry(width, fullHeight, 0.52), glass, {
+    const shell = mesh(new THREE.BoxGeometry(width, fullHeight, 0.5), glass, {
       cast: false,
       receive: false,
     });
-    shell.position.set(x, -1.54 + fullHeight / 2, 0);
-    shell.renderOrder = 4;
+    shell.position.set(x, -1.53 + fullHeight / 2, 0);
+    shell.renderOrder = 5;
     group.add(shell);
 
-    const frame = mesh(new THREE.BoxGeometry(width + 0.06, fullHeight + 0.08, 0.12), steel);
-    frame.position.set(x, -1.54 + fullHeight / 2, -0.31);
-    group.add(frame);
+    const backFrame = mesh(new THREE.BoxGeometry(width + 0.06, fullHeight + 0.08, 0.1), steel);
+    backFrame.position.set(x, -1.53 + fullHeight / 2, -0.31);
+    group.add(backFrame);
 
-    const fill = mesh(new THREE.BoxGeometry(width * 0.68, 1, 0.31), activeMaterial);
-    fill.position.set(x, -1.54, 0.02);
+    const topClamp = mesh(new THREE.BoxGeometry(width + 0.08, 0.07, 0.62), chrome);
+    topClamp.position.set(x, -1.49 + fullHeight, 0);
+    group.add(topClamp);
+
+    const bottomClamp = mesh(new THREE.BoxGeometry(width + 0.08, 0.07, 0.62), chrome);
+    bottomClamp.position.set(x, -1.5, 0);
+    group.add(bottomClamp);
+
+    const fill = mesh(new THREE.BoxGeometry(width * 0.66, 1, 0.31), amber, { cast: false, receive: false });
+    fill.position.set(x, -1.5, 0.02);
     group.add(fill);
     fills.push(fill);
 
-    const cap = mesh(new THREE.CylinderGeometry(width * 0.21, width * 0.21, 0.07, 20), chrome);
-    cap.rotation.x = Math.PI / 2;
-    cap.position.set(x, -1.5, 0.2);
-    group.add(cap);
-    caps.push(cap);
+    const meniscus = mesh(
+      new THREE.SphereGeometry(width * 0.38, 20, 12),
+      amber,
+      { cast: false, receive: false },
+    );
+    meniscus.scale.set(1, 0.22, 0.72);
+    meniscus.position.set(x, -1.48, 0.02);
+    meniscus.renderOrder = 4;
+    group.add(meniscus);
+    menisci.push(meniscus);
+
+    for (let tick = 1; tick <= 3; tick += 1) {
+      const mark = mesh(
+        new THREE.BoxGeometry(width * (tick === 2 ? 0.42 : 0.28), 0.018, 0.024),
+        tickMaterial,
+        { cast: false, receive: false },
+      );
+      mark.position.set(x + width * 0.3, -1.53 + (fullHeight * tick) / 4, 0.285);
+      group.add(mark);
+    }
+
+    const barLight = new THREE.PointLight(0xffb35a, mobile ? 0.7 : 1.05, 1.25, 2);
+    barLight.position.set(x, -1.15, 0.62);
+    group.add(barLight);
+    barLights.push(barLight);
   }
 
-  const sideLeft = mesh(new THREE.CylinderGeometry(0.07, 0.08, 3.8, 28), chrome);
-  sideLeft.position.set(-2.42, 0.05, -0.2);
+  const sideLeft = mesh(new THREE.CylinderGeometry(0.075, 0.09, 3.92, 28), chrome);
+  sideLeft.position.set(-2.48, 0.06, -0.18);
   group.add(sideLeft);
   const sideRight = sideLeft.clone();
-  sideRight.position.x = 2.42;
+  sideRight.position.x = 2.48;
   group.add(sideRight);
 
-  const indicator = new THREE.PointLight(0xffb45f, mobile ? 5 : 8, 5.5, 2);
-  indicator.position.set(-1.4, 0.8, 1.8);
+  for (const x of [-2.48, 2.48]) {
+    for (const y of [-1.71, 1.92]) {
+      const collar = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.15, 24), steel);
+      collar.position.set(x, y, -0.18);
+      group.add(collar);
+    }
+  }
+
+  const indicator = new THREE.PointLight(0xffb45f, mobile ? 5.5 : 9, 5.8, 2);
+  indicator.position.set(-1.4, 0.8, 1.75);
   group.add(indicator);
+
+  const indicatorLens = mesh(
+    new THREE.SphereGeometry(0.105, 24, 18),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xffd28a,
+      emissive: 0x8e3c08,
+      emissiveIntensity: 1.45,
+      roughness: 0.12,
+      clearcoat: 1,
+    }),
+    { cast: false, receive: false },
+  );
+  indicatorLens.position.z = 0.52;
+  group.add(indicatorLens);
 
   function update(progress, time) {
     const alive = progress * count;
     let firstPartial = -1;
     for (let i = 0; i < count; i += 1) {
-      const fill = Math.max(0, Math.min(1, alive - i));
-      const height = Math.max(0.002, heights[i] * fill);
+      const amount = Math.max(0, Math.min(1, alive - i));
+      const height = Math.max(0.002, heights[i] * amount);
       fills[i].scale.y = height;
-      fills[i].position.y = -1.54 + height / 2;
-      fills[i].visible = fill > 0.001;
-      caps[i].position.y = -1.5 + height;
-      caps[i].visible = fill > 0.001;
-      if (fill > 0.001 && fill < 0.999 && firstPartial < 0) firstPartial = i;
+      fills[i].position.y = -1.5 + height / 2;
+      fills[i].visible = amount > 0.001;
+      menisci[i].position.y = -1.48 + height;
+      menisci[i].visible = amount > 0.001;
+      barLights[i].position.y = Math.min(-1.08 + height, 1.45);
+      barLights[i].intensity = amount > 0.001 ? (mobile ? 0.7 : 1.05) * (0.45 + amount * 0.55) : 0;
+      if (amount > 0.001 && amount < 0.999 && firstPartial < 0) firstPartial = i;
     }
 
-    const focusIndex = firstPartial >= 0 ? firstPartial : Math.max(0, Math.ceil(alive) - 1);
+    const focusIndex = firstPartial >= 0 ? firstPartial : Math.max(0, Math.min(count - 1, Math.ceil(alive) - 1));
+    const amount = Math.max(0.04, Math.min(1, alive - focusIndex));
     const x = left + focusIndex * step;
-    indicator.position.x = x;
-    indicator.position.y = -1.1 + heights[focusIndex] * Math.max(0.15, Math.min(1, alive - focusIndex));
-    indicator.intensity = (mobile ? 5 : 8) * (0.84 + (reducedMotion ? 0 : Math.sin(time * 0.0024) * 0.08));
+    const y = -1.05 + heights[focusIndex] * amount;
+    indicator.position.set(x, y, 1.7);
+    indicatorLens.position.set(x, y, 0.52);
+    indicator.intensity = (mobile ? 5.5 : 9) * (0.86 + (reducedMotion ? 0 : Math.sin(time * 0.0024) * 0.08));
 
-    group.rotation.y = reducedMotion ? 0 : Math.sin(time * 0.00013) * 0.055;
-    group.rotation.x = -0.04;
+    if (!reducedMotion) {
+      const pulse = 0.78 + Math.sin(time * 0.0018) * 0.08;
+      amber.emissiveIntensity = pulse;
+      glowMaterial.opacity = 0.13 + Math.sin(time * 0.0012) * 0.025;
+      group.rotation.y = Math.sin(time * 0.00013) * 0.052;
+    } else {
+      group.rotation.y = 0;
+    }
+    group.rotation.x = -0.045;
   }
 
   return { object: group, update };

@@ -120,6 +120,10 @@ services:
 
   beat:
     <<: *app-service
+    # Beat n'expose aucun serveur HTTP : il ne doit pas hériter du HEALTHCHECK /healthz/
+    # de l'image web. Son processus est supervisé par la politique de redémarrage Docker.
+    healthcheck:
+      disable: true
     # Le calendrier est écrit dans /app/run, répertoire créé et donné à `myent` dans
     # l'image. Sous /var/run le volume appartenait à root et beat s'arrêtait aussitôt.
     command: ["celery", "-A", "config", "beat", "--loglevel=INFO", "--schedule=/app/run/celerybeat-schedule"]
@@ -146,4 +150,3 @@ volumes:
   redis_data:
   private_media:
   celerybeat_data:
-

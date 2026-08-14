@@ -9,6 +9,77 @@ import { makeCelestialRuntime } from "./premium3d/celestial.js";
 
 const SUPPORTED = new Set(["ring", "hourglass", "wave", "candle", "beads", "moon", "bars", "spiral", "sun"]);
 
+function createStudioEnvironment(THREE, renderer, mobile) {
+  const environmentScene = new THREE.Scene();
+  environmentScene.background = new THREE.Color(0x0b0f16);
+
+  const room = new THREE.Mesh(
+    new THREE.BoxGeometry(16, 10, 16),
+    new THREE.MeshBasicMaterial({ color: 0x151b24, side: THREE.BackSide }),
+  );
+  environmentScene.add(room);
+
+  const panels = [
+    { position: [-4.6, 2.7, 3.2], size: [4.8, 2.8], color: 0xffefd6 },
+    { position: [4.2, 1.5, 1.8], size: [3.2, 5.4], color: 0x99c7ff },
+    { position: [0, -3.4, 1.7], size: [6.4, 2.1], color: 0xffb66c },
+    { position: [0, 3.5, -3.8], size: [5.6, 2.0], color: 0xdce8ff },
+  ];
+  for (const spec of panels) {
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(spec.size[0], spec.size[1]),
+      new THREE.MeshBasicMaterial({ color: spec.color, side: THREE.DoubleSide }),
+    );
+    panel.position.set(...spec.position);
+    panel.lookAt(0, 0, 0);
+    environmentScene.add(panel);
+  }
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileCubemapShader();
+  const target = pmrem.fromScene(environmentScene, mobile ? 0.08 : 0.04, 0.1, 30);
+  pmrem.dispose();
+  environmentScene.traverse((node) => {
+    node.geometry?.dispose?.();
+    if (Array.isArray(node.material)) {
+      for (const material of node.material) material.dispose();
+    } else {
+      node.material?.dispose?.();
+    }
+  });
+  return target;
+}
+
+function createStudioBackdrop(THREE) {
+  const source = document.createElement("canvas");
+  source.width = 512;
+  source.height = 512;
+  const context = source.getContext("2d");
+  if (!context) return null;
+
+  const gradient = context.createRadialGradient(256, 205, 18, 256, 255, 360);
+  gradient.addColorStop(0, "rgba(105, 137, 190, 0.27)");
+  gradient.addColorStop(0.4, "rgba(30, 40, 58, 0.19)");
+  gradient.addColorStop(0.72, "rgba(10, 14, 22, 0.11)");
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, source.width, source.height);
+
+  const texture = new THREE.CanvasTexture(source);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(8.8, 6.6), material);
+  plane.position.z = -3.25;
+  plane.renderOrder = -10;
+  return { plane, texture, material };
+}
+
 async function boot() {
   const app = document.querySelector("#focus-app");
   const visual = document.querySelector("#visual-wrap");
@@ -38,6 +109,7 @@ async function boot() {
     THREE = await import(new URL("../vendor/three.module.js", import.meta.url).href);
   } catch (_) {
     app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "three-module-load";
     canvas.remove();
     return;
   }
@@ -60,6 +132,7 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     });
   } catch (_) {
     app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "webgl-init";
     canvas.remove();
     return;
   }
@@ -68,11 +141,24 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.2 : 1.65));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = !mobile;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
+  let studioEnvironment = null;
+  try {
+    studioEnvironment = createStudioEnvironment(THREE, renderer, mobile);
+    scene.environment = studioEnvironment.texture;
+    scene.environmentIntensity = mobile ? 0.95 : 1.18;
+    app.dataset.renderer3dEnvironment = "studio";
+  } catch (_) {
+    app.dataset.renderer3dEnvironment = "direct-lights";
+  }
+
+  const backdrop = createStudioBackdrop(THREE);
+  if (backdrop) scene.add(backdrop.plane);
+
   const camera = new THREE.PerspectiveCamera(mobile ? 34 : 31, 1, 0.1, 40);
   camera.position.set(0, 0.08, mobile ? 8.85 : 8.4);
   scene.add(camera);
@@ -342,6 +428,7 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     fallbackCanvas.style.visibility = "visible";
     canvas.style.display = "none";
     app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "context-lost";
   };
   canvas.addEventListener("webglcontextlost", contextLost, { once: true });
 
@@ -349,14 +436,25 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     cancelAnimationFrame(raf);
     observer.disconnect();
     if (active) dispose(active.object);
+    if (backdrop) {
+      backdrop.plane.geometry.dispose();
+      backdrop.material.dispose();
+      backdrop.texture.dispose();
+      scene.remove(backdrop.plane);
+    }
+    studioEnvironment?.dispose();
     renderer.dispose();
   }, { once: true });
 
   app.dataset.renderer3d = "three-ready";
+  delete app.dataset.renderer3dReason;
   raf = requestAnimationFrame(render);
 }
 
 boot().catch(() => {
   const app = document.querySelector("#focus-app");
-  if (app) app.dataset.renderer3d = "fallback";
+  if (app) {
+    app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "premium-boot";
+  }
 });
