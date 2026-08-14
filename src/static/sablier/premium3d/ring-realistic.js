@@ -1,7 +1,5 @@
 import { makeChrome, makeSteel } from "./material-kit.js";
 
-class ArcCurve3 extends THREE.Curve {}
-
 function arcCurve(THREE, radius, fraction) {
   class RingArc extends THREE.Curve {
     constructor() {
@@ -96,7 +94,7 @@ export function makeRingRuntime(THREE, helpers) {
     group.add(tick);
   }
 
-  let active = mesh(new THREE.TubeGeometry(arcCurve(THREE, 1.49, 1), segments, 0.07, 12, false), luminous);
+  const active = mesh(new THREE.TubeGeometry(arcCurve(THREE, 1.49, 1), segments, 0.07, 12, false), luminous);
   active.position.z = 0.08;
   group.add(active);
 
