@@ -1,240 +1,179 @@
+// Scène immersive du Sablier.
+//
+// Un seul contexte WebGL rend l'univers *et* l'objet, dans la même caméra et sous la
+// même lumière. C'est la condition d'un rendu crédible : tant que le décor était peint
+// en 2D derrière un objet éclairé à part, l'objet restait posé sur une image. Ici le
+// ciel de l'univers est la source lumineuse de l'objet, la brume l'enveloppe et son
+// ombre tombe sur le sol du lieu.
+//
+// L'objet est cadré exactement dans la zone `#visual-wrap` du gabarit : la mise en page
+// HTML continue de commander la composition, la 3D s'y conforme.
 import { makeRingRuntime } from "./premium3d/ring.js";
 import { makeHourglassRuntime } from "./premium3d/hourglass.js";
 import { makeWaveRuntime } from "./premium3d/wave.js";
+import { makeCandleRuntime } from "./premium3d/candle.js";
 import { makeBeadsRuntime } from "./premium3d/beads.js";
 import { makeBarsRuntime } from "./premium3d/bars.js";
 import { makeSpiralRuntime } from "./premium3d/spiral.js";
 import { makeCelestialRuntime } from "./premium3d/celestial.js";
+import { buildWorld } from "./premium3d/worlds.js";
+import { buildEnvironment } from "./premium3d/environment.js";
+import { createPostFX } from "./premium3d/postfx.js";
+import { disposeTextures, radialSprite } from "./premium3d/textures.js";
 
-// Bougie reste volontairement un rendu Canvas procédural : c'est la silhouette
-// mince validée par l'utilisateur. L'ajouter ici réintroduirait un remplacement
-// asynchrone par un second objet, donc une rupture visuelle et un coût GPU inutile.
-const SUPPORTED = new Set(["ring", "hourglass", "wave", "beads", "moon", "bars", "spiral", "sun"]);
+// Neuf des onze visualisations sont des objets en volume. Anneau, marée, colonnes et
+// spirale viennent du travail mené en parallèle sur `main`, où ils étaient rendus dans un
+// studio neutre : ils entrent ici dans le lieu choisi par l'utilisateur, sous sa lumière,
+// comme les cinq autres. Digital et Zen restent du texte et des cercles HTML — ce sont
+// des lectures de l'heure, pas des objets.
+const SUPPORTED = new Set([
+  "ring", "hourglass", "wave", "candle", "beads", "bars", "spiral", "moon", "sun",
+]);
 
-function createStudioEnvironment(THREE, renderer, mobile) {
-  const environmentScene = new THREE.Scene();
-  environmentScene.background = new THREE.Color(0x0b0f16);
+// Les astres ne se posent pas. Un sablier, une bougie ou un mâlâ appartiennent au sol du
+// lieu ; la Lune et le Soleil appartiennent à son ciel. Les traiter pareillement — même
+// cadrage, même rattrapage au sol — donnait une Lune de cinq mètres posée sur le sable à
+// hauteur d'œil, dans un monde qui a déjà sa lune au ciel.
+const SKYBORNE = new Set(["moon", "sun"]);
 
-  const room = new THREE.Mesh(
-    new THREE.BoxGeometry(16, 10, 16),
-    new THREE.MeshBasicMaterial({ color: 0x151b24, side: THREE.BackSide }),
-  );
-  environmentScene.add(room);
+// `decorDensity` ne règle que le mouvement. Le lieu, lui, reste entier à tous les niveaux.
+const MOTION = { 0: 0, 1: 0.4, 2: 0.72, 3: 1 };
 
-  const panels = [
-    { position: [-4.6, 2.7, 3.2], size: [4.8, 2.8], color: 0xffefd6 },
-    { position: [4.2, 1.5, 1.8], size: [3.2, 5.4], color: 0x99c7ff },
-    { position: [0, -3.4, 1.7], size: [6.4, 2.1], color: 0xffb66c },
-    { position: [0, 3.5, -3.8], size: [5.6, 2.0], color: 0xdce8ff },
-  ];
-  for (const spec of panels) {
-    const panel = new THREE.Mesh(
-      new THREE.PlaneGeometry(spec.size[0], spec.size[1]),
-      new THREE.MeshBasicMaterial({ color: spec.color, side: THREE.DoubleSide }),
-    );
-    panel.position.set(...spec.position);
-    panel.lookAt(0, 0, 0);
-    environmentScene.add(panel);
-  }
-
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileCubemapShader();
-  const target = pmrem.fromScene(environmentScene, mobile ? 0.08 : 0.04, 0.1, 30);
-  pmrem.dispose();
-  environmentScene.traverse((node) => {
-    node.geometry?.dispose?.();
-    if (Array.isArray(node.material)) {
-      for (const material of node.material) material.dispose();
-    } else {
-      node.material?.dispose?.();
-    }
-  });
-  return target;
-}
-
-function createStudioBackdrop(THREE) {
-  const source = document.createElement("canvas");
-  source.width = 512;
-  source.height = 512;
-  const context = source.getContext("2d");
-  if (!context) return null;
-
-  const gradient = context.createRadialGradient(256, 205, 18, 256, 255, 360);
-  gradient.addColorStop(0, "rgba(105, 137, 190, 0.27)");
-  gradient.addColorStop(0.4, "rgba(30, 40, 58, 0.19)");
-  gradient.addColorStop(0.72, "rgba(10, 14, 22, 0.11)");
-  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, source.width, source.height);
-
-  const texture = new THREE.CanvasTexture(source);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    transparent: true,
-    opacity: 0.9,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  const plane = new THREE.Mesh(new THREE.PlaneGeometry(8.8, 6.6), material);
-  plane.position.z = -3.25;
-  plane.renderOrder = -10;
-  return { plane, texture, material };
-}
+// Hauteur de référence des objets, en unités de scène. Elle sert à convertir la taille
+// en pixels de `#visual-wrap` en échelle 3D.
+const OBJECT_HEIGHT = 5.2;
 
 async function boot() {
   const app = document.querySelector("#focus-app");
+  const stage = document.querySelector("#focus-stage");
   const visual = document.querySelector("#visual-wrap");
+  const decorCanvas = document.querySelector("#decor-canvas");
   const fallbackCanvas = document.querySelector("#timer-canvas");
   const progressNode = document.querySelector("#digital-progress");
   const liveChip = document.querySelector("#live-chip");
-  if (!app || !visual || !fallbackCanvas || !progressNode) return;
+  if (!app || !stage || !visual || !fallbackCanvas || !progressNode) return;
 
-  let started = false;
-  let observer;
-  const start = async () => {
-    if (started) return;
-    started = true;
-    observer?.disconnect();
-    const canvas = document.createElement("canvas");
-    canvas.className = "premium-3d-canvas";
-    canvas.setAttribute("aria-hidden", "true");
-    canvas.style.cssText = [
-      "position:absolute",
-      "inset:0",
-      "width:100%",
-      "height:100%",
-      "max-width:none",
-      "max-height:none",
-      "pointer-events:none",
-      "display:none",
-      "z-index:1",
-    ].join(";");
-    visual.prepend(canvas);
+  const canvas = document.createElement("canvas");
+  canvas.className = "stage-3d-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  stage.prepend(canvas);
 
-    let THREE;
-    try {
-      THREE = await import(new URL("../vendor/three.module.js", import.meta.url).href);
-    } catch (_) {
-      app.dataset.renderer3d = "fallback";
-      app.dataset.renderer3dReason = "three-module-load";
-      canvas.remove();
-      return;
-    }
-
-    createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode, liveChip);
-  };
-  const maybeStart = () => {
-    const mode = visual.dataset.mode || app.dataset.mode;
-    if (SUPPORTED.has(mode)) start();
-  };
-
-  if (SUPPORTED.has(visual.dataset.mode || app.dataset.mode)) {
-    await start();
-  } else {
-    observer = new MutationObserver(maybeStart);
-    observer.observe(visual, { attributes: true, attributeFilter: ["data-mode"] });
-    observer.observe(app, { attributes: true, attributeFilter: ["data-mode"] });
-    window.addEventListener("pagehide", () => observer?.disconnect(), { once: true });
-  }
-}
-
-function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode, liveChip) {
-  const mobile = matchMedia("(max-width: 700px)").matches;
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let renderer;
-
+  let THREE;
   try {
-    renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: !mobile,
-      powerPreference: "high-performance",
-      premultipliedAlpha: true,
-    });
+    THREE = await import(new URL("../vendor/three.module.js", import.meta.url).href);
   } catch (_) {
+    // Repli : le dessin 2D reste en place, la page continue de fonctionner.
+    // Le motif est consigné dans le DOM : un repli silencieux est indiscernable d'un
+    // rendu réussi, et c'est exactement ce qui avait laissé passer un moteur 3D mort.
     app.dataset.renderer3d = "fallback";
-    app.dataset.renderer3dReason = "webgl-init";
+    app.dataset.renderer3dReason = "three-module-load";
     canvas.remove();
     return;
   }
 
-  renderer.setClearColor(0x000000, 0);
-  // Un DPR élevé doublait presque le coût GPU sans différence perceptible dans la
-  // scène du minuteur. La définition reste nette, y compris sur écran Retina.
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.1 : 1.35));
+  try {
+    createRuntime(THREE, { app, stage, visual, canvas, decorCanvas, fallbackCanvas, progressNode, liveChip });
+  } catch (_) {
+    app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "runtime-boot";
+    canvas.remove();
+  }
+}
+
+function createRuntime(THREE, nodes) {
+  const { app, stage, visual, canvas, decorCanvas, fallbackCanvas, progressNode, liveChip } = nodes;
+  const mobile = matchMedia("(max-width: 700px)").matches;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const decorNames = JSON.parse(document.querySelector("#decor-data")?.textContent || "{}");
+
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: !mobile,
+      powerPreference: "high-performance",
+      alpha: false,
+    });
+  } catch (_) {
+    app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "webgl-context";
+    canvas.remove();
+    return;
+  }
+
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.4 : 1.85));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 0.9;
   renderer.shadowMap.enabled = !mobile;
   renderer.shadowMap.type = THREE.PCFShadowMap;
 
   const scene = new THREE.Scene();
-  let studioEnvironment = null;
-  try {
-    studioEnvironment = createStudioEnvironment(THREE, renderer, mobile);
-    scene.environment = studioEnvironment.texture;
-    scene.environmentIntensity = mobile ? 0.95 : 1.18;
-    app.dataset.renderer3dEnvironment = "studio";
-  } catch (_) {
-    app.dataset.renderer3dEnvironment = "direct-lights";
-  }
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.4, 9000);
+  camera.position.set(0, 1.72, 0);
+  camera.rotation.order = "YXZ";
 
-  const backdrop = createStudioBackdrop(THREE);
-  if (backdrop) scene.add(backdrop.plane);
+  // Lumière directe de l'univers. Son ombre ne couvre que les abords de l'objet : une
+  // carte d'ombre étalée sur tout le paysage n'aurait plus aucune définition là où on
+  // la regarde.
+  const keyLight = new THREE.DirectionalLight(0xffffff, 3);
+  keyLight.castShadow = !mobile;
+  keyLight.shadow.mapSize.set(mobile ? 512 : 1536, mobile ? 512 : 1536);
+  keyLight.shadow.camera.near = 0.5;
+  keyLight.shadow.camera.far = 60;
+  keyLight.shadow.camera.left = -8;
+  keyLight.shadow.camera.right = 8;
+  keyLight.shadow.camera.top = 8;
+  keyLight.shadow.camera.bottom = -8;
+  keyLight.shadow.bias = -0.0012;
+  keyLight.shadow.normalBias = 0.035;
+  scene.add(keyLight, keyLight.target);
 
-  const camera = new THREE.PerspectiveCamera(mobile ? 34 : 31, 1, 0.1, 40);
-  camera.position.set(0, 0.08, mobile ? 8.85 : 8.4);
-  scene.add(camera);
+  // Rebond d'appoint : sans lui, la face non éclairée de l'objet tombe au noir dans les
+  // univers nocturnes, où la carte d'environnement porte peu d'énergie.
+  const bounce = new THREE.PointLight(0xffffff, 6, 26, 2);
+  scene.add(bounce);
 
-  const root = new THREE.Group();
-  scene.add(root);
+  // Lumière d'ambiance du lieu : le ciel par-dessus, le sol qui renvoie par-dessous.
+  // La carte d'environnement éclaire déjà les matières, mais elle est calculée depuis un
+  // seul point ; sans ce complément, un sous-bois s'enfonce dans le noir absolu dès que
+  // la canopée cache le soleil, et le sol devient un aplat sans matière.
+  const ambient = new THREE.HemisphereLight(0xffffff, 0x404040, 1);
+  scene.add(ambient);
 
-  const hemi = new THREE.HemisphereLight(0xc9ddff, 0x120c08, 1.55);
-  const key = new THREE.DirectionalLight(0xffe8cb, 4.1);
-  key.position.set(-4.2, 5.5, 6.5);
-  key.castShadow = !mobile;
-  key.shadow.mapSize.set(mobile ? 512 : 1024, mobile ? 512 : 1024);
-  key.shadow.camera.near = 0.1;
-  key.shadow.camera.far = 20;
-  key.shadow.camera.left = -5;
-  key.shadow.camera.right = 5;
-  key.shadow.camera.top = 5;
-  key.shadow.camera.bottom = -5;
+  const objectRoot = new THREE.Group();
+  scene.add(objectRoot);
 
-  const rim = new THREE.DirectionalLight(0x84bfff, 2.2);
-  rim.position.set(4.5, 2.8, -4.2);
-
-  const fill = new THREE.PointLight(0xffaa63, 12, 14, 2);
-  fill.position.set(-2.6, 0.5, 3.5);
-  scene.add(hemi, key, rim, fill);
-
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(7, 7),
-    new THREE.ShadowMaterial({ color: 0x000000, opacity: 0.24 }),
+  // Occlusion de contact. Ce n'est pas un socle : c'est l'ombre courte que tout objet
+  // creuse sous lui en interceptant la lumière du ciel. Sans elle, une bougie posée sur un
+  // sol plat semble flotter, même quand son pied touche exactement le sol — l'ombre
+  // portée part de côté et rien ne rattache l'objet à sa base. Un meuble ajouterait un
+  // objet à la scène ; ceci n'ajoute qu'un assombrissement.
+  const contact = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      map: radialSprite(THREE, [
+        ["rgba(0,0,0,.85)", 0],
+        ["rgba(0,0,0,.4)", 0.34],
+        ["rgba(0,0,0,0)", 1],
+      ]),
+      transparent: true,
+      depthWrite: false,
+      opacity: 0.85,
+    }),
   );
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -2.42;
-  floor.receiveShadow = true;
-  scene.add(floor);
+  contact.rotation.x = -Math.PI / 2;
+  contact.renderOrder = 1;
+  scene.add(contact);
 
-  const state = {
-    mode: null,
-    progress: 1,
-    running: false,
-    finished: false,
-    ambience: app.dataset.ambience,
-  };
-
+  const state = { mode: null, world: null, progress: 1, running: false, finished: false, motion: 1 };
   let active = null;
-  let lastWidth = 0;
-  let lastHeight = 0;
-  let lastRenderTime = 0;
-  let raf = 0;
-  let firstThreeFrame = false;
-  let rimBaseHex = 0x84bfff;
-  const rimBase = new THREE.Color(rimBaseHex);
-  const worldTint = new THREE.Color();
+  let currentWorld = null;
+  let environment = null;
+  let post = null;
+  let width = 0, height = 0;
+  let frame = 0;
+  let ready = false;
 
   const mesh = (geometry, material, { cast = true, receive = true } = {}) => {
     const item = new THREE.Mesh(geometry, material);
@@ -242,260 +181,323 @@ function createRuntime(THREE, app, visual, canvas, fallbackCanvas, progressNode,
     item.receiveShadow = receive;
     return item;
   };
-
-  const helpers = {
-    mobile,
-    reducedMotion,
-    mesh,
-    materials: {
-      bronze: () => new THREE.MeshPhysicalMaterial({
-        color: 0x4a3325,
-        metalness: 0.82,
-        roughness: 0.19,
-        clearcoat: 1,
-        clearcoatRoughness: 0.12,
-      }),
-      darkMetal: () => new THREE.MeshPhysicalMaterial({
-        color: 0x16181b,
-        metalness: 0.9,
-        roughness: 0.2,
-        clearcoat: 0.7,
-      }),
-      wax: () => new THREE.MeshPhysicalMaterial({
-        color: 0xfff3dd,
-        roughness: 0.48,
-        metalness: 0,
-        clearcoat: 0.22,
-        clearcoatRoughness: 0.42,
-        transmission: 0.035,
-        thickness: 0.3,
-      }),
-      glass: () => new THREE.MeshPhysicalMaterial({
-        color: 0xeaf7ff,
-        roughness: 0.07,
-        metalness: 0,
-        transmission: 0.12,
-        thickness: 0.36,
-        ior: 1.46,
-        transparent: true,
-        opacity: 0.27,
-        clearcoat: 1,
-        clearcoatRoughness: 0.04,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      }),
-      sand: () => new THREE.MeshPhysicalMaterial({
-        color: 0xdca75b,
-        roughness: 0.62,
-        metalness: 0.02,
-        clearcoat: 0.16,
-      }),
-    },
-  };
+  const helpers = { mobile, reducedMotion, mesh, THREE };
 
   const celestial = makeCelestialRuntime(THREE, helpers);
   const factories = {
-    ring: () => makeRingRuntime(THREE, helpers),
+    ring: () => makeRingRuntime(THREE, helpers, state),
     hourglass: () => makeHourglassRuntime(THREE, helpers, state),
     wave: () => makeWaveRuntime(THREE, helpers, state),
+    candle: () => makeCandleRuntime(THREE, helpers, state),
     beads: () => makeBeadsRuntime(THREE, helpers),
+    bars: () => makeBarsRuntime(THREE, helpers, state),
+    spiral: () => makeSpiralRuntime(THREE, helpers, state),
     moon: celestial.moon,
-    bars: () => makeBarsRuntime(THREE, helpers),
-    spiral: () => makeSpiralRuntime(THREE, helpers),
     sun: celestial.sun,
   };
 
+  // Empreinte au sol d'un objet : le point le plus bas de sa silhouette et son rayon.
+  // Mesurée sur la géométrie plutôt que déclarée à la main — neuf objets, chacun avec son
+  // propre profil, et une constante oubliée suffit à faire flotter l'un d'eux au-dessus de
+  // son ombre. Les sprites en sont exclus : une flamme ou un halo débordent largement du
+  // corps sans jamais toucher le sol.
+  const bounds = new THREE.Box3();
+  const corner = new THREE.Vector3();
+  function measure(target) {
+    bounds.makeEmpty();
+    target.updateMatrixWorld(true);
+    target.traverse((node) => {
+      if (!node.isMesh || node.isSprite) return;
+      bounds.expandByObject(node);
+    });
+    if (bounds.isEmpty()) return { base: -OBJECT_HEIGHT / 2, radius: 1.6 };
+    bounds.getSize(corner);
+    return {
+      base: bounds.min.y,
+      radius: Math.max(Math.abs(bounds.min.x), bounds.max.x, Math.abs(bounds.min.z), bounds.max.z),
+    };
+  }
+
   function dispose(target) {
     if (!target) return;
-    const geometries = new Set();
-    const materials = new Set();
-    const textures = new Set();
+    const geometries = new Set(), materials = new Set(), textures = new Set();
     target.traverse((node) => {
       if (node.geometry) geometries.add(node.geometry);
-      const nodeMaterials = node.material
-        ? (Array.isArray(node.material) ? node.material : [node.material])
-        : [];
-      for (const material of nodeMaterials) {
+      const list = node.material ? (Array.isArray(node.material) ? node.material : [node.material]) : [];
+      for (const material of list) {
         materials.add(material);
-        if (material.map) textures.add(material.map);
+        for (const value of Object.values(material)) {
+          // Les cartes du cache servent à tous les univers : les libérer ici forçait un
+          // réenvoi complet vers la carte graphique au changement d'ambiance, pour des
+          // textures que le cache continuait pourtant de distribuer.
+          if (value?.isTexture && value.userData?.shared !== true) textures.add(value);
+        }
       }
     });
     for (const geometry of geometries) geometry.dispose();
     for (const texture of textures) texture.dispose();
     for (const material of materials) material.dispose();
-    root.remove(target);
+    target.removeFromParent();
   }
 
-  function configureLighting(mode) {
-    key.color.set(0xffe8cb);
-    rimBaseHex = 0x84bfff;
-    rim.color.set(rimBaseHex);
-    fill.color.set(0xffaa63);
+  // ── Univers ──────────────────────────────────────────────────────────────────
+  function setWorld(key) {
+    if (state.world === key) return;
+    state.world = key;
 
-    hemi.intensity = mode === "moon" ? 0.14 : mode === "sun" ? 0.5 : 1.55;
-    key.intensity = mode === "moon" ? 0.04 : mode === "sun" ? 0.3 : 4.1;
-    rim.intensity = mode === "moon" ? 0.42 : mode === "sun" ? 0.55 : 2.2;
-    fill.intensity = mode === "candle" ? 4 : ["sun", "moon"].includes(mode) ? 0 : 12;
-    floor.visible = !["candle", "sun", "moon"].includes(mode);
-    // La bougie possède déjà sa lumière et son assise sombre : une shadow-map de
-    // 1024 px sur chaque image n'ajoutait rien, mais coûtait beaucoup.
-    key.castShadow = !mobile && !["candle", "moon", "sun"].includes(mode);
-    floor.receiveShadow = key.castShadow;
-
-    if (mode === "wave") {
-      key.color.set(0xdff8ff);
-      rimBaseHex = 0x62d8ff;
-      rim.color.set(rimBaseHex);
-      fill.color.set(0x3da8c9);
-      key.intensity = 3.2;
-      rim.intensity = 2.8;
-      fill.intensity = 7;
-    } else if (["ring", "bars", "spiral"].includes(mode)) {
-      key.color.set(0xf7f3e9);
-      rimBaseHex = 0x8fb8ff;
-      rim.color.set(rimBaseHex);
-      fill.color.set(0xe2a55b);
-      key.intensity = 4.5;
-      rim.intensity = 2.5;
-      fill.intensity = 7.5;
+    if (currentWorld) {
+      dispose(currentWorld.object);
+      currentWorld = null;
     }
+    if (environment) {
+      if (environment.background?.isObject3D) environment.background.removeFromParent();
+      scene.environment = null;
+      scene.background = null;
+      environment.dispose();
+      environment = null;
+    }
+
+    currentWorld = buildWorld(THREE, key, { mobile });
+    scene.add(currentWorld.object);
+
+    environment = buildEnvironment(THREE, renderer, currentWorld.env);
+    scene.environment = environment.environment;
+    if (environment.background.isObject3D) scene.add(environment.background);
+    else scene.background = environment.background;
+
+    const [fogColor, fogDensity] = currentWorld.fog || ["#0a1018", 0.006];
+    scene.fog = new THREE.FogExp2(new THREE.Color(fogColor), fogDensity);
+
+    // Le ciel à diffusion atmosphérique délivre une énergie physique : sans exposition
+    // adaptée, un plein soleil sature toute l'image en blanc. Chaque univers porte donc
+    // la sienne, comme on choisirait un temps de pose.
+    // Les nuits demandent une pose plus longue que les jours — et davantage qu'avant :
+    // tant que le halo réappliquait la courbe sRGB sur une image déjà encodée, les tons
+    // moyens remontaient artificiellement. La chaîne corrigée rend leurs vrais noirs, il
+    // faut donc ouvrir franchement.
+    const exposure = currentWorld.env.exposure
+      ?? (currentWorld.env.kind === "day" ? 0.4 : 2);
+    renderer.toneMappingExposure = exposure;
+    post?.setExposure(exposure);
+
+    // L'appoint reste discret : trop clair, il éclaire le sol plus fort que le ciel qui
+    // le surplombe et l'horizon se casse en deux bandes franches.
+    const shade = new THREE.Color(fogColor);
+    ambient.color.copy(shade).lerp(new THREE.Color(0xffffff), 0.22);
+    ambient.groundColor.copy(shade).multiplyScalar(0.3);
+    ambient.intensity = currentWorld.env.ambient ?? (currentWorld.env.kind === "day" ? 1.6 : 0.7);
+
+    const sun = environment.sun;
+    keyLight.color.set(sun.color);
+    keyLight.intensity = sun.intensity;
+    keyLight.position.copy(sun.direction).multiplyScalar(40);
+    bounce.color.set(sun.color);
+    bounce.intensity = currentWorld.env.kind === "day" ? 3 : 8;
   }
 
+  // ── Objet ────────────────────────────────────────────────────────────────────
   function setMode(mode) {
     if (state.mode === mode) return;
     state.mode = mode;
     const supported = SUPPORTED.has(mode);
     visual.dataset.premium3d = String(supported);
-    app.dataset.renderer3d = supported ? "three" : "canvas";
 
     if (active) {
       dispose(active.object);
       active = null;
     }
-
-    firstThreeFrame = false;
-    lastRenderTime = 0;
-    fallbackCanvas.style.opacity = "1";
-    fallbackCanvas.style.visibility = "visible";
-    canvas.style.display = supported ? "block" : "none";
-
+    syncFallback();
     if (!supported) return;
 
     active = factories[mode]();
-    root.add(active.object);
-    configureLighting(mode);
+    objectRoot.add(active.object);
+    active.footprint = measure(active.object);
   }
 
-  function readState() {
-    const mode = visual.dataset.mode || app.dataset.mode;
-    const rawProgress = Number.parseFloat(progressNode.style.getPropertyValue("--progress"));
-    state.progress = Number.isFinite(rawProgress) ? Math.max(0, Math.min(1, rawProgress)) : 1;
-    state.running = Boolean(liveChip?.textContent?.includes("EN DIRECT"));
-    state.finished = app.dataset.finished === "true";
-    state.ambience = app.dataset.ambience || state.ambience;
-    setMode(mode);
+  // Digital et Zen n'ont pas d'objet en volume : leur lecture de l'heure reste en HTML,
+  // par-dessus l'univers rendu qui leur sert de lieu.
+  //
+  // Les neuf autres ne prennent la place du dessin 2D qu'une fois la première image 3D
+  // réellement à l'écran. Les masquer dès le choix du mode laissait un intervalle — le
+  // temps de bâtir le lieu — où le dessin 2D s'affichait puis disparaissait d'un coup :
+  // l'utilisateur voyait « l'ancienne vue » clignoter avant la vraie scène.
+  function syncFallback() {
+    const handedOver = ready && SUPPORTED.has(state.mode);
+    fallbackCanvas.style.opacity = handedOver ? "0" : "1";
+    fallbackCanvas.style.visibility = handedOver ? "hidden" : "visible";
+  }
+
+  // Place et dimensionne l'objet pour qu'il occupe exactement la zone `#visual-wrap`.
+  function frameObject() {
+    const stageRect = stage.getBoundingClientRect();
+    const wrapRect = visual.getBoundingClientRect();
+    if (!stageRect.width || !stageRect.height) return;
+    // Un astre est loin. Le placer à neuf unités comme un objet de table le faisait passer
+    // *devant* les immeubles et les arbres du lieu — une lune qui éclipse une tour. La
+    // distance ne change pourtant rien à sa taille apparente : l'échelle est calculée à
+    // partir d'elle, si bien qu'un même cadrage HTML donne le même disque à l'écran, mais
+    // derrière le paysage.
+    const skyborne = SKYBORNE.has(state.mode);
+    const distance = skyborne ? 1500 : 9;
+    const halfHeight = distance * Math.tan((camera.fov * Math.PI) / 360);
+    const halfWidth = halfHeight * camera.aspect;
+    const ndcX = ((wrapRect.left + wrapRect.width / 2 - stageRect.left) / stageRect.width) * 2 - 1;
+    const ndcY = -(((wrapRect.top + wrapRect.height / 2 - stageRect.top) / stageRect.height) * 2 - 1);
+
+    // Un astre se lit de loin : il occupe un peu moins que le cadre réservé à un objet de
+    // premier plan, ce qui lui laisse la place de se détacher entier au-dessus du paysage.
+    const fill = skyborne ? 0.6 : (mobile ? 0.94 : 0.86);
+    const target = Math.min(wrapRect.width, wrapRect.height) * fill;
+    const unitsPerPixel = (halfHeight * 2) / stageRect.height;
+    const scale = (target * unitsPerPixel) / OBJECT_HEIGHT;
+
+    objectRoot.position.set(ndcX * halfWidth, camera.position.y + ndcY * halfHeight, -distance);
+    objectRoot.scale.setScalar(scale);
+
+    const half = (OBJECT_HEIGHT / 2) * scale;
+    // Chaque objet déclare le point le plus bas de sa silhouette. Les supposer tous
+    // centrés sur une hauteur de référence laissait la bougie — dont la cire s'arrête
+    // bien au-dessus de cette limite — flotter à un mètre de son ombre.
+    const footing = (active?.footprint?.base ?? -OBJECT_HEIGHT / 2) * scale;
+    const base = objectRoot.position.y + footing;
+    if (skyborne) {
+      // L'astre se détache entier au-dessus de l'horizon — qui se trouve exactement à
+      // hauteur d'œil — sans jamais monter jusqu'à sortir du cadre. On contraint son
+      // centre : contraindre son bord inférieur le chassait hors de l'image, sa
+      // demi-hauteur croissant avec sa distance.
+      const horizon = camera.position.y + half * 1.15;
+      if (objectRoot.position.y < horizon) objectRoot.position.y = horizon;
+    } else {
+      // Un objet posé est *assis* sur le sol, pas seulement empêché d'y descendre. Le
+      // rattrapage précédent ne relevait que ce qui s'enfonçait : une bougie dont la cire
+      // s'arrête haut restait donc suspendue au-dessus de son ombre, sans que rien ne la
+      // redescende. Le cadrage HTML garde la taille et la position latérale ; c'est le sol
+      // qui fixe la hauteur.
+      objectRoot.position.y += 0.02 - base;
+    }
+
+    contact.visible = !skyborne && Boolean(active);
+    if (contact.visible) {
+      const spread = (active?.footprint?.radius ?? 1.6) * scale * 2;
+      contact.position.set(objectRoot.position.x, 0.03, objectRoot.position.z);
+      contact.scale.set(spread, spread, 1);
+    }
+
+    // La lumière clé vise l'objet : c'est lui qui doit être défini, pas l'horizon.
+    keyLight.target.position.copy(objectRoot.position);
+    keyLight.target.updateMatrixWorld();
+    // Un soleil rasant — un couchant du Sahara à trois degrés — projetterait une ombre
+    // de soixante mètres, hors du champ de la carte d'ombre : l'objet paraîtrait flotter.
+    // On garde l'azimut du soleil, qui donne la direction de la lumière, mais on relève
+    // sa hauteur pour que l'ombre retombe au pied de l'objet.
+    const direction = environment
+      ? environment.sun.direction.clone()
+      : new THREE.Vector3(0.4, 0.8, 0.45);
+    if (direction.y < 0.52) {
+      direction.y = 0.52;
+      direction.normalize();
+    }
+    keyLight.position.copy(objectRoot.position).add(direction.multiplyScalar(22 * (skyborne ? 60 : 1)));
+    bounce.position.set(
+      objectRoot.position.x - 2.4 * scale,
+      objectRoot.position.y + 0.6 * scale,
+      objectRoot.position.z + 3.2 * scale,
+    );
+    // La mise au point suit l'objet : le paysage se défocalise autour de lui, qu'il soit à
+    // portée de main ou à l'horizon.
+    post?.focus(distance);
   }
 
   function resize() {
-    const rect = visual.getBoundingClientRect();
-    const width = Math.max(1, Math.round(rect.width));
-    const height = Math.max(1, Math.round(rect.height));
-    if (width === lastWidth && height === lastHeight) return;
-    lastWidth = width;
-    lastHeight = height;
+    const rect = stage.getBoundingClientRect();
+    const nextWidth = Math.max(1, Math.round(rect.width));
+    const nextHeight = Math.max(1, Math.round(rect.height));
+    if (nextWidth === width && nextHeight === height) return;
+    width = nextWidth;
+    height = nextHeight;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    post?.setSize(width, height);
   }
 
-  function tintWorld() {
-    const style = getComputedStyle(app);
-    const raw = style.getPropertyValue("--world-light").trim();
-    rimBase.setHex(rimBaseHex);
-    if (/^#[0-9a-f]{6}$/i.test(raw)) {
-      worldTint.set(raw);
-      rim.color.copy(rimBase).lerp(worldTint, 0.28);
-    } else {
-      rim.color.copy(rimBase);
-    }
+  function readState() {
+    const raw = Number.parseFloat(progressNode.style.getPropertyValue("--progress"));
+    state.progress = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
+    state.running = Boolean(liveChip?.textContent?.includes("EN DIRECT"));
+    state.finished = app.dataset.finished === "true";
+    const level = Number(app.dataset.decorDensity ?? 2);
+    state.motion = reducedMotion ? 0 : (MOTION[level] ?? 0.72);
+    setWorld(decorNames[app.dataset.ambience] || "star_tree");
+    setMode(visual.dataset.mode || app.dataset.mode);
   }
 
   function render(time) {
-    if (document.hidden) {
-      raf = requestAnimationFrame(render);
-      return;
-    }
+    frame = requestAnimationFrame(render);
     readState();
-    if (active) {
-      // Le temps change une fois par seconde. 40 i/s en marche et 20 i/s au repos
-      // suffisent largement aux flammes et évitent une boucle GPU à 60/120 i/s.
-      const minimumFrameTime = state.running ? (mobile ? 34 : 24) : (mobile ? 82 : 48);
-      if (firstThreeFrame && time - lastRenderTime < minimumFrameTime) {
-        raf = requestAnimationFrame(render);
-        return;
-      }
-      lastRenderTime = time;
-      resize();
-      tintWorld();
-      active.update(state.progress, time);
+    resize();
+    frameObject();
 
-      if (!reducedMotion) {
-        camera.position.x = Math.sin(time * 0.00011) * 0.08;
-        camera.position.y = 0.08 + Math.sin(time * 0.00008) * 0.045;
-        camera.lookAt(0, -0.08, 0);
-      }
+    currentWorld?.update(time, state.motion, state.progress);
+    active?.update(state.progress, time);
 
-      renderer.render(scene, camera);
-
-      if (!firstThreeFrame) {
-        firstThreeFrame = true;
-        fallbackCanvas.style.opacity = "0";
-        fallbackCanvas.style.visibility = "hidden";
-      }
+    if (!reducedMotion) {
+      // Respiration de la caméra : quelques dixièmes de degré suffisent à sortir la
+      // scène de la fixité d'une image de synthèse.
+      camera.rotation.y = Math.sin(time * 0.00009) * 0.012;
+      camera.rotation.x = -0.02 + Math.sin(time * 0.00007) * 0.006;
     }
 
-    raf = requestAnimationFrame(render);
+    if (post) post.render();
+    else renderer.render(scene, camera);
+
+    if (!ready) {
+      // Un seul point de bascule, une fois l'image prête : la scène 3D se révèle, le décor
+      // peint s'efface et le dessin 2D cède la place, tous sur la même transition.
+      ready = true;
+      app.dataset.renderer3d = "three";
+      canvas.style.opacity = "1";
+      if (decorCanvas) decorCanvas.style.opacity = "0";
+      syncFallback();
+    }
   }
 
-  const observer = new ResizeObserver(() => {
-    lastWidth = 0;
-    lastHeight = 0;
-  });
-  observer.observe(visual);
+  resize();
+  readState();
+  post = createPostFX(THREE, { renderer, scene, camera, width, height, mobile });
 
-  const contextLost = () => {
-    cancelAnimationFrame(raf);
-    fallbackCanvas.style.opacity = "1";
-    fallbackCanvas.style.visibility = "visible";
-    canvas.style.display = "none";
+  const observer = new ResizeObserver(() => { width = 0; height = 0; });
+  observer.observe(stage);
+
+  canvas.addEventListener("webglcontextlost", (event) => {
+    event.preventDefault();
+    cancelAnimationFrame(frame);
+    ready = false;
     app.dataset.renderer3d = "fallback";
     app.dataset.renderer3dReason = "context-lost";
-  };
-  canvas.addEventListener("webglcontextlost", contextLost, { once: true });
+    canvas.style.display = "none";
+    syncFallback();
+    if (decorCanvas) decorCanvas.style.opacity = "";
+  }, { once: true });
 
   window.addEventListener("pagehide", () => {
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(frame);
     observer.disconnect();
+    post?.dispose();
     if (active) dispose(active.object);
-    if (backdrop) {
-      backdrop.plane.geometry.dispose();
-      backdrop.material.dispose();
-      backdrop.texture.dispose();
-      scene.remove(backdrop.plane);
-    }
-    studioEnvironment?.dispose();
+    if (currentWorld) dispose(currentWorld.object);
+    environment?.dispose();
+    disposeTextures();
     renderer.dispose();
   }, { once: true });
 
   app.dataset.renderer3d = "three-ready";
-  delete app.dataset.renderer3dReason;
-  raf = requestAnimationFrame(render);
+  frame = requestAnimationFrame(render);
 }
 
 boot().catch(() => {
   const app = document.querySelector("#focus-app");
-  if (app) {
-    app.dataset.renderer3d = "fallback";
-    app.dataset.renderer3dReason = "premium-boot";
-  }
+  if (!app) return;
+  app.dataset.renderer3d = "fallback";
+  app.dataset.renderer3dReason = "boot";
 });

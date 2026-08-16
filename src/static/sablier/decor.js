@@ -45,17 +45,17 @@
   };
 
   window.SablierDecor = stub;
-  // L'objet temporel possède un unique renderer canonique dans sablier.js.
-  // Les univers restent indépendants et ne peuvent donc plus remplacer sa forme.
-  window.SablierPremium3DReady = Promise.resolve(null);
-  window.SablierWorld3DReady = import(new URL("world3d.js" + version, here).href)
+  // L'objet et son univers sont rendus ensemble par `premium3d.js`, dans un seul contexte
+  // WebGL : il n'y a pas de moteur de décor séparé à charger en parallèle. Le décor peint
+  // ci-dessous ne subsiste que comme repli, quand la 3D n'est pas disponible.
+  window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)
     .catch((error) => {
       const app = document.querySelector("#focus-app");
       if (app) {
-        app.dataset.world3d = "fallback";
-        app.dataset.world3dReason = "world-module-load";
+        app.dataset.renderer3d = "fallback";
+        app.dataset.renderer3dReason = "premium-module-load";
       }
-      console.error("Univers 3D indisponible", error);
+      console.error("Sablier premium 3D indisponible", error);
       return null;
     });
   window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"));

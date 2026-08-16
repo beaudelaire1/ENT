@@ -66,16 +66,11 @@ export function makeWaveRuntime(THREE, helpers, state) {
   rim.position.y = 1.54;
   group.add(rim);
 
-  const foot = mesh(new THREE.CylinderGeometry(1.82, 1.92, 0.18, segments), chrome);
-  foot.position.y = -1.7;
-  group.add(foot);
-
-  const footInset = mesh(
-    new THREE.CylinderGeometry(1.55, 1.66, 0.07, segments),
-    new THREE.MeshPhysicalMaterial({ color: 0x161b22, metalness: 0.82, roughness: 0.22, clearcoat: 0.65 }),
-  );
-  footInset.position.y = -1.59;
-  group.add(footInset);
+  // Pas de socle. Le vase a déjà un fond de verre : le pied chromé qui le portait
+  // venait d'un rendu en studio, où l'objet flotte dans du vide et où il faut bien
+  // lui inventer un support. Ici il repose sur le sol du lieu — sable, herbe ou
+  // pierre — et ce contact direct est ce qui le fait appartenir à l'endroit.
+  // Un socle n'est légitime que si l'objet ne tient pas sans lui.
 
   const waterVolume = mesh(new THREE.CylinderGeometry(1.42, 1.42, 2.72, segments), water, {
     cast: false,

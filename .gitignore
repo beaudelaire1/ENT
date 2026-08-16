@@ -26,5 +26,7 @@ build/
 legacy/backups/
 migration-report*.json
 /src/static/sablier/audio/*.wav
-/src/static/vendor/three.module.js
-/src/static/vendor/three.core.js
+# Le dossier entier est produit par `npm run vendor` : moteur, noyau et modules
+# d'exemple. Le verrou npm, lui, reste versionné — c'est ce qui rend `npm ci`
+# reproductible d'une construction à l'autre.
+/src/static/vendor/

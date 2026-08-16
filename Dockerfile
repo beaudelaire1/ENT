@@ -1,10 +1,11 @@
 FROM node:22-alpine AS visual-runtime
 WORKDIR /visual
 COPY package.json package-lock.json ./
+COPY tools/vendor-three.mjs ./tools/vendor-three.mjs
 RUN npm ci --ignore-scripts --no-audit --no-fund \
+    && npm run vendor \
     && mkdir -p /vendor \
-    && cp node_modules/three/build/three.module.js /vendor/three.module.js \
-    && cp node_modules/three/build/three.core.js /vendor/three.core.js
+    && cp -R src/static/vendor/. /vendor/
 
 FROM python:3.12.11-slim-bookworm
 
@@ -22,8 +23,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-COPY --from=visual-runtime /vendor/three.module.js /app/src/static/vendor/three.module.js
-COPY --from=visual-runtime /vendor/three.core.js /app/src/static/vendor/three.core.js
+COPY --from=visual-runtime /vendor/ /app/src/static/vendor/
 RUN mkdir -p /app/src/data /app/src/media /app/src/staticfiles /app/run \
     && python src/manage.py generate_chime \
     && python src/manage.py collectstatic --noinput \

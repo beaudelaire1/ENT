@@ -75,7 +75,7 @@ class SceneRegistryTests(SimpleTestCase):
     def test_browser_storage_also_converges_to_the_curated_catalog(self):
         engine = (settings.BASE_DIR / "static" / "sablier" / "sablier.js").read_text(encoding="utf-8")
         template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
-        self.assertIn('ambienceAliases[state.ambience]||state.ambience', engine)
+        self.assertIn("ambienceAliases[state.ambience]||state.ambience", engine)
         self.assertIn('json_script:"ambience-alias-data"', template)
 
 
@@ -87,7 +87,7 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         return path.read_text(encoding="utf-8")
 
     def test_canonical_runtime_protects_all_graphical_visualisations(self):
-        engine = self.read_static("sablier.js")
+        engine = self.read_static("premium3d.js")
         for mode in self.GRAPHICAL_MODES:
             self.assertIn(f"{mode}:", engine)
 
@@ -109,7 +109,12 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "celestial.js",
             "celestial-realistic.js",
             "material-kit.js",
-            "flame-texture.js",
+            "noise.js",
+            "textures.js",
+            "environment.js",
+            "world-kit.js",
+            "worlds.js",
+            "postfx.js",
             "native-modes.css",
         )
         for module in expected:
@@ -151,16 +156,27 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn("fallbackCanvas.style.visibility", premium)
         self.assertIn("renderer3dReason", premium)
 
-    def test_physical_materials_receive_a_procedural_studio_environment(self):
-        engine = self.read_static("premium3d.js")
-        for fragment in (
-            "new THREE.PMREMGenerator(renderer)",
-            "scene.environment = studioEnvironment.texture",
-            "scene.environmentIntensity",
-            "createStudioBackdrop(THREE)",
-            'app.dataset.renderer3dEnvironment = "studio"',
-        ):
-            self.assertIn(fragment, engine)
+    def test_all_time_objects_use_one_canonical_renderer(self):
+        """Les neuf objets viennent du même moteur, dans le même lieu.
+
+        La 2D reste un repli intégral — un dessin par mode — mais aucun mode ne
+        garde de chemin de rendu privilégié : c'est ce qui avait laissé cohabiter
+        des photos plates et des objets en volume dans une même série.
+        """
+        engine = self.read_static("sablier.js")
+        premium = self.read_static("premium3d.js")
+        painters = (
+            "const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,"
+            "candle:drawCandle,beads:drawBeads,moon:drawMoon,bars:drawBars,"
+            "spiral:drawSpiral,sun:drawSun}"
+        )
+        self.assertIn(painters, engine)
+        for mode in self.GRAPHICAL_MODES:
+            with self.subTest(mode=mode):
+                self.assertIn(f'"{mode}"', premium)
+        for removed in ("drawCandlePhoto", "drawHourglassPhoto", "drawWavePhoto", "#asset-data"):
+            with self.subTest(removed=removed):
+                self.assertNotIn(removed, engine)
 
     def test_digital_and_zen_remain_native_non_webgl_modes(self):
         engine = self.read_static("premium3d.js")
@@ -181,10 +197,14 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         files = [
             "decor-core.js",
             "seasonal-worlds.js",
-            "world3d.js",
             "premium3d.js",
             "premium3d/material-kit.js",
-            "premium3d/flame-texture.js",
+            "premium3d/noise.js",
+            "premium3d/textures.js",
+            "premium3d/environment.js",
+            "premium3d/world-kit.js",
+            "premium3d/worlds.js",
+            "premium3d/postfx.js",
             "premium3d/ring-realistic.js",
             "premium3d/hourglass-realistic.js",
             "premium3d/wave-realistic.js",
@@ -207,163 +227,74 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, engine)
 
-    def test_complete_catalogue_uses_temporal_webgl_scenes(self):
-        world = self.read_static("world3d.js")
-        loader = self.read_static("decor.js")
-        css = self.read_static("sablier.css")
-        for fragment in (
-            "new THREE.WebGLRenderer",
-            "new THREE.ShaderMaterial",
-            "new THREE.MeshPhysicalMaterial",
-            "new THREE.InstancedMesh",
-            "new THREE.FogExp2",
-            "date.getHours()",
-            'matchMedia("(prefers-reduced-motion: reduce)")',
-            'canvas.addEventListener("webglcontextlost"',
-        ):
-            self.assertIn(fragment, world)
-        for scene in scenes.SCENES:
-            with self.subTest(scene=scene.key):
-                self.assertIn(f'"{scene.key}"', world)
-        self.assertIn("function buildCosmos", world)
-        self.assertIn("function buildTimeRiver", world)
-        self.assertIn("galaxie: (THREE, mobile, environment) => buildCosmos", world)
-        self.assertIn("fleuve_temps: (THREE, mobile, environment) => buildTimeRiver", world)
-        self.assertIn('import(new URL("world3d.js" + version, here).href)', loader)
-        self.assertIn('[data-world3d="ready"][data-world3d-active="true"]', css)
-        self.assertIn('[data-world3d-active="true"]', css)
-        self.assertNotIn("cdn", world.lower())
+    def test_three_is_pinned_and_vendored_in_full(self):
+        """Le moteur 3D doit être copié en entier, pas seulement son point d'entrée.
 
-    def test_beads_are_a_dynamic_glass_chronometer_not_a_photo_sprite(self):
-        beads = self.read_static("premium3d/beads-realistic.js")
-        fallback = self.read_static("sablier.js")
-        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
-        for fragment in (
-            "new THREE.InstancedMesh",
-            "new THREE.LatheGeometry",
-            "transmission: 0.34",
-            "makePearl(THREE)",
-            "transferred = (1 - progress) * count",
-            "pearls.instanceMatrix.needsUpdate = true",
-        ):
-            self.assertIn(fragment, beads)
-        self.assertNotIn("drawBeadsPhoto", fallback)
-        self.assertNotIn('"pearl":', template)
-
-    def test_candle_uses_the_original_photo_without_a_renderer_swap(self):
-        fallback = self.read_static("sablier.js")
-        loader = self.read_static("decor.js")
-        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
-        for fragment in (
-            "function drawCandlePhoto(progress)",
-            "candle:drawCandlePhoto",
-            'ready("candle")',
-            "ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh)",
-        ):
-            self.assertIn(fragment, fallback)
-        self.assertIn('"candle":"{{ static_prefix }}sablier/img/9d0bd271', template)
-        self.assertNotIn('if(!ready("candle")){drawCandle', fallback)
-        self.assertIn("SablierPremium3DReady = Promise.resolve(null)", loader)
-        self.assertNotIn('import(new URL("premium3d.js"', loader)
-
-    def test_hourglass_keeps_its_canonical_image_with_a_readable_shape(self):
-        engine = self.read_static("sablier.js")
-        css = self.read_static("sablier.css")
-        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
-        self.assertIn("hourglass:drawHourglassPhoto", engine)
-        self.assertIn("const shapeWidth=1.34", engine)
-        self.assertIn("function getHourglassGrainPattern()", engine)
-        self.assertIn("for(let i=0;i<1650;i++)", engine)
-        self.assertIn("for(let i=0;i<18;i++)", engine)
-        self.assertIn(".visual-wrap .canvas-time { bottom:-18px; }", css)
-        self.assertIn(".focus-stage .stage-message { display:none; }", css)
-        self.assertIn('"hourglass":"{{ static_prefix }}sablier/img/7073fefb', template)
-
-    def test_all_time_objects_use_one_canonical_renderer(self):
-        engine = self.read_static("sablier.js")
-        loader = self.read_static("decor.js")
-        expected = (
-            "ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,"
-            "beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto"
-        )
-        self.assertIn(expected, engine)
-        self.assertIn("SablierPremium3DReady = Promise.resolve(null)", loader)
-        self.assertNotIn('import(new URL("premium3d.js"', loader)
-
-    def test_validated_visuals_remain_locked_to_their_existing_sources(self):
-        engine = self.read_static("sablier.js")
-        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
-        for fragment in (
-            "ring:drawRingPhoto",
-            "hourglass:drawHourglassPhoto",
-            "candle:drawCandlePhoto",
-            "moon:drawMoonPhoto",
-            'id="digital-time"',
-            '"ring":"{{ static_prefix }}sablier/img/7cfca4f4',
-            '"hourglass":"{{ static_prefix }}sablier/img/7073fefb',
-            '"candle":"{{ static_prefix }}sablier/img/9d0bd271',
-            '"moon":"{{ static_prefix }}sablier/img/1b9b150c',
-        ):
-            self.assertIn(fragment, engine if "draw" in fragment else template)
-
-    def test_reworked_visuals_keep_material_depth_and_visible_tide_water(self):
-        engine = self.read_static("sablier.js")
-        css = self.read_static("sablier.css")
-        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
-        for fragment in (
-            "function drawWavePhoto(progress)",
-            'ctx.globalCompositeOperation="destination-out"',
-            'ctx.globalAlpha=.42',
-            "journey=1-progress",
-            "Math.sin(Math.PI*journey)",
-            "ctx.filter=",
-            "brightness(${74+38*daylight}%)",
-            "const pearl=(x,y,active,index,scale=1)=>",
-            "une banque de tubes de verre gradués",
-            "un ressort d'horlogerie sous verre",
-        ):
-            self.assertIn(fragment, engine)
-        self.assertIn('"wave":"{{ static_prefix }}sablier/img/dbb9148a', template)
-        self.assertNotIn("function drawTide", engine)
-        sun_start = engine.index("function drawSunPhoto(progress)")
-        sun_end = engine.index("function drawRingPhoto(progress)")
-        sun = engine[sun_start:sun_end]
-        self.assertNotIn("setLineDash", sun)
-        self.assertNotIn("sunHalo", sun)
-        self.assertNotIn("horizonGlow", sun)
-        self.assertNotIn("drawSun(progress)", sun)
-        self.assertNotIn("fillRect", sun)
-        self.assertNotIn("destination-in", sun)
-        self.assertIn("canvas transparent", sun)
-        self.assertIn("ctx.rect(0,0,w,horizon+unit*.018);ctx.clip()", sun)
-        self.assertNotIn('if(!ready("wave")){drawWave', engine)
-        self.assertIn("ctx.drawImage(img,x-r,y-r,d,d)", sun)
-        self.assertIn("@keyframes zen-breathe", css)
-        self.assertIn(".zen-rings span,.zen-visual p { display:none; }", css)
-
-    def test_heavy_worlds_are_created_only_when_selected(self):
-        world = self.read_static("world3d.js")
-        self.assertIn("if (!packs.has(key))", world)
-        self.assertIn("BUILDERS[key](THREE, mobile, environmentTexture)", world)
-        self.assertIn("const start = async () =>", world)
-        self.assertIn("WORLD_KEYS.has(app.dataset.ambience)", world)
-        self.assertIn("const packs = new Map()", world)
-
-    def test_three_is_pinned_and_vendored_locally(self):
-        package_path = settings.BASE_DIR.parent / "package.json"
-        package = json.loads(package_path.read_text(encoding="utf-8"))
+        Depuis la version 0.16x, ``three.module.js`` réexporte ``three.core.js`` :
+        ne copier que le premier laissait un import mort. Le navigateur échouait en
+        silence, la scène immersive basculait en repli, et le Sablier ne montrait
+        plus que son dessin 2D — sans qu'aucune vérification ne le signale.
+        """
+        root = settings.BASE_DIR.parent
+        package = json.loads((root / "package.json").read_text(encoding="utf-8"))
         self.assertEqual(package["dependencies"]["three"], "0.184.0")
-        dockerfile = (settings.BASE_DIR.parent / "Dockerfile").read_text(encoding="utf-8")
-        self.assertIn("node_modules/three/build/three.module.js", dockerfile)
-        self.assertIn("/app/src/static/vendor/three.module.js", dockerfile)
+        self.assertEqual(package["scripts"]["vendor"], "node tools/vendor-three.mjs")
+
+        script = (root / "tools" / "vendor-three.mjs").read_text(encoding="utf-8")
+        for required in ("three.module.js", "three.core.js", "objects/Sky.js"):
+            self.assertIn(required, script)
+        # Le script refuse de rendre la main si un import sort du dossier vendu.
+        self.assertIn("importe encore", script)
+
+        dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("npm run vendor", dockerfile)
+        self.assertIn("/app/src/static/vendor/", dockerfile)
         self.assertNotIn("cdn", self.read_static("premium3d.js").lower())
 
-    def test_canonical_timer_is_independent_from_decor_worlds(self):
+    def test_every_universe_has_a_three_dimensional_recipe(self):
+        """Chaque décor du catalogue doit exister comme lieu en volume.
+
+        Sans cette garde, un univers ajouté au catalogue serveur retomberait
+        silencieusement sur le lieu par défaut : deux ambiances différentes
+        montreraient exactement le même paysage.
+        """
+        recipes = self.read_static("premium3d/worlds.js")
+        for scene in scenes.SCENES:
+            with self.subTest(scene=scene.key):
+                self.assertIn(f"\n  {scene.decor}: {{", recipes)
+
+    def test_the_object_is_lit_by_the_place_it_stands_in(self):
+        """L'objet et son univers partagent une scène, une caméra et une lumière."""
+        engine = self.read_static("premium3d.js")
+        self.assertIn("buildWorld", engine)
+        self.assertIn("buildEnvironment", engine)
+        self.assertIn("scene.environment", engine)
+        self.assertIn("FogExp2", engine)
+        # Le décor peint n'est plus repeint quand la scène 3D est à l'image.
+        self.assertIn('app.dataset.renderer3d!=="three"', self.read_static("sablier.js"))
+
+    def test_only_the_chosen_universe_is_built_and_the_previous_one_freed(self):
+        """Un seul lieu vit à la fois, et il libère celui qu'il remplace.
+
+        Vingt-quatre paysages en volume ne peuvent pas coexister : sans libération,
+        quelques changements d'ambiance suffisaient à saturer la mémoire graphique.
+        Les cartes partagées par tous les lieux doivent en revanche y survivre.
+        """
+        engine = self.read_static("premium3d.js")
+        self.assertIn("if (state.world === key) return;", engine)
+        self.assertIn("dispose(currentWorld.object);", engine)
+        self.assertIn("currentWorld = buildWorld(THREE, key, { mobile });", engine)
+        self.assertIn("userData?.shared !== true", engine)
+
+    def test_premium_runtime_boot_is_independent_from_decor_worlds(self):
         loader = self.read_static("decor.js")
-        self.assertIn("window.SablierPremium3DReady = Promise.resolve(null)", loader)
+        self.assertIn(
+            'window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)',
+            loader,
+        )
         self.assertIn(
             'window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"))',
             loader,
         )
         self.assertLess(loader.index("SablierPremium3DReady"), loader.index("SablierDecorReady ="))
-        self.assertNotIn('import(new URL("premium3d.js"', loader)
+        self.assertNotIn('.then(() => import(new URL("premium3d.js" + version, here).href))', loader)

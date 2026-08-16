@@ -35,17 +35,9 @@ document.addEventListener("DOMContentLoaded", () => {
   state.ambience=ambienceAliases[state.ambience]||state.ambience;
   if(!Object.prototype.hasOwnProperty.call(decorNames,state.ambience))state.ambience=app.dataset.ambience;
   const decor=window.SablierDecor.create($("#decor-canvas"));
-  // Les rendus historiques sont les références canoniques. Les images locales
-  // apportent leur matière, tandis que Canvas conserve les animations temporelles.
-  // Aucun second moteur ne peut ensuite les remplacer par une réinterprétation.
-  const assets={};
-  try{
-    const manifest=window.SABLIER_ASSETS||JSON.parse(document.querySelector("#asset-data")?.textContent||"{}");
-    for(const [name,url] of Object.entries(manifest)){
-      const img=new Image();img.decoding="async";img.src=url;assets[name]=img;
-    }
-  }catch(_){}
-  const ready=(name)=>Boolean(assets[name]?.complete&&assets[name].naturalWidth>0);
+  // Aucune photographie n'est chargée : la matière des objets est calculée, pas
+  // photographiée. Ce canvas n'est plus que le repli exact quand WebGL manque, et il
+  // garde pour cela ses dessins canoniques.
 
   function parseDuration(value){
     value=value.trim().replace(",","."); let seconds;
@@ -372,228 +364,26 @@ document.addEventListener("DOMContentLoaded", () => {
     hourglassGrainPattern=ctx.createPattern(tile,"repeat");
     return hourglassGrainPattern;
   }
-  function drawHourglassPhoto(progress){
-    if(!ready("hourglass")){drawHourglass(progress);return;}
-    const img=assets.hourglass,{w,h}=resize(),{accent}=palette();
-    ctx.clearRect(0,0,w,h);
-    // Le fichier source est cadré très verticalement. Une correction horizontale
-    // restitue les épaules du verre et l'assise métallique sans rogner l'objet.
-    const shapeWidth=1.34,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04;
-    const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;
-    glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);
-    // Profil réel des ampoules, mesuré sur la photo : t=0 au col, t=1 à
-    // l'extrémité. Le tracé épouse le verre au lieu de le dépasser.
-    const profile=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];
-    const bulbPath=(yNeck,yEnd)=>{
-      const H=yEnd-yNeck;
-      ctx.beginPath();
-      profile.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
-      for(let i=profile.length-1;i>=0;i--){const [t,f]=profile[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}
-      ctx.closePath();
-    };
-    // Sable doré : dégradé horizontal, éclairé au centre comme la photo.
-    const sand=ctx.createLinearGradient(cx-hw,0,cx+hw,0);
-    sand.addColorStop(0,"#9a6826");sand.addColorStop(.28,"#dfae55");sand.addColorStop(.5,"#f6d891");sand.addColorStop(.74,"#d9a04a");sand.addColorStop(1,"#8d5f22");
-    const grain=getHourglassGrainPattern();
-    const fillSand=(path)=>{
-      ctx.fillStyle=sand;path();ctx.fill();
-      if(grain){ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=grain;path();ctx.fill();ctx.restore();}
-    };
-    const received=1-progress;
-    if(progress>.001){
-      ctx.save();bulbPath(neckY,topY);ctx.clip();
-      const surface=neckY-(neckY-topY)*progress;
-      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,surface,hw*2,neckY-surface+1);});
-      // Surface irrégulière et petit creux que le filet creuse dans les grains.
-      ctx.strokeStyle="rgba(255,231,165,.72)";ctx.lineWidth=Math.max(.8,iw*.0024);ctx.beginPath();
-      for(let x=cx-hw*.9;x<=cx+hw*.9;x+=3){const y=surface+Math.sin(x*.19)*1.15+Math.sin(x*.047)*.75;x===cx-hw*.9?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
-      ctx.fillStyle="rgba(92,53,17,.32)";ctx.beginPath();ctx.ellipse(cx,surface+1,hw*.14,Math.max(1.5,hw*.025),0,0,Math.PI*2);ctx.fill();
-      ctx.restore();
-    }
-    let peak=floorY;
-    if(received>.001){
-      ctx.save();bulbPath(neckY,floorY);ctx.clip();
-      const level=floorY-(floorY-neckY)*received;
-      const mound=Math.min(hw*.5,(floorY-neckY)*.32*Math.min(1,received*3.5));
-      peak=level-mound;
-      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,level,hw*2,floorY-level+1);ctx.moveTo(cx-hw*.84,level+2);ctx.bezierCurveTo(cx-hw*.48,level-mound*.12,cx-hw*.2,peak+mound*.16,cx,peak);ctx.bezierCurveTo(cx+hw*.22,peak+mound*.14,cx+hw*.52,level-mound*.1,cx+hw*.84,level+2);ctx.closePath();});
-      ctx.strokeStyle="rgba(255,229,160,.52)";ctx.lineWidth=Math.max(.8,iw*.002);ctx.beginPath();ctx.moveTo(cx-hw*.78,level);ctx.quadraticCurveTo(cx-hw*.18,peak+mound*.08,cx,peak);ctx.quadraticCurveTo(cx+hw*.2,peak+mound*.08,cx+hw*.78,level);ctx.stroke();
-      ctx.restore();
-    }
-    if(state.running&&progress>.001){
-      const stream=ctx.createLinearGradient(0,neckY,0,peak);
-      stream.addColorStop(0,"#f8e0a2");stream.addColorStop(1,"#d99f49");
-      ctx.strokeStyle=stream;ctx.lineCap="round";
-      ctx.lineWidth=Math.max(1.2,iw*.005);ctx.beginPath();ctx.moveTo(cx,neckY+1);ctx.lineTo(cx,peak);ctx.stroke();
-      ctx.lineWidth=Math.max(.6,iw*.002);ctx.strokeStyle="rgba(255,240,200,.9)";ctx.beginPath();ctx.moveTo(cx-iw*.002,neckY+1);ctx.lineTo(cx-iw*.002,peak);ctx.stroke();
-      const phase=Date.now()/46;
-      for(let i=0;i<18;i++){
-        const travel=((phase+i*7.17)%18)/18,y=neckY+(peak-neckY)*travel,x=cx+Math.sin(i*12.7+phase*.15)*iw*.0045;
-        ctx.fillStyle=i%3===0?"rgba(255,239,188,.95)":"rgba(205,143,54,.92)";ctx.beginPath();ctx.arc(x,y,Math.max(.55,iw*(.0014+(i%4)*.00028)),0,Math.PI*2);ctx.fill();
-      }
-    }
-    ctx.drawImage(img,ix,iy,iw,ih);
-  }
-  // Bougie de référence : la cire photographique reste mince et le bougeoir reste
-  // fixe. Seuls la hauteur, la flamme et la fumée évoluent avec le temps.
-  function drawCandlePhoto(progress){
-    if(!ready("candle")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
-    const img=assets.candle,{w,h}=resize(),{accent,text}=palette();
-    ctx.clearRect(0,0,w,h);
-    const baseY=h*.87,fullH=h*.7,iw=Math.min(w*.46,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
-    const waxTop=img.naturalHeight*.058,base=img.naturalHeight*.975;
-    const topSrc=waxTop+(1-progress)*(base-waxTop),srcH=base-topSrc,dh=srcH*scale,dx=w/2-iw/2,dy=baseY-dh,fx=w/2;
-    if(progress>.004){glow(ctx,fx,dy-iw*.12,iw*1.1,accent,.28);glow(ctx,fx,dy-iw*.05,iw*.45,"#ffd98a",.2);}
-    ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);
-    if(progress>.004){
-      ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(fx,dy+1);ctx.lineTo(fx+iw*.006,dy-iw*.028);ctx.stroke();
-      const fh=iw*.3,flick=state.running?Math.sin(Date.now()/90)*iw*.012+Math.sin(Date.now()/47)*iw*.006:0;
-      ctx.save();ctx.translate(fx,dy-iw*.03);
-      ctx.fillStyle="rgba(255,150,40,.9)";ctx.shadowColor="#ff9b30";ctx.shadowBlur=iw*.22;
-      ctx.beginPath();ctx.moveTo(0,-fh-flick);
-      ctx.quadraticCurveTo(iw*.075,-fh*.38,0,0);ctx.quadraticCurveTo(-iw*.075,-fh*.38,0,-fh-flick);ctx.fill();
-      ctx.shadowBlur=0;ctx.fillStyle="#ffe9b0";
-      ctx.beginPath();ctx.moveTo(0,-fh*.62-flick*.5);
-      ctx.quadraticCurveTo(iw*.038,-fh*.24,0,-iw*.004);ctx.quadraticCurveTo(-iw*.038,-fh*.24,0,-fh*.62-flick*.5);ctx.fill();
-      ctx.fillStyle="rgba(255,255,255,.95)";
-      ctx.beginPath();ctx.ellipse(0,-fh*.16,iw*.014,fh*.1,0,0,Math.PI*2);ctx.fill();
-      ctx.restore();
-    }else{
-      ctx.globalAlpha=.4;ctx.strokeStyle=text;ctx.lineWidth=Math.max(1.2,iw*.008);ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(fx,dy-2);
-      ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;
-    }
-  }
-  // Marée : le récipient d'origine reste intact. L'eau est teintée dans le verre
-  // (et non derrière son fond blanc), afin que son niveau soit immédiatement lisible.
-  function drawWavePhoto(progress){
-    if(!ready("wave")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
-    const img=assets.wave,{w,h}=resize(),{accent}=palette(),unit=Math.min(w,h);
-    ctx.clearRect(0,0,w,h);
-    const iw=Math.min(w*.84,h*.8),ih=iw*img.naturalHeight/img.naturalWidth,
-      ix=w/2-iw/2,iy=h*.44-ih/2,cx=w/2,cy=iy+ih*.52,rx=iw*.46,ry=ih*.42,
-      bottom=cy+ry*.92,top=cy-ry*.76,phase=state.running?Date.now()/620:0;
-    glow(ctx,cx,cy,iw*.58,accent,.08);
-    // L'image du bocal contient un intérieur blanc, contrairement au verre transparent
-    // du sablier. On conserve sa forme, puis on évide optiquement ce blanc avant de
-    // reconstruire les arêtes froides et métalliques du même langage de matière.
-    ctx.save();ctx.globalAlpha=.42;ctx.filter="grayscale(1) contrast(1.32) brightness(.7)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
-    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.84,ry*.82,0,0,Math.PI*2);ctx.clip();ctx.globalCompositeOperation="destination-out";ctx.globalAlpha=.78;ctx.fillStyle="#000";ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);ctx.restore();
-    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.clip();
-    if(progress>.002){
-      const level=bottom-(bottom-top)*Math.pow(progress,.72),wave=(x)=>level+Math.sin((x-cx)/(unit*.055)+phase)*unit*.008+Math.sin((x-cx)/(unit*.022)-phase*.7)*unit*.003;
-      const water=ctx.createLinearGradient(0,level,0,bottom);water.addColorStop(0,"rgba(91,229,246,.96)");water.addColorStop(.28,"rgba(21,158,190,.96)");water.addColorStop(1,"rgba(3,59,96,.98)");
-      ctx.globalCompositeOperation="source-over";ctx.fillStyle=water;ctx.beginPath();ctx.moveTo(cx-rx,level);for(let x=cx-rx;x<=cx+rx;x+=3)ctx.lineTo(x,wave(x));ctx.lineTo(cx+rx,bottom+ry);ctx.lineTo(cx-rx,bottom+ry);ctx.closePath();ctx.fill();
-      // Une surface lumineuse et des caustiques mobiles rendent la matière liquide.
-      ctx.strokeStyle="rgba(151,225,236,.74)";ctx.lineWidth=Math.max(1.5,unit*.0045);ctx.shadowColor="rgba(48,171,199,.48)";ctx.shadowBlur=unit*.014;ctx.beginPath();for(let x=cx-rx*.94;x<=cx+rx*.94;x+=3){const y=wave(x);x===cx-rx*.94?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.shadowBlur=0;
-      for(let i=0;i<18;i++){
-        const px=cx+Math.sin(i*13.7+phase*.18)*rx*.76,py=level+(bottom-level)*(.16+(i%7)/8),span=unit*(.016+(i%4)*.006);
-        ctx.strokeStyle=i%3===0?"rgba(221,252,255,.52)":"rgba(128,230,244,.34)";ctx.lineWidth=i%4===0?2:1;ctx.beginPath();ctx.moveTo(px-span,py);ctx.quadraticCurveTo(px,py-unit*.008,px+span,py);ctx.stroke();
-      }
-      for(let i=0;i<13;i++){
-        const px=cx+Math.sin(i*9.31)*rx*.72,py=bottom-(bottom-level)*(.08+(i%9)/10),br=unit*(.0025+(i%4)*.0013);
-        ctx.strokeStyle="rgba(225,253,255,.62)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,br,0,Math.PI*2);ctx.stroke();
-      }
-    }
-    ctx.restore();
-    // Une passe très légère de la photo restitue ses reflets sans réintroduire le blanc.
-    ctx.save();ctx.globalCompositeOperation="screen";ctx.globalAlpha=.11;ctx.filter="grayscale(1) contrast(1.38) brightness(.9)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
-    const glassEdge=ctx.createLinearGradient(cx-rx,0,cx+rx,0);glassEdge.addColorStop(0,"rgba(111,148,163,.84)");glassEdge.addColorStop(.22,"rgba(231,246,250,.72)");glassEdge.addColorStop(.5,"rgba(148,181,192,.3)");glassEdge.addColorStop(.78,"rgba(238,250,252,.76)");glassEdge.addColorStop(1,"rgba(91,129,146,.86)");
-    ctx.strokeStyle=glassEdge;ctx.lineWidth=Math.max(1.4,unit*.004);ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.stroke();
-    ctx.strokeStyle="rgba(173,207,218,.48)";ctx.lineWidth=Math.max(1,unit*.0025);ctx.beginPath();ctx.ellipse(cx,cy-rx*.015,rx*.89,ry*.87,0,Math.PI*.72,Math.PI*1.25);ctx.stroke();
-  }
-  // Lune : la photo fournit les mers et cratères ; l'ombre qui la mange est un
-  // disque sombre à bord doux qui glisse depuis la gauche, comme la nuit.
-  function drawMoonPhoto(progress){
-    if(!ready("moon")){drawMoon(progress);return;}
-    const img=assets.moon,{w,h}=resize(),{accent}=palette();
-    ctx.clearRect(0,0,w,h);
-    const d=Math.min(w,h)*.74,cx=w/2,cy=h*.44,r=d/2;
-    glow(ctx,cx,cy,r*1.8,accent,.2);
-    ctx.drawImage(img,cx-r,cy-r,d,d);
-    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
-    ctx.fillStyle="rgba(3,6,12,.97)";ctx.shadowColor="rgba(3,6,12,1)";ctx.shadowBlur=r*.14;
-    ctx.beginPath();ctx.arc(cx-2.2*r*progress,cy,r,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  }
-  // Soleil : le disque photographique effectue un cycle continu. Il naît derrière
-  // le relief, monte dans un ciel qui s'éclaircit, puis disparaît entièrement derrière
-  // l'horizon pendant que la lumière vire progressivement vers le rouge du couchant.
-  function drawSunPhoto(progress){
-    if(!ready("sun")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
-    const img=assets.sun,{w,h}=resize(),unit=Math.min(w,h),journey=1-progress,
-      daylight=Math.sin(Math.PI*journey),warmth=Math.abs(journey-.5)*2;
-    ctx.clearRect(0,0,w,h);
-    const cx=w/2,horizon=h*.62,arcX=unit*.4,arcY=unit*.35,d=unit*.31,r=d/2,
-      x=cx-arcX+2*arcX*journey,
-      y=horizon+r*.62+r*.58*journey-Math.sin(Math.PI*journey)*(arcY+r*.72),
-      sunHue=42-20*warmth-8*journey;
-    const glowColor=`hsl(${sunHue},96%,62%)`;
-    // L'univers WebGL fournit désormais le ciel et le relief. Seul l'astre validé
-    // reste dans ce canvas transparent : aucun rectangle ne peut se détacher du décor.
-    ctx.save();ctx.beginPath();ctx.rect(0,0,w,horizon+unit*.018);ctx.clip();
-    glow(ctx,x,y,d*(.82+.18*daylight),glowColor,.22+.12*daylight);
-    ctx.filter=`sepia(${20+52*warmth}%) saturate(${108+118*warmth}%) hue-rotate(${-2-13*journey}deg) brightness(${74+38*daylight}%) contrast(${96+12*warmth}%)`;
-    ctx.shadowColor=glowColor;ctx.shadowBlur=d*(.3+.26*daylight);ctx.drawImage(img,x-r,y-r,d,d);ctx.shadowBlur=0;ctx.filter="none";
-    ctx.restore();
-    ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.14+.18*warmth})`;ctx.lineWidth=Math.max(1,unit*.0022);
-    ctx.beginPath();ctx.moveTo(cx-unit*.43,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.43,horizon);ctx.stroke();
-  }
-  // Anneau : une vraie jauge d'horlogerie porte les graduations ; le temps
-  // restant est un arc lumineux posé dans sa gorge.
-  function drawRingPhoto(progress){
-    if(!ready("ring")){drawRing(progress);return;}
-    const img=assets.ring,{w,h}=resize(),{accent,text}=palette();
-    ctx.clearRect(0,0,w,h);
-    const d=Math.min(w,h)*.72,cx=w/2,cy=h*.42,r=d*.395;
-    glow(ctx,cx,cy,d*.62,accent,.09);
-    ctx.drawImage(img,cx-d/2,cy-d/2,d,d);
-    if(progress>.001){
-      const end=-Math.PI/2+Math.PI*2*progress;
-      const active=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
-      active.addColorStop(0,rgba(accent,.75));active.addColorStop(.55,accent);active.addColorStop(1,rgba(text,.98));
-      ctx.strokeStyle=active;ctx.lineWidth=d*.035;ctx.lineCap="round";
-      ctx.shadowColor=accent;ctx.shadowBlur=d*.06;
-      ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,end);ctx.stroke();
-      ctx.shadowBlur=0;
-      ctx.fillStyle=text;ctx.beginPath();ctx.arc(cx+Math.cos(end)*r,cy+Math.sin(end)*r,d*.012,0,Math.PI*2);ctx.fill();
-    }
-  }
-  function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
-  function finish(){state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});logSession();}
-  // Une session achevée est envoyée au serveur : c'est ce qui alimente le temps réel de
-  // la grille de suivi. Un échec réseau ne doit rien casser — la session est perdue,
-  // le minuteur continue de fonctionner.
-  function logSession(){
-    const seconds=Math.round(state.total);
-    if(!(seconds>=1&&seconds<=86400))return;
-    const select=$("#session-competency");
-    fetch(app.dataset.logUrl,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","X-CSRFToken":app.dataset.csrf},
-      body:JSON.stringify({seconds,intention:state.intention||"",competency:select?.value||null}),
-    }).then(response=>response.ok?response.json():null).then(data=>{
-      if(data?.competency){$("#stage-message").textContent=`${data.hours} h REPORTÉES SUR ${data.competency.toUpperCase()}`;const back=$("#return-after-session");if(back&&app.dataset.returnUrl)back.hidden=false;}
-    }).catch(()=>{});
-  }
-  function ambienceLabel(){const select=$("#ambience-select"),option=[...select.options].find(item=>item.value===state.ambience);return option?.textContent||state.ambience;}
   function render(force=false){
     if(state.running){state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining<=0&&!state.finished)finish();}
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
     if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
-    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
+    const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,candle:drawCandle,beads:drawBeads,moon:drawMoon,bars:drawBars,spiral:drawSpiral,sun:drawSun};
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);
-    decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
+    // Le décor peint en 2D est le repli. Dès que la scène 3D est à l'image, elle porte
+    // le lieu, sa lumière et ses mouvements : continuer à repeindre le canvas coûterait
+    // une image entière par frame pour un dessin invisible.
+    const painted=app.dataset.renderer3d!=="three";
+    if(painted)decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
     app.querySelectorAll(".decor-levels [data-decor]").forEach(button=>{
       const active=Number(button.dataset.decor)===state.decorDensity;
       button.classList.toggle("active",active);
       button.setAttribute("aria-pressed",String(active));
     });
-    decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
+    if(painted)decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
   }
   function loop(){render();frame=requestAnimationFrame(loop)}
   $("#apply-duration").addEventListener("click",()=>{const input=$("#duration-input"),seconds=parseDuration(input.value);input.setCustomValidity("");if(seconds)setDuration(seconds);else {input.setCustomValidity("Durée invalide (maximum 24 h).");input.reportValidity();}});

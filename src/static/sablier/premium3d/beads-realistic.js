@@ -1,268 +1,129 @@
-import { makeChrome, makeSteel, makePearl, seeded } from "./material-kit.js";
+// Perles.
+//
+// Un mâlâ suspendu : le fil retombe sous son propre poids, les perles s'y enfilent avec
+// leurs irrégularités, et la nacre renvoie le lieu. Ce qui reste à venir garde son éclat ;
+// ce qui est passé s'éteint et perd sa lumière — la mesure se lit sans chiffre.
+import { makePearl, makeChrome, makeSteel, seeded } from "./material-kit.js";
 
-const TAU = Math.PI * 2;
-const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
-const ease = (value) => {
-  const t = clamp(value);
-  return t * t * (3 - 2 * t);
-};
+const COUNT_DESKTOP = 34, COUNT_MOBILE = 26;
 
-function makeUpperSlots(THREE, count) {
-  const slots = [];
-  for (let index = 0; index < count; index += 1) {
-    const ratio = index / Math.max(1, count - 1);
-    const angle = index * 2.24 + 0.35;
-    const radius = 0.42 + ratio * 0.52 + Math.sin(index * 1.7) * 0.035;
-    slots.push(new THREE.Vector3(
-      Math.cos(angle) * radius,
-      0.28 + ratio * 1.24,
-      Math.sin(angle) * radius * 0.72,
-    ));
-  }
-  return slots;
-}
-
-function makeLowerSlots(THREE, count) {
-  const slots = [];
-  for (let index = 0; index < count; index += 1) {
-    const layer = Math.floor(index / 8);
-    const inLayer = index - layer * 8;
-    const layerCount = Math.min(8, count - layer * 8);
-    const angle = inLayer / Math.max(1, layerCount) * TAU + layer * 0.58;
-    const radius = layer === 0 ? 0.54 : Math.max(0.16, 0.54 - layer * 0.15);
-    slots.push(new THREE.Vector3(
-      Math.cos(angle) * radius,
-      -1.48 + layer * 0.29,
-      Math.sin(angle) * radius * 0.74,
-    ));
-  }
-  return slots;
-}
-
-function addFrame(THREE, helpers, group, materials) {
-  const { mobile, mesh } = helpers;
-  const segments = mobile ? 48 : 80;
-
-  for (const y of [-2.05, 2.05]) {
-    const plate = mesh(
-      new THREE.CylinderGeometry(1.58, 1.72, 0.22, segments),
-      materials.chrome,
-    );
-    plate.position.y = y;
-    group.add(plate);
-
-    const inset = mesh(
-      new THREE.CylinderGeometry(1.38, 1.45, 0.12, segments),
-      materials.steel,
-    );
-    inset.position.y = y + (y > 0 ? -0.16 : 0.16);
-    group.add(inset);
-
-    const lip = mesh(
-      new THREE.TorusGeometry(1.55, 0.055, 16, segments),
-      materials.chrome,
-    );
-    lip.rotation.x = Math.PI / 2;
-    lip.position.y = y + (y > 0 ? -0.105 : 0.105);
-    group.add(lip);
-  }
-
-  for (const x of [-1.3, 1.3]) {
-    for (const z of [-0.46, 0.46]) {
-      const column = mesh(
-        new THREE.CylinderGeometry(0.064, 0.086, 3.82, 28),
-        materials.chrome,
-      );
-      column.position.set(x, 0, z);
-      group.add(column);
-      for (const y of [-1.78, 1.78]) {
-        const collar = mesh(
-          new THREE.CylinderGeometry(0.112, 0.112, 0.17, 28),
-          materials.steel,
-        );
-        collar.position.set(x, y, z);
-        group.add(collar);
-      }
-    }
-  }
-
-  const profile = [
-    [0.91, 1.78], [1.04, 1.6], [1.11, 1.22], [1.08, 0.52],
-    [0.72, 0.16], [0.72, -0.16], [1.08, -0.5], [1.13, -1.2],
-    [1.05, -1.61], [0.91, -1.78],
-  ].map(([radius, y]) => new THREE.Vector2(radius, y));
-  const vessel = mesh(
-    new THREE.LatheGeometry(profile, mobile ? 64 : 112),
-    materials.glass,
-    { cast: false, receive: false },
-  );
-  vessel.renderOrder = 5;
-  group.add(vessel);
-
-  for (const y of [-1.76, 1.76]) {
-    const seal = mesh(
-      new THREE.TorusGeometry(0.94, 0.032, 14, segments),
-      materials.chrome,
-    );
-    seal.rotation.x = Math.PI / 2;
-    seal.position.y = y;
-    group.add(seal);
-  }
-
-  const throatMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xd9f3f7,
-    roughness: 0.035,
-    transmission: 0.78,
-    thickness: 0.35,
-    ior: 1.46,
-    transparent: true,
-    opacity: 0.72,
-    clearcoat: 1,
-    depthWrite: false,
-  });
-  const throat = mesh(
-    new THREE.CylinderGeometry(0.29, 0.29, 0.46, segments),
-    throatMaterial,
-    { cast: false, receive: false },
-  );
-  group.add(throat);
-}
-
-function addHelicalCradle(THREE, helpers, group, material) {
+// Courbe du collier : une chaînette légèrement ouverte, refermée par le pendentif.
+function loop(THREE, count) {
   const points = [];
-  const samples = helpers.mobile ? 70 : 120;
-  for (let index = 0; index <= samples; index += 1) {
-    const t = index / samples;
-    const angle = t * 2.8 * TAU;
-    const radius = 0.46 + t * 0.42;
+  for (let i = 0; i < count; i += 1) {
+    const t = i / count;
+    const angle = t * Math.PI * 2 - Math.PI / 2;
+    // Le rayon se resserre en haut : un cercle parfait se lit comme un pictogramme.
+    const radius = 1.42 + Math.sin(angle) * 0.16;
     points.push(new THREE.Vector3(
       Math.cos(angle) * radius,
-      0.28 + t * 1.24,
-      Math.sin(angle) * radius * 0.72,
+      Math.sin(angle) * radius * 1.16 - 0.12,
+      Math.sin(angle * 2.1) * 0.14,
     ));
   }
-  const curve = new THREE.CatmullRomCurve3(points, false, "centripetal", 0.42);
-  group.add(helpers.mesh(
-    new THREE.TubeGeometry(curve, samples, 0.022, 10, false),
-    material,
-  ));
+  return points;
 }
 
 export function makeBeadsRuntime(THREE, helpers) {
-  const { mobile, reducedMotion } = helpers;
+  const { mobile, reducedMotion, mesh } = helpers;
   const group = new THREE.Group();
-  const count = mobile ? 18 : 24;
-  const materials = {
-    chrome: makeChrome(THREE),
-    steel: makeSteel(THREE),
-    glass: new THREE.MeshPhysicalMaterial({
-      color: 0xe9f6f7,
-      roughness: 0.035,
-      metalness: 0,
-      transmission: 0.34,
-      thickness: 0.28,
-      ior: 1.46,
-      transparent: true,
-      opacity: 0.3,
-      clearcoat: 1,
-      clearcoatRoughness: 0.02,
-      side: THREE.DoubleSide,
-      depthWrite: false,
+  const count = mobile ? COUNT_MOBILE : COUNT_DESKTOP;
+  const points = loop(THREE, count);
+  const curve = new THREE.CatmullRomCurve3([...points, points[0].clone()], true, "centripetal", 0.4);
+
+  const cord = mesh(
+    new THREE.TubeGeometry(curve, count * 8, 0.026, 10, true),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x3a2b20, roughness: 0.72, metalness: 0.02, clearcoat: 0.14, sheen: 0.4,
     }),
-    pearl: makePearl(THREE),
-    rail: new THREE.MeshPhysicalMaterial({
-      color: 0x8a5d34,
-      metalness: 0.88,
-      roughness: 0.22,
-      clearcoat: 0.72,
-      clearcoatRoughness: 0.12,
-    }),
-  };
-  materials.pearl.vertexColors = true;
-  materials.pearl.envMapIntensity = 1.45;
-  materials.pearl.roughness = 0.24;
-  materials.pearl.clearcoat = 0.86;
-  materials.pearl.iridescence = 0.72;
-  materials.pearl.emissive = new THREE.Color(0x2d241f);
-  materials.pearl.emissiveIntensity = 0.13;
-  materials.pearl.needsUpdate = true;
+  );
+  group.add(cord);
 
-  addFrame(THREE, helpers, group, materials);
-  addHelicalCradle(THREE, helpers, group, materials.rail);
+  // Les perles sont instanciées : trente-quatre matériaux distincts coûteraient cher pour
+  // une différence que seule leur couleur porte.
+  // Pas de `vertexColors` : la couleur d'instance suffit, et l'activer réclamerait un
+  // attribut de couleur par sommet que la géométrie n'a pas — les perles viraient au noir.
+  const pearl = makePearl(THREE);
+  const beads = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.2, mobile ? 28 : 44, mobile ? 20 : 30),
+    pearl,
+    count,
+  );
+  beads.castShadow = !mobile;
+  beads.receiveShadow = true;
+  group.add(beads);
 
-  const upperSlots = makeUpperSlots(THREE, count);
-  const lowerSlots = makeLowerSlots(THREE, count);
-  const pearlGeometry = new THREE.SphereGeometry(0.175, mobile ? 32 : 52, mobile ? 22 : 36);
-  const pearls = new THREE.InstancedMesh(pearlGeometry, materials.pearl, count);
-  pearls.castShadow = !mobile;
-  pearls.receiveShadow = true;
-  pearls.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  group.add(pearls);
+  const chrome = makeChrome(THREE), steel = makeSteel(THREE);
+  // Perles de séparation tous les quarts : les repères d'un mâlâ.
+  for (let i = 0; i < count; i += Math.round(count / 4)) {
+    const spacer = mesh(new THREE.TorusGeometry(0.238, 0.03, 12, 32), i % 2 === 0 ? chrome : steel);
+    spacer.position.copy(points[i]);
+    spacer.lookAt(points[(i + 1) % count]);
+    group.add(spacer);
+  }
 
-  const glow = new THREE.PointLight(0xffe6bd, mobile ? 3.5 : 6, 5, 2);
-  glow.position.set(-0.72, 0.72, 1.35);
-  group.add(glow);
+  // Pendentif et gland, en bas, là où le fil se referme.
+  const guru = mesh(new THREE.SphereGeometry(0.17, 32, 22), chrome);
+  guru.scale.set(0.8, 1.2, 0.72);
+  guru.position.set(0, -1.86, 0.05);
+  group.add(guru);
+  const cap = mesh(new THREE.ConeGeometry(0.13, 0.22, 20), steel);
+  cap.position.set(0, -2.06, 0.05);
+  group.add(cap);
+  for (let i = 0; i < 6; i += 1) {
+    const strand = mesh(
+      new THREE.CylinderGeometry(0.008, 0.014, 0.62 + seeded(i, 23) * 0.22, 6),
+      new THREE.MeshStandardMaterial({ color: 0x8a6f52, roughness: 0.86 }),
+    );
+    const angle = (i / 6) * Math.PI * 2;
+    strand.position.set(Math.cos(angle) * 0.05, -2.44 - seeded(i, 29) * 0.1, 0.05 + Math.sin(angle) * 0.05);
+    strand.rotation.z = Math.cos(angle) * 0.12;
+    group.add(strand);
+  }
 
+  // Les perles ne bougent pas les unes par rapport aux autres : leurs matrices sont
+  // posées une fois pour toutes. Les recomposer à chaque image revenait à recalculer
+  // soixante fois par seconde une position qui ne change jamais.
   const matrix = new THREE.Matrix4();
   const quaternion = new THREE.Quaternion();
   const scale = new THREE.Vector3();
-  const position = new THREE.Vector3();
-  const throatTop = new THREE.Vector3(0, 0.18, 0.03);
-  const throatBottom = new THREE.Vector3(0, -0.5, 0.04);
-  const pearlColor = new THREE.Color();
-  const warmPearl = new THREE.Color(0xfff0da);
-  const coolPearl = new THREE.Color(0xdde8ee);
-  const movingPearl = new THREE.Color(0xffd89b);
+  for (let i = 0; i < count; i += 1) {
+    // Aucune perle n'est parfaitement ronde ni de la même taille que sa voisine.
+    const size = 0.94 + seeded(i, 11) * 0.13;
+    scale.set(size, size * (0.93 + seeded(i, 13) * 0.12), size * (0.95 + seeded(i, 15) * 0.09));
+    quaternion.setFromEuler(new THREE.Euler(
+      seeded(i, 5) * Math.PI, seeded(i, 7) * Math.PI, seeded(i, 9) * Math.PI,
+    ));
+    beads.setMatrixAt(i, matrix.compose(points[i], quaternion, scale));
+  }
+  beads.instanceMatrix.needsUpdate = true;
+
+  const alive = new THREE.Color(0xfaf4ea);
+  const warm = new THREE.Color(0xffe6bd).lerp(alive, 0.75);
+  const spent = new THREE.Color(0x4a4f5a);
+  const tint = new THREE.Color();
+  let painted = -1;
 
   function update(progress, time) {
-    const transferred = (1 - progress) * count;
-    for (let index = 0; index < count; index += 1) {
-      const transfer = clamp(transferred - index, 0, 1);
-      const upper = upperSlots[index];
-      const lower = lowerSlots[index];
-
-      if (transfer <= 0) {
-        position.copy(upper);
-      } else if (transfer >= 1) {
-        position.copy(lower);
-      } else {
-        const t = ease(transfer);
-        if (t < 0.34) {
-          const local = ease(t / 0.34);
-          position.copy(upper).lerp(throatTop, local);
-          position.x += Math.sin(local * Math.PI) * (index % 2 ? 0.09 : -0.09);
-        } else if (t < 0.68) {
-          const local = ease((t - 0.34) / 0.34);
-          position.set(Math.sin(local * TAU + index) * 0.025, 0.18 - local * 0.68, 0.04);
-        } else {
-          position.copy(throatBottom).lerp(lower, ease((t - 0.68) / 0.32));
-        }
+    // La couleur ne change qu'au passage d'une perle : trente-quatre fois dans la session,
+    // pas soixante fois par seconde.
+    const remaining = progress * count;
+    if (Math.abs(remaining - painted) > 0.02) {
+      for (let i = 0; i < count; i += 1) {
+        const fill = Math.max(0, Math.min(1, remaining - i));
+        if (fill > 0.5) tint.copy(warm);
+        else tint.copy(spent).lerp(alive, fill);
+        beads.setColorAt(i, tint);
       }
-
-      const imperfection = 0.94 + seeded(index, 9) * 0.1;
-      const travelling = transfer > 0 && transfer < 1;
-      const pulse = travelling && !reducedMotion ? 1 + Math.sin(time * 0.008) * 0.025 : 1;
-      scale.set(
-        imperfection * pulse,
-        (0.95 + seeded(index, 10) * 0.08) * pulse,
-        (0.93 + seeded(index, 11) * 0.1) * pulse,
-      );
-      quaternion.setFromEuler(new THREE.Euler(
-        seeded(index, 5) * 0.16,
-        seeded(index, 6) * 0.18 + time * (travelling && !reducedMotion ? 0.0014 : 0),
-        seeded(index, 7) * 0.14,
-      ));
-      matrix.compose(position, quaternion, scale);
-      pearls.setMatrixAt(index, matrix);
-
-      pearlColor.copy(coolPearl).lerp(warmPearl, 0.5 + seeded(index, 13) * 0.14);
-      if (travelling) pearlColor.lerp(movingPearl, 0.3);
-      pearls.setColorAt(index, pearlColor);
+      if (beads.instanceColor) beads.instanceColor.needsUpdate = true;
+      painted = remaining;
     }
-    pearls.instanceMatrix.needsUpdate = true;
-    pearls.instanceColor.needsUpdate = true;
-    group.rotation.y = reducedMotion ? 0 : Math.sin(time * 0.00016) * 0.055;
-    group.rotation.z = reducedMotion ? 0 : Math.sin(time * 0.00009) * 0.006;
+
+    if (!reducedMotion) {
+      // Le collier oscille comme un pendule très lent, sans jamais tourner sur lui-même.
+      group.rotation.z = Math.sin(time * 0.00021) * 0.03;
+      group.rotation.y = Math.sin(time * 0.00013) * 0.1;
+    }
   }
 
   update(1, 0);

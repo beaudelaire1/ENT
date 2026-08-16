@@ -65,73 +65,30 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 }
 
 /* Le décor occupe toute la scène, derrière le minuteur et sans jamais l'intercepter. */
-.decor-canvas,.world-3d-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; transition:opacity .45s ease,filter .7s ease; }
-.world-3d-canvas[hidden] { display:none; }
-.focus-app[data-world3d-active="true"] .decor-canvas { opacity:0; }
+.decor-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; transition:opacity .45s ease,filter .7s ease; }
 html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
-.focus-stage > *:not(.decor-canvas):not(.world-3d-canvas) { position:relative; z-index:3; }
+.focus-stage > *:not(.decor-canvas):not(.stage-3d-canvas) { position:relative; z-index:3; }
+
+/* Le lieu rendu en 3D occupe toute la scène. Il se place au-dessus du décor peint —
+   qui n'est plus qu'un repli — et sous les commandes et le temps affiché. Le halo de
+   `::after` (z-index 2) continue de le cadrer, ce qui évite un bord net de canvas. */
+.stage-3d-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; z-index:1; opacity:0; transition:opacity .5s ease; }
+/* Le dessin 2D ne s'efface pas d'un coup : il se fond dans la scène 3D à l'instant où
+   celle-ci a sa première image, sur la même durée que son apparition. */
+#timer-canvas { transition:opacity .5s ease; }
+/* Une fois la scène 3D à l'image, le voile assombrissant du gabarit n'a plus lieu
+   d'être : c'est la brume de l'univers qui creuse la profondeur. */
+.focus-app[data-renderer3d="three"] .focus-stage { background:transparent; }
+.focus-app[data-renderer3d="three"] .focus-stage::after { opacity:.55; }
+.focus-app[data-renderer3d="three"] .visual-wrap #timer-canvas { filter:none; }
+/* Le temps se lit par-dessus un paysage clair comme sur un ciel de nuit : sans cette
+   ombre portée, les chiffres blancs disparaissent sur les univers d'été. */
+.focus-app[data-renderer3d="three"] .canvas-time strong,
+.focus-app[data-renderer3d="three"] .stage-status,
+.focus-app[data-renderer3d="three"] .stage-intention,
+.focus-app[data-renderer3d="three"] .stage-message { text-shadow:0 2px 18px rgba(0,0,0,.72),0 0 4px rgba(0,0,0,.55); }
 .visual-wrap .canvas-time { z-index:2; pointer-events:none; text-shadow:0 3px 18px rgba(0,0,0,.72); }
 
-/* Les univers conservés partagent un même espace WebGL. Le voile final ne remplace
-   jamais le décor : il calibre seulement les noirs et protège la lisibilité. */
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .focus-stage {
-  background:var(--world-ground,#071018);
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .focus-stage::after {
-  background:
-    radial-gradient(ellipse at 50% 46%,transparent 38%,rgba(3,6,8,.12) 76%,rgba(2,4,6,.38) 100%),
-    linear-gradient(180deg,rgba(2,4,6,.16),transparent 22%,transparent 74%,rgba(2,4,6,.24));
-  box-shadow:inset 0 0 120px rgba(2,4,6,.2);
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .focus-stage::before {
-  content:"";
-  position:absolute;
-  z-index:1;
-  left:50%;
-  top:70%;
-  width:min(470px,58%);
-  height:96px;
-  pointer-events:none;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  background:radial-gradient(ellipse,rgba(0,0,0,.34),rgba(0,0,0,.12) 38%,transparent 72%);
-  filter:blur(7px);
-  mix-blend-mode:multiply;
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .stage-status span,
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .stage-intention,
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .stage-message {
-  color:#fff5e7;
-  text-shadow:0 2px 12px rgba(13,7,4,.85);
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .stage-status span {
-  padding:7px 10px;
-  border:1px solid rgba(255,231,200,.14);
-  border-radius:999px;
-  background:rgba(18,10,7,.25);
-  backdrop-filter:blur(9px);
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .canvas-time {
-  padding:0;
-  border:0;
-  border-radius:0;
-  background:transparent;
-  box-shadow:none;
-  backdrop-filter:none;
-  bottom:-20px;
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] #timer-canvas {
-  transform:scale(.72) translateY(-1%);
-  transform-origin:50% 50%;
-  filter:drop-shadow(0 28px 48px rgba(13,7,4,.5));
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .visual-wrap[data-mode="candle"] #timer-canvas {
-  transform:scale(.86) translateY(-1%);
-}
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .visual-wrap[data-mode="wave"] #timer-canvas,
-.focus-app[data-world3d="ready"][data-world3d-active="true"] .visual-wrap[data-mode="sun"] #timer-canvas {
-  transform:scale(.78) translateY(-1%);
-}
 /* Sur écran étroit la barre latérale passe en deux colonnes, et un intitulé se
    retrouvait seul dans une cellule pendant que ses boutons partaient dans l'autre :
    la zone « VISUALISATION » paraissait vide. Chaque intitulé et son groupe de
