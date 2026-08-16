@@ -67,7 +67,7 @@ export const RECIPES = {
     fog: ["#050a16", 0.0016],
     ground: { profile: "flat", color: "#0a0f18", material: "rock", height: 0 },
     props: [
-      { kind: "planet", radius: 130, color: "#9c7550", position: [150, 30, -520], glow: "#ffd7a8" },
+      { kind: "planet", radius: 240, color: "#b08a5e", position: [300, 130, -900], glow: "#ffd7a8" },
       { kind: "railing", color: "#20242c", width: 70, depth: -18 },
     ],
     particles: [{ kind: "star", count: 700, color: "#dce8ff", size: 1.3, opacity: 0.9, area: [700, 300, 500], origin: [0, 110, -300] }],
@@ -76,7 +76,7 @@ export const RECIPES = {
     env: { kind: "night", zenith: "#03020b", horizon: "#25133d", ground: "#05030b", light: "#f2d6ff", glow: "#d18aff", elevation: 24, azimuth: 210, intensity: 4.4, size: 2, haze: 0.5, directIntensity: 1.1 },
     fog: ["#0d0718", 0.0012],
     ground: { profile: "flat", color: "#070510", material: "rock", height: 0 },
-    props: [{ kind: "planet", radius: 200, color: "#7a4f9c", rings: true, position: [-60, 60, -700], glow: "#e5b6ff" }],
+    props: [{ kind: "planet", radius: 260, color: "#8a5cae", rings: true, position: [-220, 170, -1300], glow: "#e5b6ff" }],
     particles: [
       { kind: "star", count: 900, color: "#e8d8ff", size: 1.4, opacity: 0.95, area: [800, 340, 600], origin: [0, 120, -340] },
       { kind: "dust", count: 260, color: "#c98aff", size: 3.2, opacity: 0.2, area: [500, 180, 400], origin: [0, 90, -300] },
@@ -85,7 +85,7 @@ export const RECIPES = {
   heaven: {
     env: { kind: "day", turbidity: 2.6, rayleigh: 0.9, mie: 0.004, mieG: 0.85, elevation: 20, azimuth: 330, light: "#fff8d8", directIntensity: 3.6, exposure: 0.34, ambient: 1.8 },
     fog: ["#c7e4f0", 0.005],
-    ground: { profile: "peaks", color: "#8fa9b8", material: "rock", height: 0.9, offset: 220 },
+    ground: { profile: "peaks", color: "#8fa9b8", material: "rock", height: 0.5, offset: 420 },
     props: [{ kind: "columns", count: 8, color: "#d8e3e8", height: 30, depth: -150 }],
     particles: [{ kind: "dust", count: 200, color: "#ffffff", size: 2.4, opacity: 0.3, area: [400, 120, 300], origin: [0, 40, -180] }],
     shafts: { count: 8, color: "#fff6d4", opacity: 0.16, height: 130, width: 22 },
@@ -102,7 +102,7 @@ export const RECIPES = {
   abyss: {
     env: { kind: "night", zenith: "#021217", horizon: "#0d4b55", ground: "#031015", light: "#9ff8ee", glow: "#58d6d8", elevation: 62, azimuth: 180, intensity: 3.6, size: 6, haze: 0.8, directIntensity: 1.5 },
     fog: ["#0f4a56", 0.0062],
-    ground: { profile: "plain", color: "#0d3038", material: "rock", height: 0.8 },
+    ground: { profile: "plain", color: "#08202a", material: "rock", height: 0.8, grain: 90 },
     props: [{ kind: "columns", count: 12, color: "#4e7078", height: 34, depth: -110 }],
     particles: [
       { kind: "dust", count: 300, color: "#a8f4ec", size: 0.8, opacity: 0.45, area: [200, 90, 220], origin: [0, 30, -110] },
@@ -115,7 +115,7 @@ export const RECIPES = {
     fog: ["#35485a", 0.0078],
     ground: { profile: "flat", color: "#191c20", material: "rock", height: 0 },
     props: [
-      { kind: "skyline", count: 20, color: "#141a22", windows: "#ffbe72", depth: [70, 240], height: [24, 80] },
+      { kind: "skyline", count: 20, color: "#141a22", windows: "#ffbe72", depth: [190, 420], spread: 340, height: [22, 70] },
       { kind: "lodge", wall: "#2e2823", roof: "#4a5058", glow: "#ffbe72", width: 16, depth: -60 },
     ],
     particles: [{ kind: "rain", count: 700, color: "#c6dced", size: 0.5, opacity: 0.4, area: [200, 90, 200], origin: [0, 10, -80] }],
@@ -123,7 +123,7 @@ export const RECIPES = {
   aurora_valley: {
     env: { kind: "night", zenith: "#06121e", horizon: "#17445b", ground: "#081018", light: "#baffef", glow: "#7defcf", elevation: 10, azimuth: 195, intensity: 3, size: 2.4, haze: 0.55, directIntensity: 0.9 },
     fog: ["#12303f", 0.0055],
-    ground: { profile: "peaks", color: "#93a8b4", material: "rock", height: 1, offset: 160 },
+    ground: { profile: "peaks", color: "#93a8b4", material: "rock", height: 0.7, offset: 320 },
     water: { level: 0.3, color: "#123542", roughness: 0.04 },
     particles: [
       { kind: "star", count: 380, color: "#dff5ff", size: 1.1, opacity: 0.8, area: [500, 180, 320], origin: [0, 110, -250] },
@@ -164,7 +164,7 @@ export const RECIPES = {
   winter_lodge: {
     env: { kind: "day", turbidity: 3, rayleigh: 2.2, mie: 0.004, mieG: 0.82, elevation: 14, azimuth: 316, light: "#eef8ff", directIntensity: 2.6, exposure: 0.36, ambient: 1.9 },
     fog: ["#b8ccd8", 0.0058],
-    ground: { profile: "peaks", color: "#cfdde5", material: "rock", height: 1, offset: 150 },
+    ground: { profile: "peaks", color: "#cfdde5", material: "rock", height: 0.72, offset: 300 },
     grove: { kind: "pine", count: 70, near: 40, far: 280, height: [10, 22] },
     props: [{ kind: "lodge", wall: "#3a3128", roof: "#5c626a", glow: "#ffbe72", width: 14, depth: -110 }],
     particles: [{ kind: "snow", count: 620, color: "#f6fcff", size: 0.7, opacity: 0.6, area: [200, 90, 200], origin: [0, 12, -90] }],
@@ -176,7 +176,7 @@ export const RECIPES = {
     fog: ["#243544", 0.0076],
     ground: { profile: "flat", color: "#12171c", material: "rock", height: 0 },
     water: { level: 0.02, color: "#101820", roughness: 0.03, size: 400 },
-    props: [{ kind: "skyline", count: 30, color: "#0e141c", windows: "#ffc87a", depth: [80, 320], height: [30, 130] }],
+    props: [{ kind: "skyline", count: 30, color: "#0e141c", windows: "#ffc87a", depth: [230, 580], spread: 400, height: [28, 100] }],
     particles: [{ kind: "rain", count: 900, color: "#bcd6ea", size: 0.45, opacity: 0.42, area: [220, 100, 220], origin: [0, 10, -90] }],
   },
   ocean_cliffs: {
@@ -216,13 +216,13 @@ export const RECIPES = {
     env: { kind: "night", zenith: "#120d0b", horizon: "#271713", ground: "#090706", light: "#ffd083", glow: "#ff9b4b", elevation: -6, azimuth: 180, intensity: 1.2, size: 5, haze: 0.9, directIntensity: 0.25 },
     fog: ["#241511", 0.0125],
     ground: { profile: "flat", color: "#171210", material: "rock", height: 0 },
-    props: [{ kind: "hearth", stone: "#2a211c", ember: "#ff7a2a", width: 26, depth: -30 }],
+    props: [{ kind: "hearth", stone: "#2a211c", ember: "#ff7a2a", width: 22, depth: -26 }],
     particles: [{ kind: "ember", count: 200, color: "#ff9a45", size: 0.9, opacity: 0.75, area: [40, 46, 30], origin: [0, 1, -30] }],
   },
   polar_sky: {
     env: { kind: "night", zenith: "#02111d", horizon: "#0d3448", ground: "#10222a", light: "#d9fff0", glow: "#77f0b0", elevation: 8, azimuth: 190, intensity: 2.8, size: 2.6, haze: 0.5, directIntensity: 0.8 },
     fog: ["#0d2c38", 0.0044],
-    ground: { profile: "plain", color: "#b9cdd6", material: "rock", height: 0.5 },
+    ground: { profile: "plain", color: "#8fa6b2", material: "rock", height: 0.5, grain: 110 },
     particles: [
       { kind: "star", count: 520, color: "#e6f8ff", size: 1.2, opacity: 0.85, area: [600, 220, 400], origin: [0, 120, -260] },
       { kind: "snow", count: 160, color: "#ffffff", size: 0.6, opacity: 0.3, area: [180, 40, 180], origin: [0, 10, -80] },
@@ -234,7 +234,7 @@ export const RECIPES = {
     fog: ["#0c1220", 0.0058],
     ground: { profile: "flat", color: "#0b0e14", material: "rock", height: 0 },
     props: [
-      { kind: "skyline", count: 34, color: "#0c1119", windows: "#ffd08a", depth: [70, 340], height: [30, 140] },
+      { kind: "skyline", count: 34, color: "#121822", windows: "#ffd08a", depth: [240, 620], spread: 420, height: [26, 92] },
       { kind: "railing", color: "#1b1f26", width: 64, depth: -16 },
     ],
     particles: [{ kind: "star", count: 420, color: "#dce8ff", size: 1.1, opacity: 0.8, area: [600, 200, 400], origin: [0, 130, -260] }],

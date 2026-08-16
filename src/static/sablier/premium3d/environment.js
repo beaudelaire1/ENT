@@ -33,8 +33,8 @@ function buildSky(THREE, config) {
   // Le dôme doit tenir dans le champ de la caméra de la scène. À l'échelle d'exemple
   // de Three.js (45 000), il tombe au-delà du plan lointain et disparaît : le ciel
   // devient noir et tout l'univers de plein jour avec lui. Il reste donc largement
-  // au-delà du relief — neuf cents unités de côté — mais en deçà du plan lointain.
-  sky.scale.setScalar(2400);
+  // au-delà du relief — mille sept cents unités de côté — mais en deçà du plan lointain.
+  sky.scale.setScalar(5200);
   const uniforms = sky.material.uniforms;
   uniforms.turbidity.value = config.turbidity ?? 6;
   uniforms.rayleigh.value = config.rayleigh ?? 2;

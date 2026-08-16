@@ -47,7 +47,7 @@ export const PROFILES = {
 };
 
 export function terrain(THREE, {
-  profile = "plain", size = 900, segments = 150, color = "#8a6a45", material = "sand",
+  profile = "plain", size = 1700, segments = 170, color = "#8a6a45", material = "sand",
   height = 1, shelter = 34, offset = 0, grain = 150,
 }) {
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
@@ -91,17 +91,21 @@ export function terrain(THREE, {
 
 // ── Eau ──────────────────────────────────────────────────────────────────────────
 
-export function water(THREE, { level = 0, size = 900, color = "#20404c", roughness = 0.08, offset = 0 }) {
+export function water(THREE, { level = 0, size = 1700, color = "#20404c", roughness = 0.08, offset = 0 }) {
   const normal = waterNormal(THREE).clone();
   normal.needsUpdate = true;
   const geometry = new THREE.PlaneGeometry(size, size, 1, 1);
   geometry.rotateX(-Math.PI / 2);
+  // Une eau qui ne réfléchit rien est une nappe de peinture. La métallicité élevée et la
+  // rugosité très basse font travailler la carte d'environnement : c'est le ciel du lieu
+  // qu'on voit dedans, avec sa couleur et son astre.
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(color),
     roughness,
-    metalness: 0.04,
+    metalness: 0.42,
     normalMap: normal,
-    normalScale: new THREE.Vector2(0.55, 0.55),
+    normalScale: new THREE.Vector2(0.4, 0.4),
+    envMapIntensity: 1.4,
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(0, level, -offset);

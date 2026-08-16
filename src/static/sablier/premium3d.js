@@ -84,7 +84,7 @@ function createRuntime(THREE, nodes) {
   renderer.shadowMap.type = THREE.PCFShadowMap;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.35, 3000);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.4, 9000);
   camera.position.set(0, 1.72, 0);
   camera.rotation.order = "YXZ";
 
@@ -196,9 +196,11 @@ function createRuntime(THREE, nodes) {
     renderer.toneMappingExposure = currentWorld.env.exposure
       ?? (currentWorld.env.kind === "day" ? 0.4 : 0.95);
 
+    // L'appoint reste discret : trop clair, il éclaire le sol plus fort que le ciel qui
+    // le surplombe et l'horizon se casse en deux bandes franches.
     const shade = new THREE.Color(fogColor);
-    ambient.color.copy(shade).lerp(new THREE.Color(0xffffff), 0.45);
-    ambient.groundColor.copy(shade).multiplyScalar(0.45);
+    ambient.color.copy(shade).lerp(new THREE.Color(0xffffff), 0.22);
+    ambient.groundColor.copy(shade).multiplyScalar(0.3);
     ambient.intensity = currentWorld.env.ambient ?? (currentWorld.env.kind === "day" ? 1.6 : 0.7);
 
     const sun = environment.sun;
