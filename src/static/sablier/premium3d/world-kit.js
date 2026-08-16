@@ -46,6 +46,21 @@ export const PROFILES = {
   },
 };
 
+// Altitude du sol en un point du *monde*. Une seule fonction, utilisée par le relief
+// comme par tout ce qui s'y pose.
+//
+// Le maillage du terrain est reculé de `offset` : un sommet écrit en coordonnées locales
+// se retrouve en `z - offset`. Tant que la clairière et les arbres calculaient leur
+// hauteur dans deux repères différents, la zone plate se creusait à `-2 × offset` — la
+// caméra et l'objet se réveillaient à l'intérieur d'un massif — et les troncs flottaient
+// à des dizaines de mètres au-dessus de leur propre sol. Tout passe désormais par ici.
+export function elevation(shape, x, worldZ, { height = 1, shelter = 34, offset = 0 } = {}) {
+  // Le creux d'accueil est centré sur l'observateur, pas sur le maillage : l'objet doit
+  // reposer sur un sol calme, le relief commence au-delà.
+  const opening = clamp01((Math.hypot(x, worldZ) - shelter) / (shelter * 2.4));
+  return shape(x, worldZ + offset) * height * opening * opening;
+}
+
 export function terrain(THREE, {
   profile = "plain", size = 1700, segments = 170, color = "#8a6a45", material = "sand",
   height = 1, shelter = 34, offset = 0, grain = 150,
@@ -56,11 +71,7 @@ export function terrain(THREE, {
   const position = geometry.attributes.position;
   for (let i = 0; i < position.count; i += 1) {
     const x = position.getX(i), z = position.getZ(i);
-    // Le creux d'accueil : l'objet doit reposer sur un sol calme, le relief commence
-    // au-delà. `shelter` est le rayon de cette clairière.
-    const distance = Math.hypot(x, z + offset);
-    const opening = clamp01((distance - shelter) / (shelter * 2.4));
-    position.setY(i, shape(x, z) * height * opening * opening);
+    position.setY(i, elevation(shape, x, z - offset, { height, shelter, offset }));
   }
   geometry.computeVertexNormals();
 
@@ -72,6 +83,9 @@ export function terrain(THREE, {
   const tile = (map) => {
     const copy = map.clone();
     copy.repeat.set(grain, grain);
+    // Le clone possède son propre envoi GPU : il se libère avec l'univers, contrairement
+    // à la carte d'origine que le cache garde pour les suivants.
+    copy.userData = { shared: false };
     copy.needsUpdate = true;
     return copy;
   };
@@ -93,6 +107,7 @@ export function terrain(THREE, {
 
 export function water(THREE, { level = 0, size = 1700, color = "#20404c", roughness = 0.08, offset = 0 }) {
   const normal = waterNormal(THREE).clone();
+  normal.userData = { shared: false };
   normal.needsUpdate = true;
   const geometry = new THREE.PlaneGeometry(size, size, 1, 1);
   geometry.rotateX(-Math.PI / 2);
@@ -110,10 +125,12 @@ export function water(THREE, { level = 0, size = 1700, color = "#20404c", roughn
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(0, level, -offset);
   mesh.receiveShadow = false;
-  mesh.userData.update = (time) => {
+  mesh.userData.update = (time, motion) => {
     // La houle n'est pas simulée : la carte de normales dérive, ce qui suffit à donner
-    // une surface vivante sans coût.
-    normal.offset.set((time * 0.000018) % 1, (time * 0.000011) % 1);
+    // une surface vivante sans coût. À l'arrêt, l'eau reste — c'est son mouvement qui
+    // cesse, pas le plan d'eau.
+    if (motion <= 0) return;
+    normal.offset.set((time * 0.000018 * motion) % 1, (time * 0.000011 * motion) % 1);
   };
   return mesh;
 }
@@ -182,8 +199,8 @@ export function grove(THREE, {
       x *= push;
       z *= push;
     }
-    const opening = clamp01((Math.hypot(x, z + offset) - shelter) / (shelter * 2.4));
-    const base = (ground(x, z) * groundHeight * opening * opening) - 0.4;
+    // Même fonction d'altitude que le relief : un arbre pousse sur son sol, pas au-dessus.
+    const base = elevation(ground, x, z, { height: groundHeight, shelter, offset }) - 0.4;
     const tall = height[0] + random() * (height[1] - height[0]);
     position.set(x, base + tall / 2, z);
     scale.set(1 + random() * 0.5, tall, 1 + random() * 0.5);
@@ -243,8 +260,7 @@ export function boulders(THREE, {
   for (let i = 0; i < count; i += 1) {
     const x = (random() - 0.5) * spread * 2;
     const z = -(near + random() * (far - near));
-    const opening = clamp01((Math.hypot(x, z + offset) - shelter) / (shelter * 2.4));
-    const base = ground(x, z) * groundHeight * opening * opening;
+    const base = elevation(ground, x, z, { height: groundHeight, shelter, offset });
     const radius = sizeRange[0] + random() * (sizeRange[1] - sizeRange[0]);
     vector.set(x, base + radius * 0.42, z);
     size.set(radius, radius * (0.6 + random() * 0.5), radius);
@@ -301,9 +317,12 @@ export function particles(THREE, {
   points.position.set(origin[0], origin[1], origin[2]);
   points.frustumCulled = false;
 
-  points.userData.update = (time, amount) => {
-    material.opacity = opacity * amount;
-    if (amount <= 0) return;
+  // `motion` ne règle que le mouvement, jamais la présence. Une pluie à l'arrêt reste une
+  // pluie suspendue ; en faisant disparaître les gouttes, le niveau « Statique » retirait
+  // au monde ce qui le définissait — la ville sous la pluie n'avait plus de pluie.
+  points.userData.update = (time, motion) => {
+    material.opacity = opacity;
+    if (motion <= 0) return;
     const t = time * 0.001 * speed;
     for (let i = 0; i < count; i += 1) {
       const drift = seeds[i * 3 + 1], phase = seeds[i * 3 + 2];
@@ -326,7 +345,7 @@ export function particles(THREE, {
         // Poussière, spores, lucioles : une dérive lente, sans direction dominante.
         positions[index] += Math.sin(t * 0.5 * drift + phase) * 0.02;
         positions[index + 1] += Math.cos(t * 0.4 * drift + phase) * 0.015;
-        material.opacity = opacity * amount * (0.55 + 0.45 * Math.sin(t * drift + phase));
+        material.opacity = opacity * (0.55 + 0.45 * Math.sin(t * drift + phase));
       }
     }
     geometry.attributes.position.needsUpdate = true;
@@ -368,8 +387,9 @@ export function lightShafts(THREE, {
     shaft.rotation.z = (random() - 0.5) * tilt;
     group.add(shaft);
   }
-  group.userData.update = (time, amount) => {
-    material.opacity = opacity * amount * (0.72 + 0.28 * Math.sin(time * 0.0002));
+  group.userData.update = (time, motion) => {
+    // Le rai de lumière existe même immobile : seule sa respiration s'arrête.
+    material.opacity = opacity * (motion > 0 ? 0.72 + 0.28 * Math.sin(time * 0.0002) : 1);
   };
   return group;
 }
@@ -577,8 +597,10 @@ export function hearth(THREE, { stone = "#2a211c", ember = "#ff7a2a", width = 26
   const fire = new THREE.PointLight(new THREE.Color(ember), 1800, 140, 2);
   fire.position.set(0, 4, depth + 2);
   group.add(fire);
-  group.userData.update = (time) => {
-    fire.intensity = 1500 + Math.sin(time * 0.003) * 260 + Math.sin(time * 0.011) * 140;
+  group.userData.update = (time, motion) => {
+    // Les braises éclairent toujours ; c'est leur battement qui s'apaise.
+    const breath = motion > 0 ? Math.sin(time * 0.003) * 260 + Math.sin(time * 0.011) * 140 : 0;
+    fire.intensity = 1500 + breath * motion;
   };
   return group;
 }

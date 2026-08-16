@@ -48,7 +48,11 @@ export function createPostFX(THREE, { renderer, scene, camera, width, height, mo
     composer = new EffectComposer(renderer);
     composer.setSize(width, height);
     composer.addPass(new RenderPass(scene, camera));
-    if (ceiling) composer.addPass(new ShaderPass(CEILING));
+    let ceilingPass = null;
+    if (ceiling) {
+      ceilingPass = new ShaderPass(CEILING);
+      composer.addPass(ceilingPass);
+    }
 
     let bokeh = null;
     if (!mobile && depthOfField) {
@@ -58,19 +62,29 @@ export function createPostFX(THREE, { renderer, scene, camera, width, height, mo
       composer.addPass(bokeh);
     }
 
-    // L'ordre compte. Le tonemapping vient *avant* le halo : appliqué après, le halo
-    // travaillerait sur les valeurs brutes du ciel, où un après-midi d'été vaut plusieurs
-    // milliers. Le flou étalait alors cette énergie sur toute l'image et la scène entière
-    // virait au blanc. Tonemappée d'abord, l'image tient dans [0,1] et le halo ne déborde
-    // plus que des sources réellement lumineuses : flamme, soleil, éclat du sable.
-    composer.addPass(new OutputPass());
+    // L'ordre compte, et il n'y en a qu'un de correct : le halo diffuse en lumière
+    // linéaire, puis le tonemapping ferme la chaîne. `OutputPass` doit rester la dernière
+    // passe — placée avant, elle cesse d'être la sortie, et la passe suivante réapplique
+    // la courbe sRGB sur une image déjà encodée. L'image entière ressortait laiteuse,
+    // sans noirs ni contraste.
     const bloom = new UnrealBloomPass(
       new THREE.Vector2(width, height),
       mobile ? 0.22 : 0.3,    // intensité
       0.62,                   // rayon
-      mobile ? 0.86 : 0.8,    // seuil : seules les vraies hautes lumières diffusent
+      1,                      // seuil, réglé ensuite selon l'exposition de l'univers
     );
     composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+
+    // Le seuil du halo se lit en lumière linéaire, alors que « blanc » dépend de
+    // l'exposition du lieu : à 0,3 le blanc vaut environ 3, à 0,95 environ 1. Un seuil
+    // fixe ferait donc diffuser un sable de plein midi comme une flamme.
+    const setExposure = (exposure) => {
+      const white = 1 / Math.max(0.05, exposure);
+      bloom.threshold = white * (mobile ? 0.92 : 0.86);
+      if (ceilingPass) ceilingPass.uniforms.ceiling.value = white * 6;
+    };
+    setExposure(renderer.toneMappingExposure || 1);
 
     return {
       render() { composer.render(); },
@@ -78,6 +92,7 @@ export function createPostFX(THREE, { renderer, scene, camera, width, height, mo
         composer.setSize(nextWidth, nextHeight);
         bloom.setSize(nextWidth, nextHeight);
       },
+      setExposure,
       focus(distance) {
         if (bokeh) bokeh.uniforms.focus.value = distance;
       },

@@ -253,5 +253,6 @@ export function makeHourglassRuntime(THREE, helpers) {
   }
 
   rebuild(1, false);
-  return { object: group, update };
+  // Le pied du plateau inférieur, congé compris : c'est lui qui touche le sol.
+  return { object: group, update, base: -2.43, radius: 1.64 };
 }

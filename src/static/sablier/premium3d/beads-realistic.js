@@ -81,34 +81,43 @@ export function makeBeadsRuntime(THREE, helpers) {
     group.add(strand);
   }
 
+  // Les perles ne bougent pas les unes par rapport aux autres : leurs matrices sont
+  // posées une fois pour toutes. Les recomposer à chaque image revenait à recalculer
+  // soixante fois par seconde une position qui ne change jamais.
   const matrix = new THREE.Matrix4();
   const quaternion = new THREE.Quaternion();
   const scale = new THREE.Vector3();
-  const position = new THREE.Vector3();
-  const rotations = points.map((_, i) => new THREE.Euler(
-    seeded(i, 5) * Math.PI, seeded(i, 7) * Math.PI, seeded(i, 9) * Math.PI,
-  ));
+  for (let i = 0; i < count; i += 1) {
+    // Aucune perle n'est parfaitement ronde ni de la même taille que sa voisine.
+    const size = 0.94 + seeded(i, 11) * 0.13;
+    scale.set(size, size * (0.93 + seeded(i, 13) * 0.12), size * (0.95 + seeded(i, 15) * 0.09));
+    quaternion.setFromEuler(new THREE.Euler(
+      seeded(i, 5) * Math.PI, seeded(i, 7) * Math.PI, seeded(i, 9) * Math.PI,
+    ));
+    beads.setMatrixAt(i, matrix.compose(points[i], quaternion, scale));
+  }
+  beads.instanceMatrix.needsUpdate = true;
 
   const alive = new THREE.Color(0xfaf4ea);
-  const warm = new THREE.Color(0xffe6bd);
+  const warm = new THREE.Color(0xffe6bd).lerp(alive, 0.75);
   const spent = new THREE.Color(0x4a4f5a);
+  const tint = new THREE.Color();
+  let painted = -1;
 
   function update(progress, time) {
+    // La couleur ne change qu'au passage d'une perle : trente-quatre fois dans la session,
+    // pas soixante fois par seconde.
     const remaining = progress * count;
-    for (let i = 0; i < count; i += 1) {
-      const fill = Math.max(0, Math.min(1, remaining - i));
-      position.copy(points[i]);
-      // Aucune perle n'est parfaitement ronde ni de la même taille que sa voisine.
-      const size = 0.94 + seeded(i, 11) * 0.13;
-      scale.set(size, size * (0.93 + seeded(i, 13) * 0.12), size * (0.95 + seeded(i, 15) * 0.09));
-      quaternion.setFromEuler(rotations[i]);
-      beads.setMatrixAt(i, matrix.compose(position, quaternion, scale));
-      beads.setColorAt(i, fill > 0.5
-        ? alive.clone().lerp(warm, 0.25)
-        : spent.clone().lerp(alive, fill));
+    if (Math.abs(remaining - painted) > 0.02) {
+      for (let i = 0; i < count; i += 1) {
+        const fill = Math.max(0, Math.min(1, remaining - i));
+        if (fill > 0.5) tint.copy(warm);
+        else tint.copy(spent).lerp(alive, fill);
+        beads.setColorAt(i, tint);
+      }
+      if (beads.instanceColor) beads.instanceColor.needsUpdate = true;
+      painted = remaining;
     }
-    beads.instanceMatrix.needsUpdate = true;
-    if (beads.instanceColor) beads.instanceColor.needsUpdate = true;
 
     if (!reducedMotion) {
       // Le collier oscille comme un pendule très lent, sans jamais tourner sur lui-même.
@@ -118,5 +127,6 @@ export function makeBeadsRuntime(THREE, helpers) {
   }
 
   update(1, 0);
-  return { object: group, update };
+  // Le bout du gland, qui frôle le sol : le collier pend, il ne repose pas.
+  return { object: group, update, base: -2.96, radius: 1.6 };
 }

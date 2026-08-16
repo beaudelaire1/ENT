@@ -13,6 +13,13 @@ function once(key, build) {
   return cache.get(key);
 }
 
+// Toute carte sortie d'ici appartient au cache et sert à tous les univers : elle est
+// marquée « partagée » pour qu'aucun démontage de scène ne la libère.
+function share(map) {
+  map.userData = { ...(map.userData || {}), shared: true };
+  return map;
+}
+
 function texture(THREE, canvas, { repeat = 1, srgb = false, anisotropy = 8 } = {}) {
   const map = new THREE.CanvasTexture(canvas);
   map.wrapS = map.wrapT = THREE.RepeatWrapping;
@@ -20,7 +27,7 @@ function texture(THREE, canvas, { repeat = 1, srgb = false, anisotropy = 8 } = {
   map.anisotropy = anisotropy;
   if (srgb) map.colorSpace = THREE.SRGBColorSpace;
   map.needsUpdate = true;
-  return map;
+  return share(map);
 }
 
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
@@ -234,7 +241,7 @@ export function radialSprite(THREE, stops, size = 128) {
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.SRGBColorSpace;
     map.needsUpdate = true;
-    return map;
+    return share(map);
   });
 }
 
@@ -269,7 +276,7 @@ export function flameSprite(THREE) {
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.SRGBColorSpace;
     map.needsUpdate = true;
-    return map;
+    return share(map);
   });
 }
 
@@ -304,7 +311,7 @@ export function foliageSprite(THREE, color, seed = 3) {
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.SRGBColorSpace;
     map.needsUpdate = true;
-    return map;
+    return share(map);
   });
 }
 

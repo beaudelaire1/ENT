@@ -5,7 +5,7 @@
 // silhouette est donc tournée à partir d'un profil recalculé à chaque palier de fonte,
 // comme le sable du sablier — et la flamme éclaire réellement la cire, ce qui lui donne
 // sa transparence chaude.
-import { makeWax, makeChrome, makeSteel, seeded } from "./material-kit.js";
+import { makeWax, seeded } from "./material-kit.js";
 import { flameSprite, radialSprite } from "./textures.js";
 
 const BASE = -1.62;          // assise de la bougie
@@ -43,19 +43,21 @@ export function makeCandleRuntime(THREE, helpers) {
   const body = mesh(new THREE.BufferGeometry(), wax);
   group.add(body);
 
-  // Bougeoir tourné : assiette, tige, coupelle. Le métal capte la flamme par-dessous et
-  // c'est ce reflet chaud qui pose la bougie sur quelque chose.
-  const chrome = makeChrome(THREE), steel = makeSteel(THREE);
-  const dish = mesh(new THREE.LatheGeometry([
-    [0, 0], [1.32, 0], [1.42, 0.06], [1.44, 0.14], [1.3, 0.17],
-    [1.06, 0.19], [1.02, 0.3], [0.98, 0.34], [0, 0.35],
-  ].map(([r, y]) => new THREE.Vector2(r, y)), segments), chrome);
-  dish.position.y = BASE - 0.34;
-  group.add(dish);
-  const collar = mesh(new THREE.TorusGeometry(RADIUS + 0.06, 0.05, 14, segments), steel);
-  collar.rotation.x = Math.PI / 2;
-  collar.position.y = BASE + 0.03;
-  group.add(collar);
+  // Pas de bougeoir. Un chandelier chromé sous la bougie était le même objet dans les
+  // vingt-quatre univers : sur le sable du Sahara, sur la mousse d'un sous-bois et devant
+  // un âtre de pierre. Un miroir poli au pied d'une flamme ne dit rien du lieu, il dit
+  // qu'un composant a été réutilisé — et il ramène l'œil à l'interface au moment précis
+  // où la scène cherchait à la faire oublier.
+  //
+  // Ce qui pose réellement une bougie, c'est sa propre cire : la flaque qu'elle s'est
+  // faite en brûlant, qui épouse le sol et prend sa lumière. Elle appartient à l'objet,
+  // le socle appartenait au meuble.
+  const spill = mesh(new THREE.LatheGeometry([
+    [0, 0], [RADIUS * 0.98, 0.008], [RADIUS * 1.16, 0.028], [RADIUS * 1.34, 0.036],
+    [RADIUS * 1.48, 0.022], [RADIUS * 1.55, 0.004],
+  ].map(([r, y]) => new THREE.Vector2(r, y)), segments), wax, { cast: false });
+  spill.position.y = BASE + 0.002;
+  group.add(spill);
 
   // Coulures : figées le long de la paroi, elles descendent avec le niveau de la cire.
   const drips = [];
@@ -158,5 +160,6 @@ export function makeCandleRuntime(THREE, helpers) {
   }
 
   rebuild(FULL, 0);
-  return { object: group, update };
+  // La flaque de cire est l'assise de la bougie.
+  return { object: group, update, base: BASE, radius: RADIUS * 1.55 };
 }

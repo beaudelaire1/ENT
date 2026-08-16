@@ -16,7 +16,7 @@ const { PROFILES } = kit;
 export const RECIPES = {
   // ── Les mondes fondateurs ──────────────────────────────────────────────────────
   star_tree: {
-    env: { kind: "night", zenith: "#020d19", horizon: "#0c3d5d", ground: "#061017", light: "#ffe7a0", glow: "#7ad8ff", elevation: 8, azimuth: 200, intensity: 3.4, size: 3, haze: 0.5, directIntensity: 0.9 },
+    env: { kind: "night", zenith: "#020d19", horizon: "#0c3d5d", ground: "#061017", light: "#ffe7a0", glow: "#7ad8ff", elevation: 8, azimuth: 200, intensity: 3.4, size: 3, haze: 0.5, directIntensity: 0.9, ambient: 1.4 },
     fog: ["#0a2334", 0.0042],
     ground: { profile: "plain", color: "#0a1a22", material: "rock", height: 0.6 },
     water: { level: 0.4, color: "#08202c", roughness: 0.05, size: 300, offset: 150 },
@@ -40,7 +40,7 @@ export const RECIPES = {
     fog: ["#20402f", 0.0044],
     ground: { profile: "valley", color: "#2f5236", material: "rock", height: 0.9 },
     water: { level: 0.6, color: "#20524a", roughness: 0.06, size: 240, offset: 120 },
-    grove: { kind: "redwood", count: 70, near: 50, far: 320, height: [18, 40] },
+    grove: { kind: "redwood", count: 70, near: 54, far: 330, height: [18, 40], clearing: 56 },
     props: [{ kind: "greatTree", trunk: "#3a2b22", leaf: "#357a4c", height: 86, depth: -180 }],
     particles: [{ kind: "firefly", count: 130, color: "#fff3b0", size: 1, opacity: 0.55, area: [200, 40, 200], origin: [0, 12, -110] }],
     shafts: { count: 7, color: "#eaffc0", opacity: 0.11 },
@@ -95,7 +95,7 @@ export const RECIPES = {
     fog: ["#8a573f", 0.0048],
     ground: { profile: "dunes", color: "#9a6238", material: "sand", height: 1 },
     water: { level: 0.5, color: "#2f5a52", roughness: 0.07, size: 120 },
-    grove: { kind: "palm", count: 22, near: 40, far: 150, spread: 90, height: [14, 24] },
+    grove: { kind: "palm", count: 22, near: 46, far: 160, spread: 90, height: [14, 24], clearing: 48 },
     props: [{ kind: "columns", count: 6, color: "#8d7550", height: 16, depth: -150 }],
     particles: [{ kind: "sand", count: 200, color: "#f0cf9c", size: 1.6, opacity: 0.28, area: [360, 40, 240], origin: [0, 12, -130] }],
   },
@@ -112,7 +112,7 @@ export const RECIPES = {
   },
   rain_refuge: {
     env: { kind: "night", zenith: "#111820", horizon: "#344756", ground: "#15130f", light: "#ffd28a", glow: "#8ba4ba", elevation: 5, azimuth: 200, intensity: 2.2, size: 3, haze: 0.7, directIntensity: 0.7 },
-    fog: ["#35485a", 0.0078],
+    fog: ["#35485a", 0.0038],
     ground: { profile: "flat", color: "#191c20", material: "rock", height: 0 },
     props: [
       { kind: "skyline", count: 20, color: "#141a22", windows: "#ffbe72", depth: [190, 420], spread: 340, height: [22, 70] },
@@ -138,7 +138,7 @@ export const RECIPES = {
     fog: ["#cfe3d3", 0.0034],
     ground: { profile: "hills", color: "#5d8a4e", material: "rock", height: 0.7 },
     water: { level: 0.2, color: "#3f7a76", roughness: 0.07, size: 140 },
-    grove: { kind: "blossom", count: 46, near: 36, far: 240, height: [10, 20] },
+    grove: { kind: "blossom", count: 46, near: 48, far: 250, height: [10, 20], clearing: 50 },
     particles: [{ kind: "petal", count: 220, color: "#f6c9d8", size: 1, opacity: 0.7, area: [160, 50, 180], origin: [0, 16, -80] }],
     shafts: { count: 4, color: "#fff4c8", opacity: 0.08 },
   },
@@ -147,7 +147,7 @@ export const RECIPES = {
     fog: ["#d8bf94", 0.0028],
     ground: { profile: "hills", color: "#a98c5c", material: "sand", height: 0.85, offset: 60, grain: 80 },
     water: { level: -18, color: "#2f6f78", roughness: 0.05, size: 300, offset: 430 },
-    grove: { kind: "olive", count: 40, near: 70, far: 300, height: [8, 16] },
+    grove: { kind: "olive", count: 40, near: 70, far: 300, height: [8, 16], clearing: 60 },
     props: [{ kind: "pergola", color: "#8c7a5f", vine: "#43663c", width: 52, depth: -46, height: 20 }],
     particles: [{ kind: "dust", count: 170, color: "#ffeec2", size: 0.9, opacity: 0.35, area: [140, 40, 160], origin: [0, 12, -60] }],
     shafts: { count: 5, color: "#fff2c0", opacity: 0.1, height: 60, width: 10, depth: [30, 90] },
@@ -157,25 +157,25 @@ export const RECIPES = {
     fog: ["#9c7a5c", 0.0062],
     ground: { profile: "hills", color: "#6c4c33", material: "rock", height: 0.8 },
     water: { level: 0.2, color: "#3a3026", roughness: 0.05, size: 500, offset: 120 },
-    grove: { kind: "autumn", count: 64, near: 44, far: 300, height: [12, 26] },
+    grove: { kind: "autumn", count: 64, near: 50, far: 310, height: [12, 26], clearing: 52 },
     particles: [{ kind: "leaf", count: 200, color: "#d98436", size: 1.2, opacity: 0.7, area: [180, 50, 200], origin: [0, 16, -90] }],
     shafts: { count: 5, color: "#ffcf92", opacity: 0.12 },
   },
   winter_lodge: {
-    env: { kind: "day", turbidity: 3, rayleigh: 2.2, mie: 0.004, mieG: 0.82, elevation: 14, azimuth: 316, light: "#eef8ff", directIntensity: 2.6, exposure: 0.36, ambient: 1.9 },
+    env: { kind: "day", turbidity: 3, rayleigh: 2.2, mie: 0.004, mieG: 0.82, elevation: 14, azimuth: 316, light: "#eef8ff", directIntensity: 2.6, exposure: 0.3, ambient: 1.7 },
     fog: ["#b8ccd8", 0.0058],
     ground: { profile: "peaks", color: "#cfdde5", material: "rock", height: 0.72, offset: 300 },
-    grove: { kind: "pine", count: 70, near: 40, far: 280, height: [10, 22] },
+    grove: { kind: "pine", count: 70, near: 56, far: 300, height: [10, 22], clearing: 58 },
     props: [{ kind: "lodge", wall: "#3a3128", roof: "#5c626a", glow: "#ffbe72", width: 14, depth: -110 }],
     particles: [{ kind: "snow", count: 620, color: "#f6fcff", size: 0.7, opacity: 0.6, area: [200, 90, 200], origin: [0, 12, -90] }],
   },
 
   // ── Les climats ────────────────────────────────────────────────────────────────
   rain_city: {
-    env: { kind: "night", zenith: "#101923", horizon: "#263748", ground: "#10151a", light: "#b7d5ea", glow: "#78b8e8", elevation: 4, azimuth: 210, intensity: 2, size: 3, haze: 0.65, directIntensity: 0.6 },
-    fog: ["#243544", 0.0076],
+    env: { kind: "night", zenith: "#101923", horizon: "#263748", ground: "#10151a", light: "#b7d5ea", glow: "#78b8e8", elevation: 4, azimuth: 210, intensity: 2, size: 3, haze: 0.65, directIntensity: 0.6, ambient: 1.6 },
+    fog: ["#243544", 0.0026],
     ground: { profile: "flat", color: "#12171c", material: "rock", height: 0 },
-    water: { level: 0.02, color: "#101820", roughness: 0.03, size: 400 },
+    water: { level: 0.02, color: "#243444", roughness: 0.16, size: 400 },
     props: [{ kind: "skyline", count: 30, color: "#0e141c", windows: "#ffc87a", depth: [230, 580], spread: 400, height: [28, 100] }],
     particles: [{ kind: "rain", count: 900, color: "#bcd6ea", size: 0.45, opacity: 0.42, area: [220, 100, 220], origin: [0, 10, -90] }],
   },
@@ -230,8 +230,8 @@ export const RECIPES = {
     aurora: { color: "#77f0b0", secondary: "#8ad9ff" },
   },
   midnight_rooftop: {
-    env: { kind: "night", zenith: "#030710", horizon: "#10192a", ground: "#080a0d", light: "#e8edff", glow: "#9cb9f1", elevation: 30, azimuth: 220, intensity: 4, size: 1.6, haze: 0.4, directIntensity: 1 },
-    fog: ["#0c1220", 0.0058],
+    env: { kind: "night", zenith: "#030710", horizon: "#10192a", ground: "#080a0d", light: "#e8edff", glow: "#9cb9f1", elevation: 30, azimuth: 220, intensity: 4, size: 1.6, haze: 0.4, directIntensity: 1, ambient: 1.3 },
+    fog: ["#0c1220", 0.0022],
     ground: { profile: "flat", color: "#0b0e14", material: "rock", height: 0 },
     props: [
       { kind: "skyline", count: 34, color: "#121822", windows: "#ffd08a", depth: [240, 620], spread: 420, height: [26, 92] },
@@ -262,20 +262,21 @@ function aurora(THREE, { color, secondary }) {
     group.add(mesh);
     layers.push({ mesh, material, base: geometry.attributes.position.array.slice() });
   }
-  group.userData.update = (time, amount, progress) => {
+  group.userData.update = (time, motion, progress) => {
     for (let index = 0; index < layers.length; index += 1) {
       const { mesh, material, base } = layers[index];
+      // Le rideau gagne en présence à mesure que la session avance — même figé, il est là.
+      material.opacity = 0.09 + (1 - progress) * 0.12;
+      if (motion <= 0) continue;
       const position = mesh.geometry.attributes.position;
       for (let i = 0; i < position.count; i += 1) {
         const x = base[i * 3], y = base[i * 3 + 1];
-        const wave = Math.sin(x * 0.012 + time * 0.00035 + index * 1.7) * 16
-          + Math.sin(x * 0.031 - time * 0.00052) * 7;
+        const wave = Math.sin(x * 0.012 + time * 0.00035 * motion + index * 1.7) * 16
+          + Math.sin(x * 0.031 - time * 0.00052 * motion) * 7;
         position.setZ(i, wave * (0.35 + (y + 75) / 150));
-        position.setY(i, y + Math.sin(x * 0.02 + time * 0.0002) * 6);
+        position.setY(i, y + Math.sin(x * 0.02 + time * 0.0002 * motion) * 6);
       }
       position.needsUpdate = true;
-      // Le rideau gagne en présence à mesure que la session avance.
-      material.opacity = (0.09 + (1 - progress) * 0.12) * amount;
     }
   };
   return group;
@@ -372,12 +373,15 @@ export function buildWorld(THREE, key, { density = 1, mobile = false } = {}) {
     object: group,
     env: recipe.env,
     fog: recipe.fog,
-    update(time, amount, progress) {
-      for (const update of updates) update(time, amount, progress);
+    update(time, motion, progress) {
+      for (const update of updates) update(time, motion, progress);
       if (flash) {
         // Un éclair rare : neuf secondes de calme, puis deux décharges rapprochées.
         const cycle = time % 9000;
-        flash.intensity = cycle < 90 ? 6 * amount : cycle > 220 && cycle < 280 ? 3.4 * amount : 0;
+        flash.intensity = motion <= 0 ? 0
+          : cycle < 90 ? 6 * motion
+          : cycle > 220 && cycle < 280 ? 3.4 * motion
+          : 0;
       }
     },
   };

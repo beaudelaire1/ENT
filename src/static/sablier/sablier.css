@@ -72,7 +72,10 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 /* Le lieu rendu en 3D occupe toute la scène. Il se place au-dessus du décor peint —
    qui n'est plus qu'un repli — et sous les commandes et le temps affiché. Le halo de
    `::after` (z-index 2) continue de le cadrer, ce qui évite un bord net de canvas. */
-.stage-3d-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; z-index:1; }
+.stage-3d-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; z-index:1; opacity:0; transition:opacity .5s ease; }
+/* Le dessin 2D ne s'efface pas d'un coup : il se fond dans la scène 3D à l'instant où
+   celle-ci a sa première image, sur la même durée que son apparition. */
+#timer-canvas { transition:opacity .5s ease; }
 /* Une fois la scène 3D à l'image, le voile assombrissant du gabarit n'a plus lieu
    d'être : c'est la brume de l'univers qui creuse la profondeur. */
 .focus-app[data-renderer3d="three"] .focus-stage { background:transparent; }

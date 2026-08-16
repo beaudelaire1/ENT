@@ -15,9 +15,18 @@ import { makeCelestialRuntime } from "./premium3d/celestial.js";
 import { buildWorld } from "./premium3d/worlds.js";
 import { buildEnvironment } from "./premium3d/environment.js";
 import { createPostFX } from "./premium3d/postfx.js";
+import { disposeTextures, radialSprite } from "./premium3d/textures.js";
 
 const SUPPORTED = new Set(["hourglass", "candle", "beads", "moon", "sun"]);
-const DENSITY = { 0: 0, 1: 0.4, 2: 0.72, 3: 1 };
+
+// Les astres ne se posent pas. Un sablier, une bougie ou un mâlâ appartiennent au sol du
+// lieu ; la Lune et le Soleil appartiennent à son ciel. Les traiter pareillement — même
+// cadrage, même rattrapage au sol — donnait une Lune de cinq mètres posée sur le sable à
+// hauteur d'œil, dans un monde qui a déjà sa lune au ciel.
+const SKYBORNE = new Set(["moon", "sun"]);
+
+// `decorDensity` ne règle que le mouvement. Le lieu, lui, reste entier à tous les niveaux.
+const MOTION = { 0: 0, 1: 0.4, 2: 0.72, 3: 1 };
 
 // Hauteur de référence des objets, en unités de scène. Elle sert à convertir la taille
 // en pixels de `#visual-wrap` en échelle 3D.
@@ -119,7 +128,29 @@ function createRuntime(THREE, nodes) {
   const objectRoot = new THREE.Group();
   scene.add(objectRoot);
 
-  const state = { mode: null, world: null, progress: 1, running: false, finished: false, density: 1 };
+  // Occlusion de contact. Ce n'est pas un socle : c'est l'ombre courte que tout objet
+  // creuse sous lui en interceptant la lumière du ciel. Sans elle, une bougie posée sur un
+  // sol plat semble flotter, même quand son pied touche exactement le sol — l'ombre
+  // portée part de côté et rien ne rattache l'objet à sa base. Un meuble ajouterait un
+  // objet à la scène ; ceci n'ajoute qu'un assombrissement.
+  const contact = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      map: radialSprite(THREE, [
+        ["rgba(0,0,0,.85)", 0],
+        ["rgba(0,0,0,.4)", 0.34],
+        ["rgba(0,0,0,0)", 1],
+      ]),
+      transparent: true,
+      depthWrite: false,
+      opacity: 0.85,
+    }),
+  );
+  contact.rotation.x = -Math.PI / 2;
+  contact.renderOrder = 1;
+  scene.add(contact);
+
+  const state = { mode: null, world: null, progress: 1, running: false, finished: false, motion: 1 };
   let active = null;
   let currentWorld = null;
   let environment = null;
@@ -153,7 +184,12 @@ function createRuntime(THREE, nodes) {
       const list = node.material ? (Array.isArray(node.material) ? node.material : [node.material]) : [];
       for (const material of list) {
         materials.add(material);
-        for (const value of Object.values(material)) if (value?.isTexture) textures.add(value);
+        for (const value of Object.values(material)) {
+          // Les cartes du cache servent à tous les univers : les libérer ici forçait un
+          // réenvoi complet vers la carte graphique au changement d'ambiance, pour des
+          // textures que le cache continuait pourtant de distribuer.
+          if (value?.isTexture && value.userData?.shared !== true) textures.add(value);
+        }
       }
     });
     for (const geometry of geometries) geometry.dispose();
@@ -193,8 +229,14 @@ function createRuntime(THREE, nodes) {
     // Le ciel à diffusion atmosphérique délivre une énergie physique : sans exposition
     // adaptée, un plein soleil sature toute l'image en blanc. Chaque univers porte donc
     // la sienne, comme on choisirait un temps de pose.
-    renderer.toneMappingExposure = currentWorld.env.exposure
-      ?? (currentWorld.env.kind === "day" ? 0.4 : 0.95);
+    // Les nuits demandent une pose plus longue que les jours — et davantage qu'avant :
+    // tant que le halo réappliquait la courbe sRGB sur une image déjà encodée, les tons
+    // moyens remontaient artificiellement. La chaîne corrigée rend leurs vrais noirs, il
+    // faut donc ouvrir franchement.
+    const exposure = currentWorld.env.exposure
+      ?? (currentWorld.env.kind === "day" ? 0.4 : 2);
+    renderer.toneMappingExposure = exposure;
+    post?.setExposure(exposure);
 
     // L'appoint reste discret : trop clair, il éclaire le sol plus fort que le ciel qui
     // le surplombe et l'horizon se casse en deux bandes franches.
@@ -222,14 +264,24 @@ function createRuntime(THREE, nodes) {
       dispose(active.object);
       active = null;
     }
-    // Les visualisations restées en 2D (anneau, marée, colonnes, spirale…) gardent leur
-    // canvas : elles se dessinent alors par-dessus l'univers rendu, qui leur sert de lieu.
-    fallbackCanvas.style.opacity = supported ? "0" : "1";
-    fallbackCanvas.style.visibility = supported ? "hidden" : "visible";
+    syncFallback();
     if (!supported) return;
 
     active = factories[mode]();
     objectRoot.add(active.object);
+  }
+
+  // Les visualisations restées en 2D (anneau, marée, colonnes, spirale…) gardent leur
+  // canvas : elles se dessinent alors par-dessus l'univers rendu, qui leur sert de lieu.
+  //
+  // Celles qui ont un objet en volume ne cèdent la place qu'une fois la première image 3D
+  // réellement à l'écran. Les masquer dès le choix du mode laissait un intervalle — le
+  // temps de bâtir le lieu — où le dessin 2D s'affichait puis disparaissait d'un coup :
+  // l'utilisateur voyait « l'ancienne vue » clignoter avant la vraie scène.
+  function syncFallback() {
+    const handedOver = ready && SUPPORTED.has(state.mode);
+    fallbackCanvas.style.opacity = handedOver ? "0" : "1";
+    fallbackCanvas.style.visibility = handedOver ? "hidden" : "visible";
   }
 
   // Place et dimensionne l'objet pour qu'il occupe exactement la zone `#visual-wrap`.
@@ -237,23 +289,56 @@ function createRuntime(THREE, nodes) {
     const stageRect = stage.getBoundingClientRect();
     const wrapRect = visual.getBoundingClientRect();
     if (!stageRect.width || !stageRect.height) return;
-    const distance = 9;
+    // Un astre est loin. Le placer à neuf unités comme un objet de table le faisait passer
+    // *devant* les immeubles et les arbres du lieu — une lune qui éclipse une tour. La
+    // distance ne change pourtant rien à sa taille apparente : l'échelle est calculée à
+    // partir d'elle, si bien qu'un même cadrage HTML donne le même disque à l'écran, mais
+    // derrière le paysage.
+    const skyborne = SKYBORNE.has(state.mode);
+    const distance = skyborne ? 1500 : 9;
     const halfHeight = distance * Math.tan((camera.fov * Math.PI) / 360);
     const halfWidth = halfHeight * camera.aspect;
     const ndcX = ((wrapRect.left + wrapRect.width / 2 - stageRect.left) / stageRect.width) * 2 - 1;
     const ndcY = -(((wrapRect.top + wrapRect.height / 2 - stageRect.top) / stageRect.height) * 2 - 1);
 
-    const target = Math.min(wrapRect.width, wrapRect.height) * (mobile ? 0.94 : 0.86);
+    // Un astre se lit de loin : il occupe un peu moins que le cadre réservé à un objet de
+    // premier plan, ce qui lui laisse la place de se détacher entier au-dessus du paysage.
+    const fill = skyborne ? 0.6 : (mobile ? 0.94 : 0.86);
+    const target = Math.min(wrapRect.width, wrapRect.height) * fill;
     const unitsPerPixel = (halfHeight * 2) / stageRect.height;
     const scale = (target * unitsPerPixel) / OBJECT_HEIGHT;
 
     objectRoot.position.set(ndcX * halfWidth, camera.position.y + ndcY * halfHeight, -distance);
     objectRoot.scale.setScalar(scale);
-    // Le cadrage HTML donne la hauteur idéale ; le sol du lieu a le dernier mot. Sans
-    // ce rattrapage, le pied de l'objet passait sous la surface et l'objet semblait
-    // enfoncé dans le sable au lieu d'y être posé.
-    const base = objectRoot.position.y - (OBJECT_HEIGHT / 2) * scale;
-    if (base < 0.04) objectRoot.position.y += 0.04 - base;
+
+    const half = (OBJECT_HEIGHT / 2) * scale;
+    // Chaque objet déclare le point le plus bas de sa silhouette. Les supposer tous
+    // centrés sur une hauteur de référence laissait la bougie — dont la cire s'arrête
+    // bien au-dessus de cette limite — flotter à un mètre de son ombre.
+    const footing = (active?.base ?? -OBJECT_HEIGHT / 2) * scale;
+    const base = objectRoot.position.y + footing;
+    if (skyborne) {
+      // L'astre se détache entier au-dessus de l'horizon — qui se trouve exactement à
+      // hauteur d'œil — sans jamais monter jusqu'à sortir du cadre. On contraint son
+      // centre : contraindre son bord inférieur le chassait hors de l'image, sa
+      // demi-hauteur croissant avec sa distance.
+      const horizon = camera.position.y + half * 1.15;
+      if (objectRoot.position.y < horizon) objectRoot.position.y = horizon;
+    } else {
+      // Un objet posé est *assis* sur le sol, pas seulement empêché d'y descendre. Le
+      // rattrapage précédent ne relevait que ce qui s'enfonçait : une bougie dont la cire
+      // s'arrête haut restait donc suspendue au-dessus de son ombre, sans que rien ne la
+      // redescende. Le cadrage HTML garde la taille et la position latérale ; c'est le sol
+      // qui fixe la hauteur.
+      objectRoot.position.y += 0.02 - base;
+    }
+
+    contact.visible = !skyborne && Boolean(active);
+    if (contact.visible) {
+      const spread = (active?.radius ?? 1.6) * scale * 2;
+      contact.position.set(objectRoot.position.x, 0.03, objectRoot.position.z);
+      contact.scale.set(spread, spread, 1);
+    }
 
     // La lumière clé vise l'objet : c'est lui qui doit être défini, pas l'horizon.
     keyLight.target.position.copy(objectRoot.position);
@@ -269,12 +354,15 @@ function createRuntime(THREE, nodes) {
       direction.y = 0.52;
       direction.normalize();
     }
-    keyLight.position.copy(objectRoot.position).add(direction.multiplyScalar(22));
+    keyLight.position.copy(objectRoot.position).add(direction.multiplyScalar(22 * (skyborne ? 60 : 1)));
     bounce.position.set(
       objectRoot.position.x - 2.4 * scale,
       objectRoot.position.y + 0.6 * scale,
       objectRoot.position.z + 3.2 * scale,
     );
+    // La mise au point suit l'objet : le paysage se défocalise autour de lui, qu'il soit à
+    // portée de main ou à l'horizon.
+    post?.focus(distance);
   }
 
   function resize() {
@@ -296,7 +384,7 @@ function createRuntime(THREE, nodes) {
     state.running = Boolean(liveChip?.textContent?.includes("EN DIRECT"));
     state.finished = app.dataset.finished === "true";
     const level = Number(app.dataset.decorDensity ?? 2);
-    state.density = reducedMotion ? 0 : (DENSITY[level] ?? 0.72);
+    state.motion = reducedMotion ? 0 : (MOTION[level] ?? 0.72);
     setWorld(decorNames[app.dataset.ambience] || "star_tree");
     setMode(visual.dataset.mode || app.dataset.mode);
   }
@@ -307,7 +395,7 @@ function createRuntime(THREE, nodes) {
     resize();
     frameObject();
 
-    currentWorld?.update(time, state.density, state.progress);
+    currentWorld?.update(time, state.motion, state.progress);
     active?.update(state.progress, time);
 
     if (!reducedMotion) {
@@ -321,9 +409,13 @@ function createRuntime(THREE, nodes) {
     else renderer.render(scene, camera);
 
     if (!ready) {
+      // Un seul point de bascule, une fois l'image prête : la scène 3D se révèle, le décor
+      // peint s'efface et le dessin 2D cède la place, tous sur la même transition.
       ready = true;
       app.dataset.renderer3d = "three";
+      canvas.style.opacity = "1";
       if (decorCanvas) decorCanvas.style.opacity = "0";
+      syncFallback();
     }
   }
 
@@ -337,10 +429,10 @@ function createRuntime(THREE, nodes) {
   canvas.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
     cancelAnimationFrame(frame);
+    ready = false;
     app.dataset.renderer3d = "fallback";
     canvas.style.display = "none";
-    fallbackCanvas.style.opacity = "1";
-    fallbackCanvas.style.visibility = "visible";
+    syncFallback();
     if (decorCanvas) decorCanvas.style.opacity = "";
   }, { once: true });
 
@@ -351,6 +443,7 @@ function createRuntime(THREE, nodes) {
     if (active) dispose(active.object);
     if (currentWorld) dispose(currentWorld.object);
     environment?.dispose();
+    disposeTextures();
     renderer.dispose();
   }, { once: true });
 

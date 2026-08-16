@@ -8,16 +8,30 @@
 import { makeRegolith, seeded } from "./material-kit.js";
 import { radialSprite } from "./textures.js";
 
+// Calques d'éclairage propres aux astres. La caméra ne rend que le calque 0 par défaut ;
+// activer un second calque sur un maillage ne change donc rien à son affichage, mais
+// restreint les lumières qui s'y trouvent à ce seul maillage.
+const PHASE_LAYER = 1;
+const CORONA_LAYER = 2;
+
 function makeMoon(THREE, helpers) {
   const { mobile, reducedMotion, mesh } = helpers;
   const group = new THREE.Group();
 
+  // La brume du lieu s'arrête bien avant l'astre : appliquée à lui, elle le noierait dans
+  // la couleur de l'horizon dès qu'il prend sa vraie distance.
   const regolith = makeRegolith(THREE);
+  regolith.fog = false;
   const sphere = mesh(
     new THREE.SphereGeometry(1.55, mobile ? 72 : 128, mobile ? 48 : 84),
     regolith,
     { cast: false, receive: false },
   );
+  // Calque réservé à l'astre. Une lumière directionnelle n'a ni portée ni origine : celle
+  // qui dessine la phase illuminait donc aussi les dunes, les arbres et le sol, dix fois
+  // plus fort que le soleil du lieu, et sa direction tournait avec la session. Le calque
+  // la confine à la Lune, seule chose qu'elle a à modeler.
+  sphere.layers.enable(PHASE_LAYER);
   group.add(sphere);
 
   // La lumière de phase appartient à l'objet : elle tourne autour de lui pendant que la
@@ -25,6 +39,7 @@ function makeMoon(THREE, helpers) {
   const target = new THREE.Object3D();
   group.add(target);
   const phase = new THREE.DirectionalLight(0xfff6e4, 9.5);
+  phase.layers.set(PHASE_LAYER);
   phase.target = target;
   group.add(phase);
 
@@ -67,6 +82,7 @@ function makeSun(THREE, helpers) {
     emissiveIntensity: 5.4,
     roughness: 0.7,
     metalness: 0,
+    fog: false,
   });
   const sphere = mesh(
     new THREE.SphereGeometry(1.26, mobile ? 72 : 112, mobile ? 48 : 72),
@@ -95,7 +111,7 @@ function makeSun(THREE, helpers) {
   const arcs = [];
   const arcMaterial = new THREE.MeshBasicMaterial({
     color: 0xff7a26, transparent: true, opacity: 0.3,
-    blending: THREE.AdditiveBlending, depthWrite: false,
+    blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
   });
   for (let i = 0; i < 5; i += 1) {
     const arc = mesh(
@@ -108,7 +124,13 @@ function makeSun(THREE, helpers) {
     arcs.push(arc);
   }
 
+  // Même règle pour le Soleil : sa lumière est celle de l'astre sur lui-même. Laissée
+  // libre, elle repeignait en orange le sol et les arbres d'un univers qui a déjà son
+  // propre soleil — deux sources contradictoires dans la même image.
+  sphere.layers.enable(CORONA_LAYER);
+  for (const arc of arcs) arc.layers.enable(CORONA_LAYER);
   const light = new THREE.PointLight(0xff9b43, 42, 22, 1.35);
+  light.layers.set(CORONA_LAYER);
   group.add(light);
 
   function update(progress, time) {
