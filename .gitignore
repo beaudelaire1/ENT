@@ -27,3 +27,6 @@ legacy/backups/
 migration-report*.json
 /src/static/sablier/audio/*.wav
 /src/static/vendor/
+# `three` est épinglé à une version exacte dans package.json et reste la seule
+# dépendance front : le verrou ne garantirait rien de plus.
+/package-lock.json
