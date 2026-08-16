@@ -79,7 +79,12 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "celestial.js",
             "celestial-realistic.js",
             "material-kit.js",
-            "flame-texture.js",
+            "noise.js",
+            "textures.js",
+            "environment.js",
+            "world-kit.js",
+            "worlds.js",
+            "postfx.js",
         )
         for module in expected:
             path = settings.BASE_DIR / "static" / "sablier" / "premium3d" / module
@@ -111,7 +116,12 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "seasonal-worlds.js",
             "premium3d.js",
             "premium3d/material-kit.js",
-            "premium3d/flame-texture.js",
+            "premium3d/noise.js",
+            "premium3d/textures.js",
+            "premium3d/environment.js",
+            "premium3d/world-kit.js",
+            "premium3d/worlds.js",
+            "premium3d/postfx.js",
             "premium3d/hourglass-realistic.js",
             "premium3d/candle-realistic.js",
             "premium3d/beads-realistic.js",
@@ -130,14 +140,51 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, engine)
 
-    def test_three_is_pinned_and_vendored_locally(self):
-        package_path = settings.BASE_DIR.parent / "package.json"
-        package = json.loads(package_path.read_text(encoding="utf-8"))
+    def test_three_is_pinned_and_vendored_in_full(self):
+        """Le moteur 3D doit être copié en entier, pas seulement son point d'entrée.
+
+        Depuis la version 0.16x, ``three.module.js`` réexporte ``three.core.js`` :
+        ne copier que le premier laissait un import mort. Le navigateur échouait en
+        silence, la scène immersive basculait en repli, et le Sablier ne montrait
+        plus que son dessin 2D — sans qu'aucune vérification ne le signale.
+        """
+        root = settings.BASE_DIR.parent
+        package = json.loads((root / "package.json").read_text(encoding="utf-8"))
         self.assertEqual(package["dependencies"]["three"], "0.184.0")
-        dockerfile = (settings.BASE_DIR.parent / "Dockerfile").read_text(encoding="utf-8")
-        self.assertIn("node_modules/three/build/three.module.js", dockerfile)
-        self.assertIn("/app/src/static/vendor/three.module.js", dockerfile)
+        self.assertEqual(package["scripts"]["vendor"], "node tools/vendor-three.mjs")
+
+        script = (root / "tools" / "vendor-three.mjs").read_text(encoding="utf-8")
+        for required in ("three.module.js", "three.core.js", "objects/Sky.js"):
+            self.assertIn(required, script)
+        # Le script refuse de rendre la main si un import sort du dossier vendu.
+        self.assertIn("importe encore", script)
+
+        dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("npm run vendor", dockerfile)
+        self.assertIn("/app/src/static/vendor/", dockerfile)
         self.assertNotIn("cdn", self.read_static("premium3d.js").lower())
+
+    def test_every_universe_has_a_three_dimensional_recipe(self):
+        """Chaque décor du catalogue doit exister comme lieu en volume.
+
+        Sans cette garde, un univers ajouté au catalogue serveur retomberait
+        silencieusement sur le lieu par défaut : deux ambiances différentes
+        montreraient exactement le même paysage.
+        """
+        recipes = self.read_static("premium3d/worlds.js")
+        for scene in scenes.SCENES:
+            with self.subTest(scene=scene.key):
+                self.assertIn(f"\n  {scene.decor}: {{", recipes)
+
+    def test_the_object_is_lit_by_the_place_it_stands_in(self):
+        """L'objet et son univers partagent une scène, une caméra et une lumière."""
+        engine = self.read_static("premium3d.js")
+        self.assertIn("buildWorld", engine)
+        self.assertIn("buildEnvironment", engine)
+        self.assertIn("scene.environment", engine)
+        self.assertIn("FogExp2", engine)
+        # Le décor peint n'est plus repeint quand la scène 3D est à l'image.
+        self.assertIn('app.dataset.renderer3d!=="three"', self.read_static("sablier.js"))
 
     def test_premium_runtime_boot_is_independent_from_decor_worlds(self):
         loader = self.read_static("decor.js")

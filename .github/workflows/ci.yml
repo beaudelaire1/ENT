@@ -39,20 +39,21 @@ jobs:
       - name: Vérifier la syntaxe des moteurs visuels
         run: |
           test -s src/static/vendor/three.module.js
+          test -s src/static/vendor/three.core.js
+          test -s src/static/vendor/three-addons/objects/Sky.js
           node --check src/static/sablier/decor.js
           node --check src/static/sablier/decor-core.js
           node --check src/static/sablier/seasonal-worlds.js
+          node --check src/static/sablier/sablier.js
           node --input-type=module --check < src/static/sablier/premium3d.js
-          node --input-type=module --check < src/static/sablier/premium3d/material-kit.js
-          node --input-type=module --check < src/static/sablier/premium3d/flame-texture.js
-          node --input-type=module --check < src/static/sablier/premium3d/hourglass.js
-          node --input-type=module --check < src/static/sablier/premium3d/hourglass-realistic.js
-          node --input-type=module --check < src/static/sablier/premium3d/candle.js
-          node --input-type=module --check < src/static/sablier/premium3d/candle-realistic.js
-          node --input-type=module --check < src/static/sablier/premium3d/beads.js
-          node --input-type=module --check < src/static/sablier/premium3d/beads-realistic.js
-          node --input-type=module --check < src/static/sablier/premium3d/celestial.js
-          node --input-type=module --check < src/static/sablier/premium3d/celestial-realistic.js
+          for module in src/static/sablier/premium3d/*.js; do
+            node --input-type=module --check < "$module"
+          done
+      - name: Vérifier que le moteur 3D se résout entièrement hors ligne
+        # Le repli 2D est silencieux : sans cette résolution complète du graphe
+        # d'imports, un fichier vendu manquant ne se verrait qu'à l'écran.
+        run: |
+          node --input-type=module -e "await import('./src/static/vendor/three.module.js'); await import('./src/static/vendor/three-addons/postprocessing/EffectComposer.js'); await import('./src/static/vendor/three-addons/objects/Sky.js'); console.log('moteur 3D résolu');"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
