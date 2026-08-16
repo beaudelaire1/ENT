@@ -42,8 +42,27 @@ class FakeS3:
         self.deleted.extend(item["Key"] for item in Delete["Objects"])
 
 
-def run(client, *, options=None, **environment):
-    """Exécute la commande avec un pg_dump simulé et un S3 en mémoire.
+# Un mercredi quelconque. La commande ne monte les paliers hebdomadaire et mensuel que
+# le dimanche et le premier du mois : laisser l'horloge réelle décider faisait dépendre
+# les clés produites du jour où la suite tournait, et les tests écrits pour le seul
+# palier quotidien tombaient chaque dimanche. Les paliers eux-mêmes restent couverts par
+# `RetentionTests`, avec leurs dates explicites.
+WEEKDAY = datetime(2026, 8, 12, 4, 30, tzinfo=timezone.utc)
+
+
+def frozen_clock(instant):
+    """Horloge figée : la commande lit l'heure elle-même, au moment du transfert."""
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return instant if tz is None else instant.astimezone(tz)
+
+    return Clock
+
+
+def run(client, *, options=None, when=WEEKDAY, **environment):
+    """Exécute la commande avec un pg_dump simulé, un S3 en mémoire et une horloge figée.
 
     Une variable passée à ``None`` est vidée plutôt que supprimée : la commande teste la
     valeur, et une chaîne vide est le cas réel d'un secret déclaré mais laissé vide.
@@ -57,6 +76,7 @@ def run(client, *, options=None, **environment):
         mock.patch.dict("os.environ", values, clear=False),
         mock.patch.object(Command, "client", staticmethod(lambda: client)),
         mock.patch.object(Command, "dump_database", dump),
+        mock.patch("core.management.commands.backup_database.datetime", frozen_clock(when)),
     ):
         call_command("backup_database", **(options or {}))
 
@@ -164,3 +184,20 @@ class FullRunTests(SimpleTestCase):
             with override_settings(MEDIA_ROOT=Path(media), USE_S3=False):
                 run(client)
         self.assertTrue(all(key.startswith("database/daily/myent-") for _bucket, key in client.uploaded))
+
+    def test_a_sunday_run_also_writes_the_weekly_copy(self):
+        """Le dimanche, la même sauvegarde part aussi sous le palier hebdomadaire.
+
+        Ce jour-là, la commande produit deux clés pour un seul transfert : c'est ce
+        que l'ancien contrôle de préfixe, écrit pour le seul palier quotidien,
+        n'avait pas prévu — la suite tombait donc tous les dimanches.
+        """
+        client = FakeS3()
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=Path(media), USE_S3=False):
+                run(client, when=datetime(2026, 8, 16, 4, 30, tzinfo=timezone.utc))
+        keys = [key for _bucket, key in client.uploaded]
+        self.assertEqual(
+            sorted(key.split("/")[1] for key in keys if key.startswith("database/")),
+            ["daily", "weekly"],
+        )
