@@ -346,13 +346,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);
-    decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
+    // Le décor peint en 2D est le repli. Dès que la scène 3D est à l'image, elle porte
+    // le lieu, sa lumière et ses mouvements : continuer à repeindre le canvas coûterait
+    // une image entière par frame pour un dessin invisible.
+    const painted=app.dataset.renderer3d!=="three";
+    if(painted)decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
     app.querySelectorAll(".decor-levels [data-decor]").forEach(button=>{
       const active=Number(button.dataset.decor)===state.decorDensity;
       button.classList.toggle("active",active);
       button.setAttribute("aria-pressed",String(active));
     });
-    decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
+    if(painted)decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
   }
   function loop(){render();frame=requestAnimationFrame(loop)}
   $("#apply-duration").addEventListener("click",()=>{const input=$("#duration-input"),seconds=parseDuration(input.value);input.setCustomValidity("");if(seconds)setDuration(seconds);else {input.setCustomValidity("Durée invalide (maximum 24 h).");input.reportValidity();}});

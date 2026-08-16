@@ -67,7 +67,23 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 /* Le décor occupe toute la scène, derrière le minuteur et sans jamais l'intercepter. */
 .decor-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; transition:opacity .45s ease,filter .7s ease; }
 html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
-.focus-stage > *:not(.decor-canvas) { position:relative; z-index:3; }
+.focus-stage > *:not(.decor-canvas):not(.stage-3d-canvas) { position:relative; z-index:3; }
+
+/* Le lieu rendu en 3D occupe toute la scène. Il se place au-dessus du décor peint —
+   qui n'est plus qu'un repli — et sous les commandes et le temps affiché. Le halo de
+   `::after` (z-index 2) continue de le cadrer, ce qui évite un bord net de canvas. */
+.stage-3d-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; z-index:1; }
+/* Une fois la scène 3D à l'image, le voile assombrissant du gabarit n'a plus lieu
+   d'être : c'est la brume de l'univers qui creuse la profondeur. */
+.focus-app[data-renderer3d="three"] .focus-stage { background:transparent; }
+.focus-app[data-renderer3d="three"] .focus-stage::after { opacity:.55; }
+.focus-app[data-renderer3d="three"] .visual-wrap #timer-canvas { filter:none; }
+/* Le temps se lit par-dessus un paysage clair comme sur un ciel de nuit : sans cette
+   ombre portée, les chiffres blancs disparaissent sur les univers d'été. */
+.focus-app[data-renderer3d="three"] .canvas-time strong,
+.focus-app[data-renderer3d="three"] .stage-status,
+.focus-app[data-renderer3d="three"] .stage-intention,
+.focus-app[data-renderer3d="three"] .stage-message { text-shadow:0 2px 18px rgba(0,0,0,.72),0 0 4px rgba(0,0,0,.55); }
 
 /* Sur écran étroit la barre latérale passe en deux colonnes, et un intitulé se
    retrouvait seul dans une cellule pendant que ses boutons partaient dans l'autre :

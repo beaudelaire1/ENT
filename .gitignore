@@ -26,4 +26,4 @@ build/
 legacy/backups/
 migration-report*.json
 /src/static/sablier/audio/*.wav
-/src/static/vendor/three.module.js
+/src/static/vendor/
