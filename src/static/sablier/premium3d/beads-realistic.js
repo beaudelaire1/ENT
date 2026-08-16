@@ -127,6 +127,5 @@ export function makeBeadsRuntime(THREE, helpers) {
   }
 
   update(1, 0);
-  // Le bout du gland, qui frôle le sol : le collier pend, il ne repose pas.
-  return { object: group, update, base: -2.96, radius: 1.6 };
+  return { object: group, update };
 }

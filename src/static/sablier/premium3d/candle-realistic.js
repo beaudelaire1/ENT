@@ -160,6 +160,5 @@ export function makeCandleRuntime(THREE, helpers) {
   }
 
   rebuild(FULL, 0);
-  // La flaque de cire est l'assise de la bougie.
-  return { object: group, update, base: BASE, radius: RADIUS * 1.55 };
+  return { object: group, update };
 }

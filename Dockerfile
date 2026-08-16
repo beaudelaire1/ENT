@@ -1,8 +1,8 @@
 FROM node:22-alpine AS visual-runtime
 WORKDIR /visual
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY tools/vendor-three.mjs ./tools/vendor-three.mjs
-RUN npm install --ignore-scripts --no-audit --no-fund \
+RUN npm ci --ignore-scripts --no-audit --no-fund \
     && npm run vendor \
     && mkdir -p /vendor \
     && cp -R src/static/vendor/. /vendor/

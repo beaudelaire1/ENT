@@ -39,43 +39,73 @@ class SceneRegistryTests(SimpleTestCase):
         self.assertEqual(len(signatures), len(set(signatures)))
         self.assertEqual(len(renderers), len(set(renderers)))
 
-    def test_historical_universes_are_preserved(self):
+    def test_catalog_restores_every_distinct_historical_universe(self):
         expected = {
+            "arbre_etoiles",
+            "fontaine",
+            "eden",
+            "fleuve_temps",
+            "souvenirs",
+            "interstellaire",
+            "galaxie",
+            "heaven",
+            "oasis",
+            "abysses",
+            "refuge_pluie",
+            "aurores",
             "printemps",
             "ete",
             "automne",
             "hiver",
             "pluie",
+            "foret",
             "ocean",
             "sahara",
-            "foret",
             "orage",
             "braises",
             "aurore",
             "nuit",
         }
-        self.assertTrue(expected.issubset({scene.key for scene in scenes.SCENES}))
+        self.assertEqual({scene.key for scene in scenes.SCENES}, expected)
+        self.assertEqual(len(scenes.SCENES), 24)
 
-    def test_only_generic_concentration_is_legacy(self):
+    def test_only_the_pre_catalogue_concentration_alias_is_replaced(self):
         self.assertEqual(scenes.LEGACY_REPLACED, {"concentration": "arbre_etoiles"})
+
+    def test_browser_storage_also_converges_to_the_curated_catalog(self):
+        engine = (settings.BASE_DIR / "static" / "sablier" / "sablier.js").read_text(encoding="utf-8")
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        self.assertIn("ambienceAliases[state.ambience]||state.ambience", engine)
+        self.assertIn('json_script:"ambience-alias-data"', template)
 
 
 class PremiumVisualRuntimeTests(SimpleTestCase):
+    GRAPHICAL_MODES = ("ring", "hourglass", "wave", "candle", "beads", "moon", "bars", "spiral", "sun")
+
     def read_static(self, relative_path):
         path = settings.BASE_DIR / "static" / "sablier" / relative_path
         return path.read_text(encoding="utf-8")
 
-    def test_premium_runtime_protects_the_five_material_visualisations(self):
+    def test_canonical_runtime_protects_all_graphical_visualisations(self):
         engine = self.read_static("premium3d.js")
-        for mode in ("hourglass", "candle", "beads", "moon", "sun"):
+        for mode in self.GRAPHICAL_MODES:
             self.assertIn(f"{mode}:", engine)
+
         expected = (
+            "ring.js",
+            "ring-realistic.js",
             "hourglass.js",
             "hourglass-realistic.js",
+            "wave.js",
+            "wave-realistic.js",
             "candle.js",
             "candle-realistic.js",
             "beads.js",
             "beads-realistic.js",
+            "bars.js",
+            "bars-realistic.js",
+            "spiral.js",
+            "spiral-realistic.js",
             "celestial.js",
             "celestial-realistic.js",
             "material-kit.js",
@@ -85,16 +115,21 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "world-kit.js",
             "worlds.js",
             "postfx.js",
+            "native-modes.css",
         )
         for module in expected:
             path = settings.BASE_DIR / "static" / "sablier" / "premium3d" / module
             self.assertTrue(path.is_file(), module)
 
-    def test_material_visualisations_delegate_to_realistic_renderers(self):
+    def test_graphical_visualisations_delegate_to_realistic_renderers(self):
         delegates = {
+            "ring.js": "ring-realistic.js",
             "hourglass.js": "hourglass-realistic.js",
+            "wave.js": "wave-realistic.js",
             "candle.js": "candle-realistic.js",
             "beads.js": "beads-realistic.js",
+            "bars.js": "bars-realistic.js",
+            "spiral.js": "spiral-realistic.js",
             "celestial.js": "celestial-realistic.js",
         }
         for entry, target in delegates.items():
@@ -103,12 +138,60 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
 
     def test_canvas_visualisations_remain_as_a_webgl_fallback(self):
         engine = self.read_static("sablier.js")
-        for function in ("drawHourglass", "drawCandle", "drawBeads", "drawMoon", "drawSun"):
+        for function in (
+            "drawRing",
+            "drawHourglass",
+            "drawWave",
+            "drawCandle",
+            "drawBeads",
+            "drawMoon",
+            "drawBars",
+            "drawSpiral",
+            "drawSun",
+        ):
             self.assertIn(f"function {function}", engine)
         premium = self.read_static("premium3d.js")
         self.assertIn('app.dataset.renderer3d = "fallback"', premium)
         self.assertIn("webglcontextlost", premium)
         self.assertIn("fallbackCanvas.style.visibility", premium)
+        self.assertIn("renderer3dReason", premium)
+
+    def test_all_time_objects_use_one_canonical_renderer(self):
+        """Les neuf objets viennent du même moteur, dans le même lieu.
+
+        La 2D reste un repli intégral — un dessin par mode — mais aucun mode ne
+        garde de chemin de rendu privilégié : c'est ce qui avait laissé cohabiter
+        des photos plates et des objets en volume dans une même série.
+        """
+        engine = self.read_static("sablier.js")
+        premium = self.read_static("premium3d.js")
+        painters = (
+            "const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,"
+            "candle:drawCandle,beads:drawBeads,moon:drawMoon,bars:drawBars,"
+            "spiral:drawSpiral,sun:drawSun}"
+        )
+        self.assertIn(painters, engine)
+        for mode in self.GRAPHICAL_MODES:
+            with self.subTest(mode=mode):
+                self.assertIn(f'"{mode}"', premium)
+        for removed in ("drawCandlePhoto", "drawHourglassPhoto", "drawWavePhoto", "#asset-data"):
+            with self.subTest(removed=removed):
+                self.assertNotIn(removed, engine)
+
+    def test_digital_and_zen_remain_native_non_webgl_modes(self):
+        engine = self.read_static("premium3d.js")
+        supported = next(line for line in engine.splitlines() if line.startswith("const SUPPORTED"))
+        self.assertNotIn('"digital"', supported)
+        self.assertNotIn('"zen"', supported)
+        css = self.read_static("premium3d/native-modes.css")
+        self.assertIn('.visual-wrap[data-mode="digital"] .digital-visual', css)
+        self.assertIn('.visual-wrap[data-mode="zen"] .zen-rings', css)
+        loader = self.read_static("decor.js")
+        self.assertIn("premium3d/native-modes.css", loader)
+
+    def test_nested_premium_assets_participate_in_cache_versioning(self):
+        views = (settings.BASE_DIR / "sablier" / "views.py").read_text(encoding="utf-8")
+        self.assertIn('folder.rglob("*")', views)
 
     def test_visual_runtime_never_controls_the_users_music(self):
         files = [
@@ -122,9 +205,13 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "premium3d/world-kit.js",
             "premium3d/worlds.js",
             "premium3d/postfx.js",
+            "premium3d/ring-realistic.js",
             "premium3d/hourglass-realistic.js",
+            "premium3d/wave-realistic.js",
             "premium3d/candle-realistic.js",
             "premium3d/beads-realistic.js",
+            "premium3d/bars-realistic.js",
+            "premium3d/spiral-realistic.js",
             "premium3d/celestial-realistic.js",
         ]
         engine = "".join(self.read_static(path) for path in files)
@@ -185,6 +272,19 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn("FogExp2", engine)
         # Le décor peint n'est plus repeint quand la scène 3D est à l'image.
         self.assertIn('app.dataset.renderer3d!=="three"', self.read_static("sablier.js"))
+
+    def test_only_the_chosen_universe_is_built_and_the_previous_one_freed(self):
+        """Un seul lieu vit à la fois, et il libère celui qu'il remplace.
+
+        Vingt-quatre paysages en volume ne peuvent pas coexister : sans libération,
+        quelques changements d'ambiance suffisaient à saturer la mémoire graphique.
+        Les cartes partagées par tous les lieux doivent en revanche y survivre.
+        """
+        engine = self.read_static("premium3d.js")
+        self.assertIn("if (state.world === key) return;", engine)
+        self.assertIn("dispose(currentWorld.object);", engine)
+        self.assertIn("currentWorld = buildWorld(THREE, key, { mobile });", engine)
+        self.assertIn("userData?.shared !== true", engine)
 
     def test_premium_runtime_boot_is_independent_from_decor_worlds(self):
         loader = self.read_static("decor.js")

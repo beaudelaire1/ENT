@@ -74,5 +74,6 @@
 </div>
 {{ playlist_payload|json_script:"playlist-data" }}
 {{ decors|json_script:"decor-data" }}
+{{ ambience_aliases|json_script:"ambience-alias-data" }}
 {% endblock %}
 {% block scripts %}<script src="{% static 'sablier/decor.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/sablier.js' %}?v={{ asset_version }}" defer></script>{% endblock %}

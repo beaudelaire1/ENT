@@ -11,6 +11,11 @@
     document.head.append(script);
   });
 
+  const nativeStyles = document.createElement("link");
+  nativeStyles.rel = "stylesheet";
+  nativeStyles.href = new URL("premium3d/native-modes.css" + version, here).href;
+  document.head.append(nativeStyles);
+
   const stub = {
     names: [],
     backdrops: [],
@@ -40,6 +45,9 @@
   };
 
   window.SablierDecor = stub;
+  // L'objet et son univers sont rendus ensemble par `premium3d.js`, dans un seul contexte
+  // WebGL : il n'y a pas de moteur de décor séparé à charger en parallèle. Le décor peint
+  // ci-dessous ne subsiste que comme repli, quand la 3D n'est pas disponible.
   window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)
     .catch((error) => {
       const app = document.querySelector("#focus-app");

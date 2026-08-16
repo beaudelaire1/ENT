@@ -26,7 +26,7 @@ build/
 legacy/backups/
 migration-report*.json
 /src/static/sablier/audio/*.wav
+# Le dossier entier est produit par `npm run vendor` : moteur, noyau et modules
+# d'exemple. Le verrou npm, lui, reste versionné — c'est ce qui rend `npm ci`
+# reproductible d'une construction à l'autre.
 /src/static/vendor/
-# `three` est épinglé à une version exacte dans package.json et reste la seule
-# dépendance front : le verrou ne garantirait rien de plus.
-/package-lock.json

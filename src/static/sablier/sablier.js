@@ -31,7 +31,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let lastSecond = -1, warningCue=false, frame=0;
   const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
+  const ambienceAliases=JSON.parse(document.querySelector("#ambience-alias-data")?.textContent||"{}");
+  state.ambience=ambienceAliases[state.ambience]||state.ambience;
+  if(!Object.prototype.hasOwnProperty.call(decorNames,state.ambience))state.ambience=app.dataset.ambience;
   const decor=window.SablierDecor.create($("#decor-canvas"));
+  // Aucune photographie n'est chargée : la matière des objets est calculée, pas
+  // photographiée. Ce canvas n'est plus que le repli exact quand WebGL manque, et il
+  // garde pour cela ses dessins canoniques.
 
   function parseDuration(value){
     value=value.trim().replace(",","."); let seconds;
@@ -56,7 +62,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return {w:rect.width,h:rect.height};
   }
   function palette(){const css=getComputedStyle(app);return {accent:css.getPropertyValue("--focus-accent").trim(),border:css.getPropertyValue("--focus-border").trim(),text:css.getPropertyValue("--focus-text").trim(),surface:css.getPropertyValue("--focus-surface").trim()};}
-  function rgba(color,alpha){const match=/^#([0-9a-f]{6})$/i.exec(color||"");if(!match)return color;const value=Number.parseInt(match[1],16);return `rgba(${value>>16},${(value>>8)&255},${value&255},${alpha})`;}
+  function rgba(color,alpha){
+    const valueColor=color||"",match=/^#([0-9a-f]{6})$/i.exec(valueColor);
+    if(match){const value=Number.parseInt(match[1],16);return `rgba(${value>>16},${(value>>8)&255},${value&255},${alpha})`;}
+    const hsl=/^hsl\((.+)\)$/i.exec(valueColor);
+    return hsl?`hsla(${hsl[1]},${alpha})`:valueColor;
+  }
   function glow(ctx,x,y,r,color,alpha=.22){const gradient=ctx.createRadialGradient(x,y,0,x,y,r);gradient.addColorStop(0,rgba(color,alpha));gradient.addColorStop(.45,rgba(color,alpha*.35));gradient.addColorStop(1,rgba(color,0));ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
   // Contraste des volumes. Chaque visuel réglait ses dégradés au cas par cas et finissait
   // par s'éteindre sur les bords : une forme dont les flancs se fondent dans le fond
@@ -127,90 +138,89 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.globalAlpha=.2;ctx.strokeStyle=text;for(let i=0;i<7;i++){const y=level+18+i*18,width=r*(.12+i*.035);ctx.beginPath();ctx.moveTo(cx-width,y);ctx.lineTo(cx+width,y);ctx.stroke();}
     ctx.restore();ctx.globalAlpha=1;ctx.strokeStyle=rgba(text,.55);ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=rgba(text,.1);ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r-5,0,Math.PI*2);ctx.stroke();
   }
-  // Bougie : la silhouette d'origine reste tracée, seule la cire se consume à
-  // l'intérieur. Faire rétrécir la bougie elle-même effaçait la mesure : on ne voyait
-  // plus quelle part du temps avait été brûlée, comme un sablier dont le verre
-  // rapetisserait avec le sable.
+  // Bougie mince canonique : sa matière et sa largeur ne dépendent jamais de
+  // l'univers. Seule sa hauteur traduit le temps restant.
   function drawCandle(progress){
-    const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,
-      bodyW=Math.min(w,h)*.27,full=h*.6,base=h*.83,ceiling=base-full,
+    const {w,h}=resize(),cx=w/2,
+      bodyW=Math.min(w,h)*.235,full=h*.6,base=h*.83,
       top=base-full*progress,radius=bodyW*.16;
     ctx.clearRect(0,0,w,h);
     // Le halo de la flamme est peint d'abord : il baigne la scène, la cire s'y détache.
     if(progress>.004){
-      glow(ctx,cx,top-bodyW*.8,bodyW*3.6,accent,.3);
-      glow(ctx,cx,top-bodyW*.42,bodyW*1.4,text,.13);
+      glow(ctx,cx,top-bodyW*.48,bodyW*2.45,"#ff9d32",.24);
+      glow(ctx,cx,top-bodyW*.25,bodyW*1.05,"#fff1c2",.12);
     }
     // Bougeoir : assise, fût, et le reflet chaud que la flamme y dépose.
-    const holder=ctx.createLinearGradient(cx-bodyW*1.6,0,cx+bodyW*1.6,0);
-    holder.addColorStop(0,rgba(border,.98));holder.addColorStop(.3,rgba(text,.5));
-    holder.addColorStop(.5,surface);holder.addColorStop(.72,rgba(text,.4));holder.addColorStop(1,rgba(border,.98));
+    const holder=ctx.createLinearGradient(cx-bodyW*1.15,0,cx+bodyW*1.15,0);
+    holder.addColorStop(0,"#4a2608");holder.addColorStop(.2,"#a96512");
+    holder.addColorStop(.46,"#f5d477");holder.addColorStop(.62,"#a66110");holder.addColorStop(1,"#3a1d07");
     ctx.fillStyle=holder;
-    ctx.beginPath();ctx.ellipse(cx,base+9,bodyW*1.58,14,0,0,Math.PI*2);ctx.fill();
-    limb(text,1.2,.3);
-    ctx.beginPath();ctx.roundRect(cx-bodyW*1.6,base-3,bodyW*3.2,15,8);ctx.fill();limb(text,1.2,.34);
-    if(progress>.004){ctx.globalAlpha=.5;glow(ctx,cx,base,bodyW*1.7,accent,.3);ctx.globalAlpha=1;}
-    // Hauteur d'origine : ce qui a déjà fondu reste mesurable, en pointillé plutôt qu'en
-    // aplat fantôme — un bloc translucide se lisait comme une deuxième bougie.
-    ctx.setLineDash([7,7]);ctx.globalAlpha=.55;
-    ctx.beginPath();ctx.roundRect(cx-bodyW/2,ceiling,bodyW,full,radius);limb(text,1.4,.5);
-    ctx.setLineDash([]);ctx.globalAlpha=1;
+    ctx.beginPath();ctx.ellipse(cx,base+9,bodyW*1.08,12,0,0,Math.PI*2);ctx.fill();
+    limb("#f8d980",1.2,.5);
+    ctx.beginPath();ctx.roundRect(cx-bodyW*1.1,base-3,bodyW*2.2,14,7);ctx.fill();limb("#f8d980",1.2,.56);
+    ctx.strokeStyle="#d79b32";ctx.lineWidth=Math.max(2,bodyW*.025);
+    for(const side of [-1,1]){ctx.beginPath();ctx.ellipse(cx+side*bodyW*1.08,base+4,bodyW*.26,8,0,0,Math.PI*2);ctx.stroke();}
+    if(progress>.004){ctx.globalAlpha=.45;glow(ctx,cx,base,bodyW*1.28,"#ffae42",.24);ctx.globalAlpha=1;}
     if(progress>.004){
-      ctx.fillStyle=litColumn(cx-bodyW/2,cx+bodyW/2,{accent,text,border});
+      const wax=ctx.createLinearGradient(cx-bodyW/2,0,cx+bodyW/2,0);
+      wax.addColorStop(0,"#d7c38b");wax.addColorStop(.2,"#f2e3b5");wax.addColorStop(.48,"#fff8dc");wax.addColorStop(.72,"#f2dfac");wax.addColorStop(1,"#c9b476");
+      ctx.fillStyle=wax;
       ctx.beginPath();ctx.roundRect(cx-bodyW/2,top,bodyW,base-top,radius);ctx.fill();
       // Liseré : c'est lui qui donne sa taille apparente à la bougie.
-      limb(text,2,.62);
+      limb("#fff5d2",2,.72);
       // Cuvette de cire autour de la mèche, creusée par la flamme.
-      ctx.fillStyle=rgba(border,.85);ctx.beginPath();ctx.ellipse(cx,top+bodyW*.06,bodyW*.5,bodyW*.14,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=rgba(text,.9);ctx.globalAlpha=.5;ctx.beginPath();ctx.ellipse(cx,top+bodyW*.04,bodyW*.34,bodyW*.08,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-      ctx.fillStyle=rgba(accent,.9);ctx.beginPath();ctx.ellipse(cx,top+bodyW*.09,bodyW*.2,bodyW*.05,0,0,Math.PI*2);ctx.fill();
-      // Coulures : la cire fondue déborde à mesure qu'elle descend.
-      const spill=(1-progress)*bodyW*.3;
-      if(spill>1){
-        ctx.beginPath();
-        ctx.moveTo(cx-bodyW/2,top+bodyW*.14);
-        ctx.quadraticCurveTo(cx-bodyW/2-spill,top+bodyW*.5,cx-bodyW/2,top+bodyW*.92);
-        ctx.moveTo(cx+bodyW/2,top+bodyW*.22);
-        ctx.quadraticCurveTo(cx+bodyW/2+spill,top+bodyW*.7,cx+bodyW/2,top+bodyW*1.15);
-        ctx.lineWidth=spill;ctx.strokeStyle=rgba(accent,.92);ctx.lineCap="round";ctx.stroke();
-      }
+      ctx.fillStyle="#f5e5b7";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.06,bodyW*.49,bodyW*.12,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#d6a85c";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.065,bodyW*.22,bodyW*.055,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#f2c46d";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.062,bodyW*.12,bodyW*.028,0,0,Math.PI*2);ctx.fill();
       // Mèche puis flamme : cœur blanc, manteau coloré, halo. Trois valeurs, sinon la
       // flamme n'est qu'une tache de la couleur d'ambiance.
-      const flicker=state.running?Math.sin(Date.now()/90)*bodyW*.035:0,flameH=bodyW*1.15;
-      ctx.strokeStyle=rgba(border,.95);ctx.lineWidth=Math.max(2,bodyW*.035);
-      ctx.beginPath();ctx.moveTo(cx,top+2);ctx.quadraticCurveTo(cx+bodyW*.04,top-bodyW*.16,cx-bodyW*.03,top-bodyW*.3);ctx.stroke();
+      const flicker=state.running?Math.sin(Date.now()/90)*bodyW*.02:0,flameH=bodyW*.62;
+      ctx.strokeStyle="#24170c";ctx.lineWidth=Math.max(2,bodyW*.035);
+      ctx.beginPath();ctx.moveTo(cx,top+2);ctx.quadraticCurveTo(cx+bodyW*.03,top-bodyW*.08,cx-bodyW*.02,top-bodyW*.17);ctx.stroke();
       ctx.beginPath();ctx.moveTo(cx,top-flameH-flicker);
-      ctx.quadraticCurveTo(cx+bodyW*.44,top-flameH*.33,cx,top-2);
-      ctx.quadraticCurveTo(cx-bodyW*.44,top-flameH*.33,cx,top-flameH-flicker);
-      ctx.fillStyle=accent;ctx.shadowColor=accent;ctx.shadowBlur=bodyW*.55;ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle=rgba(text,.97);
+      ctx.quadraticCurveTo(cx+bodyW*.22,top-flameH*.33,cx,top-2);
+      ctx.quadraticCurveTo(cx-bodyW*.22,top-flameH*.33,cx,top-flameH-flicker);
+      ctx.fillStyle="#ff9d32";ctx.shadowColor="#ff8b25";ctx.shadowBlur=bodyW*.55;ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle="#fff0b8";
       ctx.beginPath();ctx.moveTo(cx,top-flameH*.66-flicker*.5);
-      ctx.quadraticCurveTo(cx+bodyW*.17,top-flameH*.26,cx,top-bodyW*.06);
-      ctx.quadraticCurveTo(cx-bodyW*.17,top-flameH*.26,cx,top-flameH*.66-flicker*.5);ctx.fill();
-      ctx.fillStyle=rgba(border,.55);
+      ctx.quadraticCurveTo(cx+bodyW*.09,top-flameH*.26,cx,top-bodyW*.035);
+      ctx.quadraticCurveTo(cx-bodyW*.09,top-flameH*.26,cx,top-flameH*.66-flicker*.5);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.82)";
       ctx.beginPath();ctx.ellipse(cx,top-bodyW*.1,bodyW*.06,bodyW*.13,0,0,Math.PI*2);ctx.fill();
     }else{
       // Mèche éteinte : un filet de fumée plutôt qu'une bougie disparue.
-      ctx.globalAlpha=.45;ctx.strokeStyle=text;ctx.lineWidth=Math.max(2,bodyW*.03);ctx.lineCap="round";
+      ctx.globalAlpha=.45;ctx.strokeStyle="#d9dee2";ctx.lineWidth=Math.max(2,bodyW*.03);ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(cx,base-6);
       ctx.quadraticCurveTo(cx+bodyW*.28,base-bodyW*.7,cx-bodyW*.12,base-bodyW*1.3);
       ctx.stroke();ctx.globalAlpha=1;
     }
   }
-  // Perles : chaque perle est une part du temps ; elles s'éteignent une à une.
+  // Perles : un collier vivant se défait au fil du temps. Les perles écoulées
+  // quittent le fil et se déposent sur le plateau, au lieu de rester une grille fixe.
   function drawBeads(progress){
-    const {w,h}=resize(),{accent,border,text}=palette(),cols=6,rows=6,total=cols*rows,
-      span=Math.min(w,h)*.68,step=span/(cols-1),ox=w/2-span/2,oy=h*.42-span/2,r=Math.max(5,step*.19),
-      alive=progress*total;
-    ctx.clearRect(0,0,w,h);glow(ctx,w/2,h*.42,span*.64,accent,.07);ctx.strokeStyle=rgba(text,.18);ctx.lineWidth=Math.max(1,r*.16);
-    // Le fil suit le même trajet en serpentin que la lecture des perles.
-    ctx.beginPath();for(let row=0;row<rows;row++){const y=oy+row*step;if(row===0)ctx.moveTo(ox,y);if(row%2===0){ctx.lineTo(ox+span,y);if(row<rows-1)ctx.quadraticCurveTo(ox+span+step*.25,y+step*.5,ox+span,y+step);}else{ctx.lineTo(ox,y);if(row<rows-1)ctx.quadraticCurveTo(ox-step*.25,y+step*.5,ox,y+step);}}ctx.stroke();
+    const {w,h}=resize(),{accent,border,text,surface}=palette(),unit=Math.min(w,h),total=24,
+      remaining=Math.ceil(progress*total),cx=w/2,cy=h*.38,rx=unit*.29,ry=unit*.205,r=unit*.031,
+      shimmer=state.running?Date.now()/720:0;
+    ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,unit*.48,accent,.1);
+    // Fil satiné et fermoir : l'ellipse reste entière, les vides rendent les perles
+    // déjà écoulées immédiatement lisibles.
+    const cord=ctx.createLinearGradient(cx-rx,0,cx+rx,0);cord.addColorStop(0,rgba(border,.65));cord.addColorStop(.5,rgba(text,.62));cord.addColorStop(1,rgba(border,.65));
+    ctx.strokeStyle=cord;ctx.lineWidth=Math.max(1.2,unit*.004);ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle=rgba(text,.7);ctx.beginPath();ctx.roundRect(cx-unit*.045,cy-ry-r*1.15,unit*.09,unit*.035,unit*.012);ctx.fill();limb(text,1,.45);
+    // Plateau de réception, volontairement bas et discret.
+    const trayY=h*.69,tray=ctx.createLinearGradient(cx-unit*.3,0,cx+unit*.3,0);tray.addColorStop(0,rgba(border,.72));tray.addColorStop(.45,rgba(text,.78));tray.addColorStop(.62,rgba(surface,.9));tray.addColorStop(1,rgba(border,.72));
+    ctx.fillStyle=tray;ctx.beginPath();ctx.ellipse(cx,trayY,unit*.3,unit*.045,0,0,Math.PI*2);ctx.fill();limb(text,1.2,.3);
+    const pearl=(x,y,active,index,scale=1)=>{
+      const pr=r*scale,pulse=active&&state.running?1+Math.sin(shimmer*4+index*1.73)*.035:1,
+        nacre=ctx.createRadialGradient(x-pr*.38,y-pr*.42,pr*.04,x,y,pr);
+      if(active){nacre.addColorStop(0,"rgba(255,255,255,.98)");nacre.addColorStop(.16,"rgba(225,249,255,.96)");nacre.addColorStop(.48,rgba(accent,.78));nacre.addColorStop(.78,rgba(text,.58));nacre.addColorStop(1,rgba(border,.94));}
+      else{nacre.addColorStop(0,rgba(text,.52));nacre.addColorStop(.28,rgba(surface,.9));nacre.addColorStop(.72,rgba(border,.94));nacre.addColorStop(1,rgba(border,.99));}
+      ctx.save();ctx.fillStyle=nacre;ctx.shadowColor=active?accent:"rgba(0,0,0,.65)";ctx.shadowBlur=active?pr*.85:pr*.42;ctx.beginPath();ctx.arc(x,y,pr*pulse,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+      ctx.strokeStyle=rgba(text,active ? .58 : .2);ctx.lineWidth=Math.max(.7,pr*.055);ctx.stroke();ctx.fillStyle="rgba(255,255,255,.78)";ctx.beginPath();ctx.ellipse(x-pr*.34,y-pr*.38,pr*.16,pr*.1,-.55,0,Math.PI*2);ctx.fill();ctx.restore();
+    };
     for(let i=0;i<total;i++){
-      const row=Math.floor(i/cols),column=row%2===0?i%cols:cols-1-i%cols,x=ox+column*step,y=oy+row*step,fill=Math.max(0,Math.min(1,alive-i));
-      let bead=ctx.createRadialGradient(x-r*.35,y-r*.4,r*.08,x,y,r);bead.addColorStop(0,rgba(text,.4));bead.addColorStop(.3,rgba(border,.98));bead.addColorStop(1,rgba(border,.92));ctx.fillStyle=bead;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();limb(text,1.2,.3);
-      if(fill>0){
-        bead=ctx.createRadialGradient(x-r*.36,y-r*.42,r*.04,x,y,r);bead.addColorStop(0,rgba(text,.92));bead.addColorStop(.22,accent);bead.addColorStop(1,rgba(accent,.34));ctx.fillStyle=bead;ctx.globalAlpha=fill;ctx.beginPath();ctx.arc(x,y,r*(.45+.55*fill),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-      }
+      if(i<remaining){const a=-Math.PI/2+(i/total)*Math.PI*2,x=cx+Math.cos(a)*rx,y=cy+Math.sin(a)*ry;pearl(x,y,true,i);}
+      else{const fallen=i-remaining,row=Math.floor(fallen/8),col=fallen%8,x=cx+(col-3.5)*r*1.72+(row%2?r*.75:0),y=trayY-r*.65-row*r*1.45;pearl(x,y,false,i,.92);}
     }
   }
   // Lune : elle décroît comme le temps restant, de la pleine lune au croissant.
@@ -263,45 +273,57 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
     ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);limb(text,2,.55);
   }
-  // Colonnes : le temps se lit comme un niveau qui retombe, colonne après colonne.
+  // Colonnes : une banque de tubes de verre gradués, remplis d'ambre liquide.
+  // La matière descend colonne après colonne ; le châssis reste toujours visible.
   function drawBars(progress){
-    const {w,h}=resize(),{accent,border,text}=palette(),count=14,
-      span=Math.min(w,h)*.78,gap=span/count,barW=gap*.58,base=h*.72,maxH=h*.48,
-      alive=progress*count,ox=w/2-span/2;
-    ctx.clearRect(0,0,w,h);glow(ctx,w/2,base,span*.65,accent,.07);ctx.strokeStyle=rgba(text,.2);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ox-gap*.2,base+1);ctx.lineTo(ox+span,base+1);ctx.stroke();
+    const {w,h}=resize(),{border,text,surface}=palette(),count=9,unit=Math.min(w,h),
+      span=unit*.74,gap=span/count,barW=gap*.58,base=h*.68,maxH=h*.45,
+      alive=progress*count,ox=w/2-span/2,heights=[.54,.76,.64,.88,1,.82,.93,.7,.58];
+    ctx.clearRect(0,0,w,h);glow(ctx,w/2,base,span*.62,"#ffad52",.12);
+    const plinth=ctx.createLinearGradient(ox,0,ox+span,0);plinth.addColorStop(0,rgba(border,.98));plinth.addColorStop(.24,rgba(text,.7));plinth.addColorStop(.5,rgba(surface,.96));plinth.addColorStop(.76,rgba(text,.65));plinth.addColorStop(1,rgba(border,.98));
+    ctx.fillStyle=plinth;ctx.beginPath();ctx.roundRect(ox-gap*.18,base,span+gap*.36,unit*.075,unit*.02);ctx.fill();limb(text,1.2,.36);
+    ctx.fillStyle="rgba(255,169,73,.12)";ctx.beginPath();ctx.roundRect(ox,base+unit*.012,span,unit*.034,unit*.012);ctx.fill();
     for(let i=0;i<count;i++){
-      // Une hauteur propre à chaque colonne, stable d'une image à l'autre.
-      const shape=.45+.55*Math.abs(Math.sin(i*1.7)),full=maxH*shape,x=ox+i*gap+(gap-barW)/2,
-        fill=Math.max(0,Math.min(1,alive-i));
-      ctx.fillStyle=border;ctx.globalAlpha=.6;
-      ctx.beginPath();ctx.roundRect(x,base-full,barW,full,barW*.3);ctx.fill();
-      ctx.globalAlpha=1;limb(text,1.2,.26);ctx.globalAlpha=.6;
+      const full=maxH*heights[i],x=ox+i*gap+(gap-barW)/2,fill=Math.max(0,Math.min(1,alive-i)),inner=barW*.62;
+      const shell=ctx.createLinearGradient(x,0,x+barW,0);shell.addColorStop(0,"rgba(205,231,240,.13)");shell.addColorStop(.18,"rgba(255,255,255,.62)");shell.addColorStop(.42,"rgba(179,213,226,.12)");shell.addColorStop(.78,"rgba(255,255,255,.36)");shell.addColorStop(1,"rgba(117,151,166,.28)");
+      ctx.fillStyle=shell;ctx.beginPath();ctx.roundRect(x,base-full,barW,full,barW*.42);ctx.fill();ctx.strokeStyle=rgba(text,.5);ctx.lineWidth=Math.max(1,unit*.002);ctx.stroke();
       if(fill>0){
-        ctx.globalAlpha=1;ctx.fillStyle=litColumn(x,x+barW,{accent,text,border});
-        const height=full*fill;
-        ctx.beginPath();ctx.roundRect(x,base-height,barW,height,barW*.3);ctx.fill();limb(text,1.4,.45);
+        const height=Math.max(inner*.3,(full-inner*.16)*fill),ix=x+(barW-inner)/2,top=base-height-inner*.08,
+          amber=ctx.createLinearGradient(ix,0,ix+inner,0);amber.addColorStop(0,"#7a3508");amber.addColorStop(.2,"#dc761b");amber.addColorStop(.48,"#ffd07a");amber.addColorStop(.72,"#e58b2e");amber.addColorStop(1,"#6b2b07");
+        ctx.fillStyle=amber;ctx.shadowColor="rgba(255,143,43,.65)";ctx.shadowBlur=unit*.018;ctx.beginPath();ctx.roundRect(ix,top,inner,height,inner*.42);ctx.fill();ctx.shadowBlur=0;
+        ctx.fillStyle="rgba(255,228,166,.82)";ctx.beginPath();ctx.ellipse(ix+inner/2,top+inner*.12,inner*.48,inner*.15,0,0,Math.PI*2);ctx.fill();
       }
+      // Colliers métalliques et graduations donnent une échelle réelle aux niveaux.
+      ctx.fillStyle=plinth;ctx.beginPath();ctx.roundRect(x-barW*.08,base-full-barW*.04,barW*1.16,barW*.14,barW*.05);ctx.fill();ctx.beginPath();ctx.roundRect(x-barW*.08,base-barW*.1,barW*1.16,barW*.14,barW*.05);ctx.fill();
+      ctx.strokeStyle=rgba(text,.32);ctx.lineWidth=1;for(let tick=1;tick<4;tick++){const y=base-full*tick/4;ctx.beginPath();ctx.moveTo(x+barW*.72,y);ctx.lineTo(x+barW*.96,y);ctx.stroke();}
     }
-    ctx.globalAlpha=1;
   }
-  // Spirale : le fil se déroule du centre vers l'extérieur, et se rétracte avec le temps.
+  // Spirale : un ressort d'horlogerie sous verre, enchâssé dans une platine métallique.
   function drawSpiral(progress){
-    const {w,h}=resize(),{accent,border,text}=palette(),cx=w/2,cy=h*.41,
-      turns=4,maxR=Math.min(w,h)*.35,steps=460;
-    ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,maxR*1.1,accent,.07);
+    const {w,h}=resize(),{border,text,surface}=palette(),cx=w/2,cy=h*.39,
+      turns=4.35,maxR=Math.min(w,h)*.31,steps=520;
+    ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,maxR*1.45,"#ffad52",.14);
+    const plate=ctx.createRadialGradient(cx-maxR*.32,cy-maxR*.38,maxR*.06,cx,cy,maxR*1.08);plate.addColorStop(0,rgba(text,.22));plate.addColorStop(.42,rgba(surface,.94));plate.addColorStop(.78,rgba(border,.98));plate.addColorStop(1,"rgba(3,6,10,.98)");
+    ctx.fillStyle=plate;ctx.beginPath();ctx.arc(cx,cy,maxR*1.08,0,Math.PI*2);ctx.fill();ctx.strokeStyle=rgba(text,.7);ctx.lineWidth=Math.max(2,maxR*.025);ctx.stroke();
+    ctx.strokeStyle="rgba(255,255,255,.13)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,maxR*.98,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<24;i++){const a=i*Math.PI/12,inner=maxR*.92,outer=maxR*(i%6===0 ? 1.02 : .975);ctx.strokeStyle=rgba(text,i%6===0 ? .5 : .22);ctx.lineWidth=i%6===0 ? 2 : 1;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*inner,cy+Math.sin(a)*inner);ctx.lineTo(cx+Math.cos(a)*outer,cy+Math.sin(a)*outer);ctx.stroke();}
     const trace=(fraction,color,width,alpha)=>{
       if(fraction<=.0005)return;
       ctx.strokeStyle=color;ctx.lineWidth=width;ctx.globalAlpha=alpha;ctx.lineCap="round";
       ctx.beginPath();
       for(let i=0;i<=steps*fraction;i++){
-        const t=i/steps,angle=t*turns*Math.PI*2-Math.PI/2,r=maxR*t;
+        const t=i/steps,angle=t*turns*Math.PI*2-Math.PI/2,r=maxR*(.06+.94*t);
         const x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;
         i?ctx.lineTo(x,y):ctx.moveTo(x,y);
       }
       ctx.stroke();ctx.globalAlpha=1;
     };
-    trace(1,border,3.4,.5);trace(progress,accent,5.4,1);
-    if(progress>.001){const angle=progress*turns*Math.PI*2-Math.PI/2,r=maxR*progress,x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;ctx.fillStyle=text;ctx.shadowColor=accent;ctx.shadowBlur=18;ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+    trace(1,"rgba(6,9,13,.96)",maxR*.095,1);trace(1,rgba(text,.35),maxR*.048,1);
+    const active=ctx.createLinearGradient(cx-maxR,cy-maxR,cx+maxR,cy+maxR);active.addColorStop(0,"#8d3d08");active.addColorStop(.48,"#ffab42");active.addColorStop(.78,"#ffe0a1");active.addColorStop(1,"#c96814");
+    ctx.shadowColor="rgba(255,142,43,.72)";ctx.shadowBlur=maxR*.08;trace(progress,active,maxR*.057,1);ctx.shadowBlur=0;trace(progress,"rgba(255,245,214,.64)",maxR*.012,1);
+    const hub=ctx.createRadialGradient(cx-maxR*.04,cy-maxR*.05,1,cx,cy,maxR*.12);hub.addColorStop(0,"#fff1c7");hub.addColorStop(.3,"#ffb14d");hub.addColorStop(.7,"#6f2d08");hub.addColorStop(1,"#19100a");ctx.fillStyle=hub;ctx.beginPath();ctx.arc(cx,cy,maxR*.115,0,Math.PI*2);ctx.fill();limb(text,1.2,.5);
+    for(const a of [Math.PI/4,Math.PI*.75,Math.PI*1.25,Math.PI*1.75]){const x=cx+Math.cos(a)*maxR*.9,y=cy+Math.sin(a)*maxR*.9;ctx.fillStyle=rgba(text,.65);ctx.beginPath();ctx.arc(x,y,maxR*.035,0,Math.PI*2);ctx.fill();ctx.strokeStyle=rgba(border,.8);ctx.beginPath();ctx.moveTo(x-maxR*.02,y);ctx.lineTo(x+maxR*.02,y);ctx.stroke();}
+    if(progress>.001){const angle=progress*turns*Math.PI*2-Math.PI/2,r=maxR*(.06+.94*progress),x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;ctx.fillStyle="#fff1c8";ctx.shadowColor="#ff9d32";ctx.shadowBlur=maxR*.14;ctx.beginPath();ctx.arc(x,y,maxR*.04,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
   }
   // Soleil : sa course dit l'heure qui reste, du lever au coucher.
   function drawSun(progress){
@@ -319,24 +341,29 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.strokeStyle=rgba(text,.3);ctx.lineWidth=1;for(let i=0;i<12;i++){const a=i*Math.PI/6,inner=r*1.25,outer=r*(1.42+(i%2)*.1);ctx.beginPath();ctx.moveTo(x+Math.cos(a)*inner,y+Math.sin(a)*inner);ctx.lineTo(x+Math.cos(a)*outer,y+Math.sin(a)*outer);ctx.stroke();}
     }
   }
-  function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
-  function finish(){state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});logSession();}
-  // Une session achevée est envoyée au serveur : c'est ce qui alimente le temps réel de
-  // la grille de suivi. Un échec réseau ne doit rien casser — la session est perdue,
-  // le minuteur continue de fonctionner.
-  function logSession(){
-    const seconds=Math.round(state.total);
-    if(!(seconds>=1&&seconds<=86400))return;
-    const select=$("#session-competency");
-    fetch(app.dataset.logUrl,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","X-CSRFToken":app.dataset.csrf},
-      body:JSON.stringify({seconds,intention:state.intention||"",competency:select?.value||null}),
-    }).then(response=>response.ok?response.json():null).then(data=>{
-      if(data?.competency){$("#stage-message").textContent=`${data.hours} h REPORTÉES SUR ${data.competency.toUpperCase()}`;const back=$("#return-after-session");if(back&&app.dataset.returnUrl)back.hidden=false;}
-    }).catch(()=>{});
+  // ------------------------------------------------------------------
+  // Rendus photoréalistes : la photo fournit la matière (verre, chrome, cire,
+  // nacre…), le canvas n'anime que ce qui vit — sable, eau, flamme, ombre.
+  // Chaque renderer retombe sur le tracé vectoriel tant que sa photo n'est
+  // pas chargée : jamais d'écran vide, même hors-ligne.
+  // ------------------------------------------------------------------
+  // Sablier : le sable est peint DERRIÈRE la photo, dans l'empreinte des
+  // ampoules ; la vitre lui garde ainsi ses reflets et ses épaisseurs.
+  let hourglassGrainPattern=null;
+  function getHourglassGrainPattern(){
+    if(hourglassGrainPattern)return hourglassGrainPattern;
+    const tile=document.createElement("canvas"),grain=tile.getContext("2d");
+    tile.width=128;tile.height=128;
+    let seed=0x51ab1e;
+    const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+    for(let i=0;i<1650;i++){
+      const x=random()*tile.width,y=random()*tile.height,r=.22+random()*.88,tone=random();
+      grain.fillStyle=tone>.78?`rgba(255,239,179,${.28+random()*.5})`:tone>.34?`rgba(210,151,61,${.25+random()*.5})`:`rgba(112,70,22,${.18+random()*.38})`;
+      grain.beginPath();grain.arc(x,y,r,0,Math.PI*2);grain.fill();
+    }
+    hourglassGrainPattern=ctx.createPattern(tile,"repeat");
+    return hourglassGrainPattern;
   }
-  function ambienceLabel(){const select=$("#ambience-select"),option=[...select.options].find(item=>item.value===state.ambience);return option?.textContent||state.ambience;}
   function render(force=false){
     if(state.running){state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining<=0&&!state.finished)finish();}
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;

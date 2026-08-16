@@ -8,16 +8,27 @@
 //
 // L'objet est cadré exactement dans la zone `#visual-wrap` du gabarit : la mise en page
 // HTML continue de commander la composition, la 3D s'y conforme.
+import { makeRingRuntime } from "./premium3d/ring.js";
 import { makeHourglassRuntime } from "./premium3d/hourglass.js";
+import { makeWaveRuntime } from "./premium3d/wave.js";
 import { makeCandleRuntime } from "./premium3d/candle.js";
 import { makeBeadsRuntime } from "./premium3d/beads.js";
+import { makeBarsRuntime } from "./premium3d/bars.js";
+import { makeSpiralRuntime } from "./premium3d/spiral.js";
 import { makeCelestialRuntime } from "./premium3d/celestial.js";
 import { buildWorld } from "./premium3d/worlds.js";
 import { buildEnvironment } from "./premium3d/environment.js";
 import { createPostFX } from "./premium3d/postfx.js";
 import { disposeTextures, radialSprite } from "./premium3d/textures.js";
 
-const SUPPORTED = new Set(["hourglass", "candle", "beads", "moon", "sun"]);
+// Neuf des onze visualisations sont des objets en volume. Anneau, marée, colonnes et
+// spirale viennent du travail mené en parallèle sur `main`, où ils étaient rendus dans un
+// studio neutre : ils entrent ici dans le lieu choisi par l'utilisateur, sous sa lumière,
+// comme les cinq autres. Digital et Zen restent du texte et des cercles HTML — ce sont
+// des lectures de l'heure, pas des objets.
+const SUPPORTED = new Set([
+  "ring", "hourglass", "wave", "candle", "beads", "bars", "spiral", "moon", "sun",
+]);
 
 // Les astres ne se posent pas. Un sablier, une bougie ou un mâlâ appartiennent au sol du
 // lieu ; la Lune et le Soleil appartiennent à son ciel. Les traiter pareillement — même
@@ -52,7 +63,10 @@ async function boot() {
     THREE = await import(new URL("../vendor/three.module.js", import.meta.url).href);
   } catch (_) {
     // Repli : le dessin 2D reste en place, la page continue de fonctionner.
+    // Le motif est consigné dans le DOM : un repli silencieux est indiscernable d'un
+    // rendu réussi, et c'est exactement ce qui avait laissé passer un moteur 3D mort.
     app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "three-module-load";
     canvas.remove();
     return;
   }
@@ -61,6 +75,7 @@ async function boot() {
     createRuntime(THREE, { app, stage, visual, canvas, decorCanvas, fallbackCanvas, progressNode, liveChip });
   } catch (_) {
     app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "runtime-boot";
     canvas.remove();
   }
 }
@@ -81,6 +96,7 @@ function createRuntime(THREE, nodes) {
     });
   } catch (_) {
     app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "webgl-context";
     canvas.remove();
     return;
   }
@@ -169,12 +185,38 @@ function createRuntime(THREE, nodes) {
 
   const celestial = makeCelestialRuntime(THREE, helpers);
   const factories = {
+    ring: () => makeRingRuntime(THREE, helpers, state),
     hourglass: () => makeHourglassRuntime(THREE, helpers, state),
+    wave: () => makeWaveRuntime(THREE, helpers, state),
     candle: () => makeCandleRuntime(THREE, helpers, state),
     beads: () => makeBeadsRuntime(THREE, helpers),
+    bars: () => makeBarsRuntime(THREE, helpers, state),
+    spiral: () => makeSpiralRuntime(THREE, helpers, state),
     moon: celestial.moon,
     sun: celestial.sun,
   };
+
+  // Empreinte au sol d'un objet : le point le plus bas de sa silhouette et son rayon.
+  // Mesurée sur la géométrie plutôt que déclarée à la main — neuf objets, chacun avec son
+  // propre profil, et une constante oubliée suffit à faire flotter l'un d'eux au-dessus de
+  // son ombre. Les sprites en sont exclus : une flamme ou un halo débordent largement du
+  // corps sans jamais toucher le sol.
+  const bounds = new THREE.Box3();
+  const corner = new THREE.Vector3();
+  function measure(target) {
+    bounds.makeEmpty();
+    target.updateMatrixWorld(true);
+    target.traverse((node) => {
+      if (!node.isMesh || node.isSprite) return;
+      bounds.expandByObject(node);
+    });
+    if (bounds.isEmpty()) return { base: -OBJECT_HEIGHT / 2, radius: 1.6 };
+    bounds.getSize(corner);
+    return {
+      base: bounds.min.y,
+      radius: Math.max(Math.abs(bounds.min.x), bounds.max.x, Math.abs(bounds.min.z), bounds.max.z),
+    };
+  }
 
   function dispose(target) {
     if (!target) return;
@@ -269,12 +311,13 @@ function createRuntime(THREE, nodes) {
 
     active = factories[mode]();
     objectRoot.add(active.object);
+    active.footprint = measure(active.object);
   }
 
-  // Les visualisations restées en 2D (anneau, marée, colonnes, spirale…) gardent leur
-  // canvas : elles se dessinent alors par-dessus l'univers rendu, qui leur sert de lieu.
+  // Digital et Zen n'ont pas d'objet en volume : leur lecture de l'heure reste en HTML,
+  // par-dessus l'univers rendu qui leur sert de lieu.
   //
-  // Celles qui ont un objet en volume ne cèdent la place qu'une fois la première image 3D
+  // Les neuf autres ne prennent la place du dessin 2D qu'une fois la première image 3D
   // réellement à l'écran. Les masquer dès le choix du mode laissait un intervalle — le
   // temps de bâtir le lieu — où le dessin 2D s'affichait puis disparaissait d'un coup :
   // l'utilisateur voyait « l'ancienne vue » clignoter avant la vraie scène.
@@ -315,7 +358,7 @@ function createRuntime(THREE, nodes) {
     // Chaque objet déclare le point le plus bas de sa silhouette. Les supposer tous
     // centrés sur une hauteur de référence laissait la bougie — dont la cire s'arrête
     // bien au-dessus de cette limite — flotter à un mètre de son ombre.
-    const footing = (active?.base ?? -OBJECT_HEIGHT / 2) * scale;
+    const footing = (active?.footprint?.base ?? -OBJECT_HEIGHT / 2) * scale;
     const base = objectRoot.position.y + footing;
     if (skyborne) {
       // L'astre se détache entier au-dessus de l'horizon — qui se trouve exactement à
@@ -335,7 +378,7 @@ function createRuntime(THREE, nodes) {
 
     contact.visible = !skyborne && Boolean(active);
     if (contact.visible) {
-      const spread = (active?.radius ?? 1.6) * scale * 2;
+      const spread = (active?.footprint?.radius ?? 1.6) * scale * 2;
       contact.position.set(objectRoot.position.x, 0.03, objectRoot.position.z);
       contact.scale.set(spread, spread, 1);
     }
@@ -431,6 +474,7 @@ function createRuntime(THREE, nodes) {
     cancelAnimationFrame(frame);
     ready = false;
     app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = "context-lost";
     canvas.style.display = "none";
     syncFallback();
     if (decorCanvas) decorCanvas.style.opacity = "";
@@ -453,5 +497,7 @@ function createRuntime(THREE, nodes) {
 
 boot().catch(() => {
   const app = document.querySelector("#focus-app");
-  if (app) app.dataset.renderer3d = "fallback";
+  if (!app) return;
+  app.dataset.renderer3d = "fallback";
+  app.dataset.renderer3dReason = "boot";
 });

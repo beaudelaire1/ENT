@@ -34,7 +34,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install --ignore-scripts --no-audit --no-fund
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run vendor
       - name: Vérifier la syntaxe des moteurs visuels
         run: |
@@ -53,7 +55,7 @@ jobs:
         # Le repli 2D est silencieux : sans cette résolution complète du graphe
         # d'imports, un fichier vendu manquant ne se verrait qu'à l'écran.
         run: |
-          node --input-type=module -e "await import('./src/static/vendor/three.module.js'); await import('./src/static/vendor/three-addons/postprocessing/EffectComposer.js'); await import('./src/static/vendor/three-addons/objects/Sky.js'); console.log('moteur 3D résolu');"
+          node --input-type=module -e "const THREE = await import('./src/static/vendor/three.module.js'); if (!THREE.WebGLRenderer) { console.error('moteur incomplet'); process.exit(1); } await import('./src/static/vendor/three-addons/postprocessing/EffectComposer.js'); await import('./src/static/vendor/three-addons/objects/Sky.js'); console.log('moteur 3D résolu');"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
