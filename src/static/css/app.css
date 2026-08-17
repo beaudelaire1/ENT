@@ -341,3 +341,14 @@ ul.errorlist { margin:4px 0 0; padding-left:18px; color:var(--danger); font-size
 .legend-criteria dd { margin:0; font-size:13px; line-height:1.45; }
 .level-criterion { margin:6px 0 12px; font-size:14px; }
 .chip.static.reached { color:white; background:var(--accent); border-color:transparent; }
+
+/* Préférences de notification : une famille par bloc, ses cases, puis ce qu'elle couvre. */
+.preference-family { margin:0; padding:16px 18px; border:1px solid var(--border); border-radius:var(--radius); }
+.preference-family legend { padding:0 8px; font-weight:700; }
+.preference-family .muted { margin:0 0 10px; font-size:14px; }
+/* `input,select,textarea` impose `width:100%` à tous les champs : une case à cocher s'y
+   étalait sur toute la ligne, la case au milieu et son libellé rejeté au bord. Une case
+   se dimensionne d'elle-même. */
+.preference-family .check { display:flex; align-items:center; gap:9px; margin:6px 0; font-size:14px; }
+.preference-family .check input { width:auto; flex:none; padding:0; }
+.preference-family .event-list { margin:12px 0 0; padding-left:18px; font-size:13px; line-height:1.7; }

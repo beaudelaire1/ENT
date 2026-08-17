@@ -306,7 +306,16 @@ CELERY_BEAT_SCHEDULE = {
     "dispatch-due-reminders-every-minute": {
         "task": "planner.dispatch_due_reminders",
         "schedule": 60.0,
-    }
+    },
+    # Ce que personne ne vient déclarer : échéances qui approchent, retards, évaluations,
+    # objectifs arrivés à terme, résumé de révision. À l'heure et non à la minute — ces
+    # faits-là se comptent en heures, et la déduplication rend un passage de plus sans
+    # effet. Sans cette ligne, la moitié des notifications n'existerait tout simplement
+    # pas : aucune vue ne les produit.
+    "scan-notifications-hourly": {
+        "task": "notifications.scan_for_events",
+        "schedule": 3600.0,
+    },
 }
 
 # Les tests exécutent les tâches sur place. L'intégration continue fournit un courtier
