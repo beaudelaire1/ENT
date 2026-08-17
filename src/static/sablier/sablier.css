@@ -67,6 +67,10 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
 /* Le décor occupe toute la scène, derrière le minuteur et sans jamais l'intercepter. */
 .decor-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; transition:opacity .45s ease,filter .7s ease; }
 html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
+/* Le décor peint ne se montre que dans l'état de repli. `data-renderer3d` est la seule
+   source de vérité — aucun script ne touche plus son opacité, si bien qu'il n'existe plus
+   d'instant où le repli et la scène en volume sont visibles ensemble. */
+.focus-app:not([data-renderer3d="fallback"]) .decor-canvas { opacity:0; }
 .focus-stage > *:not(.decor-canvas):not(.stage-3d-canvas) { position:relative; z-index:3; }
 
 /* Le lieu rendu en 3D occupe toute la scène. Il se place au-dessus du décor peint —

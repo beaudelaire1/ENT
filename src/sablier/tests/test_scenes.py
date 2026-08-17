@@ -80,10 +80,26 @@ class SceneRegistryTests(SimpleTestCase):
 
 
 class PremiumVisualRuntimeTests(SimpleTestCase):
+    """Le contrat de rendu du Sablier, tenu par des tests plutôt que par la vigilance.
+
+    Le lieu appartient à la 3D ; l'objet appartient à l'utilisateur. Six objets ont une
+    photographie qu'il a validée et ce sont elles qui s'affichent ; trois n'en ont jamais
+    eu et sont construits en volume. Un mode a un rendu, jamais deux.
+    """
+
     GRAPHICAL_MODES = ("ring", "hourglass", "wave", "candle", "beads", "moon", "bars", "spiral", "sun")
-    # Les objets rendus en volume. La bougie en est absente : la sienne est une
-    # photographie, conservée à la demande de l'utilisateur.
-    VOLUMETRIC_MODES = ("ring", "hourglass", "wave", "beads", "moon", "bars", "spiral", "sun")
+    # Les objets validés par l'utilisateur, avec le repère de leur image dans le manifeste.
+    PHOTO_MODES = {
+        "ring": "7cfca4f4",
+        "hourglass": "7073fefb",
+        "wave": "dbb9148a",
+        "candle": "9d0bd271",
+        "moon": "1b9b150c",
+        "sun": "52c57cf0",
+    }
+    # Les objets sans photographie de référence : ceux-là, et seuls ceux-là, sont bâtis
+    # en volume dans le lieu.
+    VOLUMETRIC_MODES = ("beads", "bars", "spiral")
 
     def read_static(self, relative_path):
         path = settings.BASE_DIR / "static" / "sablier" / relative_path
@@ -159,53 +175,121 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn("fallbackCanvas.style.visibility", premium)
         self.assertIn("renderer3dReason", premium)
 
-    def test_every_mode_has_exactly_one_renderer(self):
-        """Chaque visualisation a un rendu, et un seul, désigné sans ambiguïté.
+    def test_the_two_families_of_objects_cover_every_mode_without_overlap(self):
+        """Point 3 du contrat : un mode, un rendu. La partition doit être exacte.
 
-        Huit objets sont rendus en volume dans le lieu choisi. La bougie est une
-        photographie — celle que l'utilisateur reconnaît, gardée à sa demande — et son
-        fond transparent la pose sur le même univers 3D. Ce qui compte est qu'aucun
-        mode n'ait deux rendus concurrents : c'est ce mélange qui avait produit un
-        écran où des photos plates voisinaient avec des objets éclairés par leur lieu.
+        Un mode qui appartiendrait aux deux familles verrait sa photographie et son
+        objet en volume dessinés dans le même cadre. Un mode qui n'appartiendrait à
+        aucune n'aurait aucun rendu du tout.
+        """
+        photo = set(self.PHOTO_MODES)
+        volumetric = set(self.VOLUMETRIC_MODES)
+        self.assertEqual(photo & volumetric, set())
+        self.assertEqual(photo | volumetric, set(self.GRAPHICAL_MODES))
+
+    def test_each_photographic_object_keeps_its_validated_image(self):
+        """Les six objets validés par l'utilisateur s'affichent tels qu'il les connaît.
+
+        Chacun a son image sur le disque, son entrée dans le manifeste et son peintre
+        dans la table. Ces visuels-là ne sont pas à réinterpréter : les remplacer par un
+        équivalent en volume, même meilleur techniquement, retire à l'utilisateur ce
+        qu'il avait choisi.
         """
         engine = self.read_static("sablier.js")
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        folder = settings.BASE_DIR / "static" / "sablier" / "img"
+        images = [path.name for path in folder.glob("*.jpg")]
+
+        for mode, fingerprint in self.PHOTO_MODES.items():
+            with self.subTest(mode=mode):
+                painter = f"draw{mode.capitalize()}Photo"
+                self.assertIn(f"function {painter}(", engine)
+                self.assertIn(f"{mode}:{painter}", engine)
+                self.assertIn(f'"{mode}":"{{{{ static_prefix }}}}sablier/img/{fingerprint}', template)
+                self.assertTrue([name for name in images if name.startswith(fingerprint)], fingerprint)
+
+        # Aucune image orpheline : tout ce qui est livré est référencé, et inversement.
+        self.assertEqual(len(images), len(self.PHOTO_MODES), sorted(images))
+
+    def test_only_the_objects_without_a_photograph_are_built_in_volume(self):
+        """Point 2 du contrat, et son unique levier.
+
+        `SUPPORTED` décide seul qui est bâti en volume. S'il recoupait la table des
+        peintres photographiques, deux rendus se disputeraient le même cadre — c'est
+        exactement ce qui avait fait cohabiter des photos plates et des objets éclairés
+        par leur lieu dans une même série de visualisations.
+        """
         premium = self.read_static("premium3d.js")
-        painters = (
-            "const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,"
-            "candle:drawCandlePhoto,beads:drawBeads,moon:drawMoon,bars:drawBars,"
-            "spiral:drawSpiral,sun:drawSun}"
-        )
-        self.assertIn(painters, engine)
+        supported = next(line for line in premium.splitlines() if line.startswith("const SUPPORTED"))
         for mode in self.VOLUMETRIC_MODES:
             with self.subTest(mode=mode):
-                self.assertIn(f'"{mode}"', premium)
+                self.assertIn(f'"{mode}"', supported)
+        for mode in self.PHOTO_MODES:
+            with self.subTest(mode=mode):
+                self.assertNotIn(f'"{mode}"', supported)
+        for native in ("digital", "zen"):
+            with self.subTest(mode=native):
+                self.assertNotIn(f'"{native}"', supported)
 
-        # La bougie est volontairement hors de la liste des objets en volume : sans
-        # cela, la photographie et l'objet 3D se superposeraient dans le même cadre.
-        supported = next(line for line in premium.splitlines() if line.startswith('  "ring", "hourglass"'))
-        self.assertNotIn('"candle"', supported)
-        self.assertEqual(
-            set(self.GRAPHICAL_MODES) - set(self.VOLUMETRIC_MODES),
-            {"candle"},
-        )
+    def test_nothing_of_the_place_is_shown_before_a_renderer_is_in_charge(self):
+        """Point 4 du contrat : un seul basculement visible.
 
-    def test_the_candle_photograph_is_the_only_image_asset(self):
-        """Une seule photographie subsiste, et c'est un choix explicite.
-
-        Les six autres visuels photographiques ont été remplacés par des objets en
-        volume : leur manifeste ne doit pas revenir par inadvertance, sinon deux
-        rendus se disputeraient à nouveau le même mode.
+        Bâtir un lieu en volume prend une à deux secondes. Peindre le décor 2D pendant
+        ce temps le rendait visible, puis le remplaçait : l'utilisateur voyait « les
+        anciennes vues revenir » à chaque ouverture de page. L'état `booting` existe pour
+        que cet intervalle ne montre rien du tout, et le repli ne se peint que lorsqu'il
+        est réellement en charge.
         """
-        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        loader = self.read_static("decor.js")
         engine = self.read_static("sablier.js")
-        images = sorted(path.name for path in (settings.BASE_DIR / "static" / "sablier" / "img").glob("*.jpg"))
-        self.assertEqual(len(images), 1, images)
-        self.assertIn("9d0bd271", images[0])
-        self.assertIn('id="asset-data"', template)
-        self.assertIn("function drawCandlePhoto", engine)
-        for removed in ("drawHourglassPhoto", "drawWavePhoto", "drawMoonPhoto", "drawSunPhoto", "drawRingPhoto"):
-            with self.subTest(removed=removed):
-                self.assertNotIn(removed, engine)
+        css = self.read_static("sablier.css")
+
+        self.assertIn('app.dataset.renderer3d = "booting"', loader)
+        # Un démarrage muet ne doit pas pouvoir durer indéfiniment.
+        self.assertIn('giveUp("slow-start")', loader)
+        # Le décor peint n'est peint que dans l'état de repli…
+        self.assertIn('const painted=app.dataset.renderer3d==="fallback"', engine)
+        # …et n'est visible que là, par le CSS et non par un script.
+        self.assertIn('.focus-app:not([data-renderer3d="fallback"]) .decor-canvas { opacity:0; }', css)
+        self.assertNotIn("decorCanvas.style", self.read_static("premium3d.js"))
+
+    def test_the_object_canvas_never_betrays_its_own_rectangle(self):
+        """Rien de ce que peint le canvas ne doit révéler ses bords.
+
+        Deux façons de se trahir, toutes deux invisibles sur l'ancien décor peint et
+        flagrantes sur un paysage en volume :
+
+        * un dégradé tronqué par un bord cesse d'être une lumière et devient une arête.
+          `glow` borne donc son rayon à la distance du bord le plus proche ;
+        * un filtre de canvas — `contrast()`, `brightness()` — a un terme constant : sur
+          une image à fond transparent il colore les pixels vides et remplit tout le
+          rectangle de dessin, qu'un découpage circulaire ne suffit pas à contenir. La
+          teinte de l'astre passe donc par `source-atop`, qui ne peint que là où l'image
+          est déjà opaque : la transparence est préservée par construction.
+        """
+        engine = self.read_static("sablier.js")
+        self.assertIn("const radius=Math.min(r,x,y,extent.w-x,extent.h-y);", engine)
+        self.assertIn("extent.w=rect.width;extent.h=rect.height;", engine)
+
+        sun = engine[engine.index("function drawSunPhoto(") : engine.index("function drawRingPhoto(")]
+        self.assertIn('ctx.globalCompositeOperation="source-atop"', sun)
+        self.assertNotIn("ctx.filter", sun)
+
+    def test_the_place_publishes_its_horizon_for_the_objects_that_need_one(self):
+        """Un soleil se couche sur l'horizon du lieu, pas sur une ligne inventée.
+
+        L'horizon est compté depuis le haut de la scène et non de la fenêtre : publié en
+        coordonnées de fenêtre, il devenait faux au premier défilement et l'astre
+        disparaissait sous un horizon hors cadre.
+        """
+        premium = self.read_static("premium3d.js")
+        engine = self.read_static("sablier.js")
+        self.assertIn("app.dataset.worldHorizon", premium)
+        self.assertIn("skyline.set(0, camera.position.y, -1e6).project(camera)", premium)
+        self.assertIn("((1 - skyline.y) / 2) * height", premium)
+        self.assertIn("function horizonLine(ratio)", engine)
+        self.assertIn("horizonLine(.62)", engine)
+        self.assertIn("stage.getBoundingClientRect().top", engine)
 
     def test_digital_and_zen_remain_native_non_webgl_modes(self):
         engine = self.read_static("premium3d.js")
@@ -292,15 +376,17 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             with self.subTest(scene=scene.key):
                 self.assertIn(f"\n  {scene.decor}: {{", recipes)
 
-    def test_the_object_is_lit_by_the_place_it_stands_in(self):
-        """L'objet et son univers partagent une scène, une caméra et une lumière."""
+    def test_the_place_is_rendered_in_volume_with_its_own_light(self):
+        """Point 1 du contrat : le lieu est rendu en volume, et il éclaire ce qu'il porte.
+
+        Les objets bâtis dans cette scène reçoivent la lumière du ciel de l'univers, sa
+        brume les enveloppe, leur ombre tombe sur son sol. C'est cette continuité qui
+        distingue un lieu d'un fond.
+        """
         engine = self.read_static("premium3d.js")
-        self.assertIn("buildWorld", engine)
-        self.assertIn("buildEnvironment", engine)
-        self.assertIn("scene.environment", engine)
-        self.assertIn("FogExp2", engine)
-        # Le décor peint n'est plus repeint quand la scène 3D est à l'image.
-        self.assertIn('app.dataset.renderer3d!=="three"', self.read_static("sablier.js"))
+        for fragment in ("buildWorld", "buildEnvironment", "scene.environment", "FogExp2"):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, engine)
 
     def test_only_the_chosen_universe_is_built_and_the_previous_one_freed(self):
         """Un seul lieu vit à la fois, et il libère celui qu'il remplace.

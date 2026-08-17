@@ -45,16 +45,34 @@
   };
 
   window.SablierDecor = stub;
-  // L'objet et son univers sont rendus ensemble par `premium3d.js`, dans un seul contexte
-  // WebGL : il n'y a pas de moteur de décor séparé à charger en parallèle. Le décor peint
-  // ci-dessous ne subsiste que comme repli, quand la 3D n'est pas disponible.
+
+  // Le lieu est rendu en volume par `premium3d.js`, dans un seul contexte WebGL ; le décor
+  // peint n'est que son repli. Trois états, et un seul basculement visible :
+  //
+  //   booting  — personne n'est encore en charge. Rien du lieu ne s'affiche.
+  //   three    — la scène a sa première image et prend le lieu.
+  //   fallback — la 3D est hors jeu ; le décor peint apparaît, avec le motif de l'échec.
+  //
+  // Poser `booting` ici, avant tout rendu, est ce qui empêche le décor peint de s'afficher
+  // pendant la construction du lieu — c'est cet affichage-là qui donnait l'impression que
+  // « les anciennes vues reviennent » à chaque ouverture de page.
+  const app = document.querySelector("#focus-app");
+  if (app) app.dataset.renderer3d = "booting";
+  // Ne renonce que si personne n'a encore tranché : un échec tardif ne doit pas effacer
+  // une scène qui rend déjà.
+  const giveUp = (reason) => {
+    if (app?.dataset.renderer3d !== "booting") return;
+    app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = reason;
+  };
+
+  // Un démarrage muet ne doit jamais devenir un écran vide définitif : si aucune image
+  // n'est venue au bout de ce délai, le repli prend la main de lui-même.
+  setTimeout(() => giveUp("slow-start"), 8000);
+
   window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)
     .catch((error) => {
-      const app = document.querySelector("#focus-app");
-      if (app) {
-        app.dataset.renderer3d = "fallback";
-        app.dataset.renderer3dReason = "premium-module-load";
-      }
+      giveUp("premium-module-load");
       console.error("Sablier premium 3D indisponible", error);
       return null;
     });

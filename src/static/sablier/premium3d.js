@@ -1,13 +1,30 @@
 // Scène immersive du Sablier.
 //
-// Un seul contexte WebGL rend l'univers *et* l'objet, dans la même caméra et sous la
-// même lumière. C'est la condition d'un rendu crédible : tant que le décor était peint
-// en 2D derrière un objet éclairé à part, l'objet restait posé sur une image. Ici le
-// ciel de l'univers est la source lumineuse de l'objet, la brume l'enveloppe et son
-// ombre tombe sur le sol du lieu.
+// ── Contrat de rendu ────────────────────────────────────────────────────────────────
 //
-// L'objet est cadré exactement dans la zone `#visual-wrap` du gabarit : la mise en page
-// HTML continue de commander la composition, la 3D s'y conforme.
+// 1. Le LIEU appartient à la 3D. Les vingt-quatre univers du catalogue sont rendus en
+//    volume, ici, dans un unique contexte WebGL. Le décor peint en 2D n'est plus un
+//    choix artistique : c'est le repli, et rien d'autre.
+//
+// 2. L'OBJET appartient à l'utilisateur. Six objets ont une photographie qu'il a
+//    validée — anneau, sablier, marée, bougie, lune, soleil. Ce sont *elles* qui
+//    s'affichent, dessinées sur le canvas de l'objet au-dessus du lieu ; leur fond est
+//    transparent, et le canvas anime ce qui vit : sable, eau, flamme, phase. Trois
+//    objets n'ont jamais eu de photographie — perles, colonnes, spirale : ceux-là sont
+//    rendus en volume dans le lieu. Digital et Zen restent du HTML : ce sont des
+//    lectures de l'heure, pas des objets.
+//
+// 3. UN MODE, UN RENDU. Jamais deux à la fois dans le même cadre. `SUPPORTED` est
+//    l'unique endroit qui tranche, et il ne doit jamais recouper la table des peintres
+//    photographiques de `sablier.js`.
+//
+// 4. RIEN NE S'AFFICHE AVANT D'ÊTRE DÉCIDÉ. Bâtir un lieu prend du temps ; montrer le
+//    décor peint pendant ce temps, puis le remplacer, donnait l'impression que « les
+//    anciennes vues reviennent ». La scène reste donc muette jusqu'à sa première image,
+//    ou jusqu'au constat d'échec — un seul basculement, jamais deux.
+//
+// L'objet en volume est cadré exactement dans la zone `#visual-wrap` du gabarit : la
+// mise en page HTML commande la composition, la 3D s'y conforme.
 import { makeRingRuntime } from "./premium3d/ring.js";
 import { makeHourglassRuntime } from "./premium3d/hourglass.js";
 import { makeWaveRuntime } from "./premium3d/wave.js";
@@ -21,25 +38,14 @@ import { buildEnvironment } from "./premium3d/environment.js";
 import { createPostFX } from "./premium3d/postfx.js";
 import { disposeTextures, radialSprite } from "./premium3d/textures.js";
 
-// Neuf des onze visualisations sont des objets en volume. Anneau, marée, colonnes et
-// spirale viennent du travail mené en parallèle sur `main`, où ils étaient rendus dans un
-// studio neutre : ils entrent ici dans le lieu choisi par l'utilisateur, sous sa lumière,
-// comme les cinq autres. Digital et Zen restent du texte et des cercles HTML — ce sont
-// des lectures de l'heure, pas des objets.
-// La bougie n'est pas de la liste : la sienne est une photographie, à fond transparent,
-// que l'utilisateur reconnaît et a demandé à garder. Elle se dessine sur son canvas
-// au-dessus de l'univers rendu — le lieu derrière elle reste un lieu en volume, avec sa
-// lumière et sa brume. Un objet photographié dans une scène rendue n'est pas une
-// régression : c'est le même partage du travail que pour Digital et Zen, où la 3D tient
-// le lieu et le reste tient l'objet.
-const SUPPORTED = new Set([
-  "ring", "hourglass", "wave", "beads", "bars", "spiral", "moon", "sun",
-]);
+// Les seuls objets que cette scène construit : ceux qui n'ont pas de photographie validée
+// (point 2 du contrat). Les six autres arrivent par le canvas, avec leur image d'origine.
+// Modifier cette liste change *qui* rend quoi : c'est le seul levier, et il est testé.
+const SUPPORTED = new Set(["beads", "bars", "spiral"]);
 
-// Les astres ne se posent pas. Un sablier, une bougie ou un mâlâ appartiennent au sol du
-// lieu ; la Lune et le Soleil appartiennent à son ciel. Les traiter pareillement — même
-// cadrage, même rattrapage au sol — donnait une Lune de cinq mètres posée sur le sable à
-// hauteur d'œil, dans un monde qui a déjà sa lune au ciel.
+// Les astres ne se posent pas. Un mâlâ appartient au sol du lieu, la Lune et le Soleil à
+// son ciel. Aucun des deux n'est construit ici aujourd'hui — leurs photographies tiennent
+// ce rôle —, mais la distinction reste juste et sert dès qu'ils reviennent en volume.
 const SKYBORNE = new Set(["moon", "sun"]);
 
 // `decorDensity` ne règle que le mouvement. Le lieu, lui, reste entier à tous les niveaux.
@@ -53,7 +59,6 @@ async function boot() {
   const app = document.querySelector("#focus-app");
   const stage = document.querySelector("#focus-stage");
   const visual = document.querySelector("#visual-wrap");
-  const decorCanvas = document.querySelector("#decor-canvas");
   const fallbackCanvas = document.querySelector("#timer-canvas");
   const progressNode = document.querySelector("#digital-progress");
   const liveChip = document.querySelector("#live-chip");
@@ -78,7 +83,7 @@ async function boot() {
   }
 
   try {
-    createRuntime(THREE, { app, stage, visual, canvas, decorCanvas, fallbackCanvas, progressNode, liveChip });
+    createRuntime(THREE, { app, stage, visual, canvas, fallbackCanvas, progressNode, liveChip });
   } catch (_) {
     app.dataset.renderer3d = "fallback";
     app.dataset.renderer3dReason = "runtime-boot";
@@ -87,7 +92,7 @@ async function boot() {
 }
 
 function createRuntime(THREE, nodes) {
-  const { app, stage, visual, canvas, decorCanvas, fallbackCanvas, progressNode, liveChip } = nodes;
+  const { app, stage, visual, canvas, fallbackCanvas, progressNode, liveChip } = nodes;
   const mobile = matchMedia("(max-width: 700px)").matches;
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const decorNames = JSON.parse(document.querySelector("#decor-data")?.textContent || "{}");
@@ -332,13 +337,10 @@ function createRuntime(THREE, nodes) {
     objectRoot.add(active.object);
   }
 
-  // Digital et Zen n'ont pas d'objet en volume : leur lecture de l'heure reste en HTML,
-  // par-dessus l'univers rendu qui leur sert de lieu.
-  //
-  // Les neuf autres ne prennent la place du dessin 2D qu'une fois la première image 3D
-  // réellement à l'écran. Les masquer dès le choix du mode laissait un intervalle — le
-  // temps de bâtir le lieu — où le dessin 2D s'affichait puis disparaissait d'un coup :
-  // l'utilisateur voyait « l'ancienne vue » clignoter avant la vraie scène.
+  // Le canvas de l'objet reste en place pour les six objets photographiques : il *est*
+  // leur rendu, dans tous les états, et rien ne doit le masquer. Il ne s'efface que pour
+  // les objets que cette scène construit elle-même, et seulement quand elle les rend
+  // vraiment — sinon on verrait le dessin de repli, puis l'objet, deux images pour un.
   function syncFallback() {
     const handedOver = ready && SUPPORTED.has(state.mode);
     fallbackCanvas.style.opacity = handedOver ? "0" : "1";
@@ -450,6 +452,22 @@ function createRuntime(THREE, nodes) {
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     post?.setSize(width, height);
+    publishHorizon();
+  }
+
+  // Le lieu publie son horizon. Les objets photographiques qui ont besoin d'une ligne
+  // d'horizon — le soleil se couche, il ne flotte pas — la lisent au lieu de l'inventer :
+  // deux horizons dans une même image, et le canvas se dénonce aussitôt.
+  //
+  // La valeur est comptée depuis le haut de la scène, jamais depuis le haut de la fenêtre.
+  // Publiée en coordonnées de fenêtre, elle devenait fausse dès le premier défilement — le
+  // soleil se retrouvait sous un horizon situé hors du cadre, donc invisible. Comptée dans
+  // la scène, le défilement s'annule entre celui qui écrit et celui qui lit.
+  const skyline = new THREE.Vector3();
+  function publishHorizon() {
+    // Le point du sol à distance infinie, à hauteur d'œil : sa projection *est* l'horizon.
+    skyline.set(0, camera.position.y, -1e6).project(camera);
+    app.dataset.worldHorizon = String(Math.round(((1 - skyline.y) / 2) * height));
   }
 
   function readState() {
@@ -459,8 +477,11 @@ function createRuntime(THREE, nodes) {
     state.finished = app.dataset.finished === "true";
     const level = Number(app.dataset.decorDensity ?? 2);
     state.motion = reducedMotion ? 0 : (MOTION[level] ?? 0.72);
-    setWorld(decorNames[app.dataset.ambience] || "star_tree");
+    // L'objet d'abord : il publie aussitôt qui le rend (`data-premium3d`), ce que le reste
+    // de la page attend pour savoir s'il doit montrer le dessin de repli. Bâtir le lieu,
+    // juste après, peut prendre une seconde sans que rien de faux ne s'affiche entre-temps.
     setMode(visual.dataset.mode || app.dataset.mode);
+    setWorld(decorNames[app.dataset.ambience] || "star_tree");
   }
 
   function render(time) {
@@ -483,12 +504,12 @@ function createRuntime(THREE, nodes) {
     else renderer.render(scene, camera);
 
     if (!ready) {
-      // Un seul point de bascule, une fois l'image prête : la scène 3D se révèle, le décor
-      // peint s'efface et le dessin 2D cède la place, tous sur la même transition.
+      // L'unique basculement. Avant lui, rien du lieu n'est montré — ni la scène, encore
+      // vide, ni le décor peint, qui n'est qu'un repli : `data-renderer3d` porte l'état et
+      // le CSS en tire toutes les conséquences, en une seule transition.
       ready = true;
       app.dataset.renderer3d = "three";
       canvas.style.opacity = "1";
-      if (decorCanvas) decorCanvas.style.opacity = "0";
       syncFallback();
     }
   }
@@ -508,7 +529,6 @@ function createRuntime(THREE, nodes) {
     app.dataset.renderer3dReason = "context-lost";
     canvas.style.display = "none";
     syncFallback();
-    if (decorCanvas) decorCanvas.style.opacity = "";
   }, { once: true });
 
   window.addEventListener("pagehide", () => {
