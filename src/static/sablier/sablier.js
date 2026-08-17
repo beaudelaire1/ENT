@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (state.running) state.remaining = Math.max(0,(state.endsAt-Date.now())/1000);
   if (state.running && state.remaining <= 0) { state.running=false; state.finished=true; }
   let lastSecond = -1, warningCue=false, frame=0;
-  const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio");
+  const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio"),stage=$("#focus-stage");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
   const ambienceAliases=JSON.parse(document.querySelector("#ambience-alias-data")?.textContent||"{}");
   state.ambience=ambienceAliases[state.ambience]||state.ambience;
@@ -65,19 +65,50 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function reset(){state.running=false;state.finished=false;state.remaining=state.total;state.endsAt=0;warningCue=false;save();render(true);}
   function adjust(seconds){state.remaining=clamp(state.remaining+seconds,0,86400);state.total=Math.max(1,state.total,state.remaining);state.finished=false;if(state.running)state.endsAt=Date.now()+state.remaining*1000;warningCue=false;save();render(true);}
+  // Dimensions utiles du canvas de l'objet, en unités CSS. Mémorisées à chaque
+  // redimensionnement pour que `glow` connaisse ses bords sans relire la mise en page.
+  const extent={w:0,h:0};
   function resize(){
     const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),pixelW=Math.max(1,Math.round(rect.width*dpr)),pixelH=Math.max(1,Math.round(rect.height*dpr));
     if(canvas.width!==pixelW||canvas.height!==pixelH){canvas.width=pixelW;canvas.height=pixelH;ctx.setTransform(dpr,0,0,dpr,0,0);}
+    extent.w=rect.width;extent.h=rect.height;
     return {w:rect.width,h:rect.height};
   }
   function palette(){const css=getComputedStyle(app);return {accent:css.getPropertyValue("--focus-accent").trim(),border:css.getPropertyValue("--focus-border").trim(),text:css.getPropertyValue("--focus-text").trim(),surface:css.getPropertyValue("--focus-surface").trim()};}
+  // Ligne d'horizon, en coordonnées du canvas de l'objet. Quand le lieu est rendu en
+  // volume, c'est *lui* qui la donne : un soleil qui se couche sous un horizon inventé,
+  // alors que celui du paysage est ailleurs, met deux horizons dans la même image et
+  // trahit aussitôt le canvas. Sinon on retombe sur la proportion d'origine, qui reste
+  // juste pour le décor peint.
+  function horizonLine(ratio){
+    const published=Number(app.dataset.worldHorizon);
+    if(app.dataset.renderer3d==="three"&&Number.isFinite(published)){
+      // L'horizon est compté depuis le haut de la scène ; on le ramène aux coordonnées du
+      // canvas de l'objet. Les deux mesures sont prises au même instant, donc le
+      // défilement de la page s'annule entre elles.
+      return published-(canvas.getBoundingClientRect().top-stage.getBoundingClientRect().top);
+    }
+    return extent.h*ratio;
+  }
   function rgba(color,alpha){
     const valueColor=color||"",match=/^#([0-9a-f]{6})$/i.exec(valueColor);
     if(match){const value=Number.parseInt(match[1],16);return `rgba(${value>>16},${(value>>8)&255},${value&255},${alpha})`;}
     const hsl=/^hsl\((.+)\)$/i.exec(valueColor);
     return hsl?`hsla(${hsl[1]},${alpha})`:valueColor;
   }
-  function glow(ctx,x,y,r,color,alpha=.22){const gradient=ctx.createRadialGradient(x,y,0,x,y,r);gradient.addColorStop(0,rgba(color,alpha));gradient.addColorStop(.45,rgba(color,alpha*.35));gradient.addColorStop(1,rgba(color,0));ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+  // Halo de lumière. Le rayon est borné à la distance du bord le plus proche : un dégradé
+  // que le canvas tronque cesse d'être une lumière et devient une arête. Sur l'ancien
+  // décor peint, uniforme, cela ne se voyait pas ; posé sur un univers rendu en volume,
+  // le même dégradé dessine un rectangle clair en pleine nuit — la trace du canvas, ce
+  // qui fait qu'un objet a l'air collé sur une interface au lieu d'être dans un lieu.
+  // La règle est ici, une fois, plutôt que réglée à la main dans chaque visuel.
+  function glow(ctx,x,y,r,color,alpha=.22){
+    const radius=Math.min(r,x,y,extent.w-x,extent.h-y);
+    if(!(radius>0))return;
+    const gradient=ctx.createRadialGradient(x,y,0,x,y,radius);
+    gradient.addColorStop(0,rgba(color,alpha));gradient.addColorStop(.45,rgba(color,alpha*.35));gradient.addColorStop(1,rgba(color,0));
+    ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
+  }
   // Contraste des volumes. Chaque visuel réglait ses dégradés au cas par cas et finissait
   // par s'éteindre sur les bords : une forme dont les flancs se fondent dans le fond
   // paraît plus petite qu'elle n'est. Ces deux fonctions donnent un langage commun —
@@ -373,24 +404,78 @@ document.addEventListener("DOMContentLoaded", () => {
     hourglassGrainPattern=ctx.createPattern(tile,"repeat");
     return hourglassGrainPattern;
   }
+  function drawHourglassPhoto(progress){
+    if(!ready("hourglass")){drawHourglass(progress);return;}
+    const img=assets.hourglass,{w,h}=resize(),{accent}=palette();
+    ctx.clearRect(0,0,w,h);
+    // Le fichier source est cadré très verticalement. Une correction horizontale
+    // restitue les épaules du verre et l'assise métallique sans rogner l'objet.
+    const shapeWidth=1.34,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04;
+    const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;
+    glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);
+    // Profil réel des ampoules, mesuré sur la photo : t=0 au col, t=1 à
+    // l'extrémité. Le tracé épouse le verre au lieu de le dépasser.
+    const profile=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];
+    const bulbPath=(yNeck,yEnd)=>{
+      const H=yEnd-yNeck;
+      ctx.beginPath();
+      profile.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+      for(let i=profile.length-1;i>=0;i--){const [t,f]=profile[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}
+      ctx.closePath();
+    };
+    // Sable doré : dégradé horizontal, éclairé au centre comme la photo.
+    const sand=ctx.createLinearGradient(cx-hw,0,cx+hw,0);
+    sand.addColorStop(0,"#9a6826");sand.addColorStop(.28,"#dfae55");sand.addColorStop(.5,"#f6d891");sand.addColorStop(.74,"#d9a04a");sand.addColorStop(1,"#8d5f22");
+    const grain=getHourglassGrainPattern();
+    const fillSand=(path)=>{
+      ctx.fillStyle=sand;path();ctx.fill();
+      if(grain){ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=grain;path();ctx.fill();ctx.restore();}
+    };
+    const received=1-progress;
+    if(progress>.001){
+      ctx.save();bulbPath(neckY,topY);ctx.clip();
+      const surface=neckY-(neckY-topY)*progress;
+      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,surface,hw*2,neckY-surface+1);});
+      // Surface irrégulière et petit creux que le filet creuse dans les grains.
+      ctx.strokeStyle="rgba(255,231,165,.72)";ctx.lineWidth=Math.max(.8,iw*.0024);ctx.beginPath();
+      for(let x=cx-hw*.9;x<=cx+hw*.9;x+=3){const y=surface+Math.sin(x*.19)*1.15+Math.sin(x*.047)*.75;x===cx-hw*.9?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+      ctx.fillStyle="rgba(92,53,17,.32)";ctx.beginPath();ctx.ellipse(cx,surface+1,hw*.14,Math.max(1.5,hw*.025),0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+    let peak=floorY;
+    if(received>.001){
+      ctx.save();bulbPath(neckY,floorY);ctx.clip();
+      const level=floorY-(floorY-neckY)*received;
+      const mound=Math.min(hw*.5,(floorY-neckY)*.32*Math.min(1,received*3.5));
+      peak=level-mound;
+      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,level,hw*2,floorY-level+1);ctx.moveTo(cx-hw*.84,level+2);ctx.bezierCurveTo(cx-hw*.48,level-mound*.12,cx-hw*.2,peak+mound*.16,cx,peak);ctx.bezierCurveTo(cx+hw*.22,peak+mound*.14,cx+hw*.52,level-mound*.1,cx+hw*.84,level+2);ctx.closePath();});
+      ctx.strokeStyle="rgba(255,229,160,.52)";ctx.lineWidth=Math.max(.8,iw*.002);ctx.beginPath();ctx.moveTo(cx-hw*.78,level);ctx.quadraticCurveTo(cx-hw*.18,peak+mound*.08,cx,peak);ctx.quadraticCurveTo(cx+hw*.2,peak+mound*.08,cx+hw*.78,level);ctx.stroke();
+      ctx.restore();
+    }
+    if(state.running&&progress>.001){
+      const stream=ctx.createLinearGradient(0,neckY,0,peak);
+      stream.addColorStop(0,"#f8e0a2");stream.addColorStop(1,"#d99f49");
+      ctx.strokeStyle=stream;ctx.lineCap="round";
+      ctx.lineWidth=Math.max(1.2,iw*.005);ctx.beginPath();ctx.moveTo(cx,neckY+1);ctx.lineTo(cx,peak);ctx.stroke();
+      ctx.lineWidth=Math.max(.6,iw*.002);ctx.strokeStyle="rgba(255,240,200,.9)";ctx.beginPath();ctx.moveTo(cx-iw*.002,neckY+1);ctx.lineTo(cx-iw*.002,peak);ctx.stroke();
+      const phase=Date.now()/46;
+      for(let i=0;i<18;i++){
+        const travel=((phase+i*7.17)%18)/18,y=neckY+(peak-neckY)*travel,x=cx+Math.sin(i*12.7+phase*.15)*iw*.0045;
+        ctx.fillStyle=i%3===0?"rgba(255,239,188,.95)":"rgba(205,143,54,.92)";ctx.beginPath();ctx.arc(x,y,Math.max(.55,iw*(.0014+(i%4)*.00028)),0,Math.PI*2);ctx.fill();
+      }
+    }
+    ctx.drawImage(img,ix,iy,iw,ih);
+  }
   // Bougie de référence : la cire photographique reste mince et le bougeoir reste
   // fixe. Seuls la hauteur, la flamme et la fumée évoluent avec le temps.
-  //
-  // La cire s'arrête plus bas qu'avant, et le halo est borné à la place disponible
-  // au-dessus de la flamme. Sur un décor peint uniforme, un dégradé coupé par le bord du
-  // canvas ne se voyait pas ; posé sur un univers en volume, il dessinait un rectangle
-  // clair en pleine nuit — la trace du canvas, exactement ce qui fait qu'un objet a l'air
-  // collé sur une interface au lieu d'être dans un lieu.
   function drawCandlePhoto(progress){
     if(!ready("candle")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
     const img=assets.candle,{w,h}=resize(),{accent,text}=palette();
     ctx.clearRect(0,0,w,h);
-    const baseY=h*.87,fullH=h*.62,iw=Math.min(w*.42,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
+    const baseY=h*.87,fullH=h*.7,iw=Math.min(w*.46,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
     const waxTop=img.naturalHeight*.058,base=img.naturalHeight*.975;
     const topSrc=waxTop+(1-progress)*(base-waxTop),srcH=base-topSrc,dh=srcH*scale,dx=w/2-iw/2,dy=baseY-dh,fx=w/2;
-    // Rayon maximal qui laisse le dégradé s'éteindre avant d'atteindre un bord.
-    const room=Math.max(1,Math.min(fx,dy-iw*.12));
-    if(progress>.004){glow(ctx,fx,dy-iw*.12,Math.min(iw*1.1,room),accent,.28);glow(ctx,fx,dy-iw*.05,Math.min(iw*.45,room),"#ffd98a",.2);}
+    if(progress>.004){glow(ctx,fx,dy-iw*.12,iw*1.1,accent,.28);glow(ctx,fx,dy-iw*.05,iw*.45,"#ffd98a",.2);}
     ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);
     if(progress>.004){
       ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.lineCap="round";
@@ -410,6 +495,120 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.globalAlpha=.4;ctx.strokeStyle=text;ctx.lineWidth=Math.max(1.2,iw*.008);ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(fx,dy-2);
       ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;
+    }
+  }
+  // Marée : le récipient d'origine reste intact. L'eau est teintée dans le verre
+  // (et non derrière son fond blanc), afin que son niveau soit immédiatement lisible.
+  function drawWavePhoto(progress){
+    if(!ready("wave")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.wave,{w,h}=resize(),{accent}=palette(),unit=Math.min(w,h);
+    ctx.clearRect(0,0,w,h);
+    const iw=Math.min(w*.84,h*.8),ih=iw*img.naturalHeight/img.naturalWidth,
+      ix=w/2-iw/2,iy=h*.44-ih/2,cx=w/2,cy=iy+ih*.52,rx=iw*.46,ry=ih*.42,
+      bottom=cy+ry*.92,top=cy-ry*.76,phase=state.running?Date.now()/620:0;
+    glow(ctx,cx,cy,iw*.58,accent,.08);
+    // L'image du bocal contient un intérieur blanc, contrairement au verre transparent
+    // du sablier. On conserve sa forme, puis on évide optiquement ce blanc avant de
+    // reconstruire les arêtes froides et métalliques du même langage de matière.
+    ctx.save();ctx.globalAlpha=.42;ctx.filter="grayscale(1) contrast(1.32) brightness(.7)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.84,ry*.82,0,0,Math.PI*2);ctx.clip();ctx.globalCompositeOperation="destination-out";ctx.globalAlpha=.78;ctx.fillStyle="#000";ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);ctx.restore();
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.clip();
+    if(progress>.002){
+      const level=bottom-(bottom-top)*Math.pow(progress,.72),wave=(x)=>level+Math.sin((x-cx)/(unit*.055)+phase)*unit*.008+Math.sin((x-cx)/(unit*.022)-phase*.7)*unit*.003;
+      const water=ctx.createLinearGradient(0,level,0,bottom);water.addColorStop(0,"rgba(91,229,246,.96)");water.addColorStop(.28,"rgba(21,158,190,.96)");water.addColorStop(1,"rgba(3,59,96,.98)");
+      ctx.globalCompositeOperation="source-over";ctx.fillStyle=water;ctx.beginPath();ctx.moveTo(cx-rx,level);for(let x=cx-rx;x<=cx+rx;x+=3)ctx.lineTo(x,wave(x));ctx.lineTo(cx+rx,bottom+ry);ctx.lineTo(cx-rx,bottom+ry);ctx.closePath();ctx.fill();
+      // Une surface lumineuse et des caustiques mobiles rendent la matière liquide.
+      ctx.strokeStyle="rgba(151,225,236,.74)";ctx.lineWidth=Math.max(1.5,unit*.0045);ctx.shadowColor="rgba(48,171,199,.48)";ctx.shadowBlur=unit*.014;ctx.beginPath();for(let x=cx-rx*.94;x<=cx+rx*.94;x+=3){const y=wave(x);x===cx-rx*.94?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.shadowBlur=0;
+      for(let i=0;i<18;i++){
+        const px=cx+Math.sin(i*13.7+phase*.18)*rx*.76,py=level+(bottom-level)*(.16+(i%7)/8),span=unit*(.016+(i%4)*.006);
+        ctx.strokeStyle=i%3===0?"rgba(221,252,255,.52)":"rgba(128,230,244,.34)";ctx.lineWidth=i%4===0?2:1;ctx.beginPath();ctx.moveTo(px-span,py);ctx.quadraticCurveTo(px,py-unit*.008,px+span,py);ctx.stroke();
+      }
+      for(let i=0;i<13;i++){
+        const px=cx+Math.sin(i*9.31)*rx*.72,py=bottom-(bottom-level)*(.08+(i%9)/10),br=unit*(.0025+(i%4)*.0013);
+        ctx.strokeStyle="rgba(225,253,255,.62)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,br,0,Math.PI*2);ctx.stroke();
+      }
+    }
+    ctx.restore();
+    // Une passe très légère de la photo restitue ses reflets sans réintroduire le blanc.
+    ctx.save();ctx.globalCompositeOperation="screen";ctx.globalAlpha=.11;ctx.filter="grayscale(1) contrast(1.38) brightness(.9)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
+    const glassEdge=ctx.createLinearGradient(cx-rx,0,cx+rx,0);glassEdge.addColorStop(0,"rgba(111,148,163,.84)");glassEdge.addColorStop(.22,"rgba(231,246,250,.72)");glassEdge.addColorStop(.5,"rgba(148,181,192,.3)");glassEdge.addColorStop(.78,"rgba(238,250,252,.76)");glassEdge.addColorStop(1,"rgba(91,129,146,.86)");
+    ctx.strokeStyle=glassEdge;ctx.lineWidth=Math.max(1.4,unit*.004);ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle="rgba(173,207,218,.48)";ctx.lineWidth=Math.max(1,unit*.0025);ctx.beginPath();ctx.ellipse(cx,cy-rx*.015,rx*.89,ry*.87,0,Math.PI*.72,Math.PI*1.25);ctx.stroke();
+  }
+  // Lune : la photo fournit les mers et cratères ; l'ombre qui la mange est un
+  // disque sombre à bord doux qui glisse depuis la gauche, comme la nuit.
+  function drawMoonPhoto(progress){
+    if(!ready("moon")){drawMoon(progress);return;}
+    const img=assets.moon,{w,h}=resize(),{accent}=palette();
+    ctx.clearRect(0,0,w,h);
+    const d=Math.min(w,h)*.74,cx=w/2,cy=h*.44,r=d/2;
+    glow(ctx,cx,cy,r*1.8,accent,.2);
+    ctx.drawImage(img,cx-r,cy-r,d,d);
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+    ctx.fillStyle="rgba(3,6,12,.97)";ctx.shadowColor="rgba(3,6,12,1)";ctx.shadowBlur=r*.14;
+    ctx.beginPath();ctx.arc(cx-2.2*r*progress,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  // Soleil : le disque photographique effectue un cycle continu. Il naît derrière
+  // le relief, monte dans un ciel qui s'éclaircit, puis disparaît entièrement derrière
+  // l'horizon pendant que la lumière vire progressivement vers le rouge du couchant.
+  function drawSunPhoto(progress){
+    if(!ready("sun")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.sun,{w,h}=resize(),unit=Math.min(w,h),journey=1-progress,
+      daylight=Math.sin(Math.PI*journey),warmth=Math.abs(journey-.5)*2;
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2,horizon=horizonLine(.62),arcX=unit*.4,arcY=unit*.35,d=unit*.31,r=d/2,
+      x=cx-arcX+2*arcX*journey,
+      y=horizon+r*.62+r*.58*journey-Math.sin(Math.PI*journey)*(arcY+r*.72),
+      sunHue=42-20*warmth-8*journey;
+    const glowColor=`hsl(${sunHue},96%,62%)`;
+    // L'univers WebGL fournit désormais le ciel et le relief. Seul l'astre validé
+    // reste dans ce canvas transparent : aucun rectangle ne peut se détacher du décor.
+    ctx.save();ctx.beginPath();ctx.rect(0,0,w,horizon+unit*.018);ctx.clip();
+    glow(ctx,x,y,d*(.82+.18*daylight),glowColor,.22+.12*daylight);
+    // L'astre garde l'image validée ; seule sa teinte suit l'heure. Elle n'est plus obtenue
+    // par un filtre de canvas : `contrast()` et `brightness()` ont un terme constant, si
+    // bien qu'appliqués à une image à fond transparent ils donnent une couleur aux pixels
+    // vides et remplissent tout le rectangle de dessin. Sur l'ancien décor peint, ce
+    // rectangle chaud se confondait avec le ciel ; sur un paysage rendu en volume, il se
+    // détachait en pleine nuit, opaque et net — et un découpage circulaire ne suffisait pas
+    // à le contenir.
+    //
+    // `source-atop` ne peint que là où l'image est déjà opaque : la transparence est alors
+    // préservée par construction, et non par une précaution qu'on peut oublier.
+    ctx.drawImage(img,x-r,y-r,d,d);
+    ctx.save();
+    ctx.globalCompositeOperation="source-atop";
+    ctx.globalAlpha=.32+.24*warmth;
+    ctx.fillStyle=`hsl(${sunHue},${88+8*warmth}%,${52+16*daylight}%)`;
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    ctx.restore();
+    // Le trait d'horizon n'a de sens que sur le décor peint, qui n'en a pas. Le paysage en
+    // volume porte le sien : en dessiner un second par-dessus ferait deux lignes.
+    if(app.dataset.renderer3d!=="three"){
+      ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.14+.18*warmth})`;ctx.lineWidth=Math.max(1,unit*.0022);
+      ctx.beginPath();ctx.moveTo(cx-unit*.43,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.43,horizon);ctx.stroke();
+    }
+  }
+  // Anneau : une vraie jauge d'horlogerie porte les graduations ; le temps
+  // restant est un arc lumineux posé dans sa gorge.
+  function drawRingPhoto(progress){
+    if(!ready("ring")){drawRing(progress);return;}
+    const img=assets.ring,{w,h}=resize(),{accent,text}=palette();
+    ctx.clearRect(0,0,w,h);
+    const d=Math.min(w,h)*.72,cx=w/2,cy=h*.42,r=d*.395;
+    glow(ctx,cx,cy,d*.62,accent,.09);
+    ctx.drawImage(img,cx-d/2,cy-d/2,d,d);
+    if(progress>.001){
+      const end=-Math.PI/2+Math.PI*2*progress;
+      const active=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+      active.addColorStop(0,rgba(accent,.75));active.addColorStop(.55,accent);active.addColorStop(1,rgba(text,.98));
+      ctx.strokeStyle=active;ctx.lineWidth=d*.035;ctx.lineCap="round";
+      ctx.shadowColor=accent;ctx.shadowBlur=d*.06;
+      ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,end);ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.fillStyle=text;ctx.beginPath();ctx.arc(cx+Math.cos(end)*r,cy+Math.sin(end)*r,d*.012,0,Math.PI*2);ctx.fill();
     }
   }
   function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
@@ -435,14 +634,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
     if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
-    const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoon,bars:drawBars,spiral:drawSpiral,sun:drawSun};
+    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);
-    // Le décor peint en 2D est le repli. Dès que la scène 3D est à l'image, elle porte
-    // le lieu, sa lumière et ses mouvements : continuer à repeindre le canvas coûterait
-    // une image entière par frame pour un dessin invisible.
-    const painted=app.dataset.renderer3d!=="three";
+    // Le décor peint en 2D est le repli, et uniquement le repli. On ne le peint donc que
+    // dans cet état — pas pendant `booting`, où la scène en volume est encore en train de
+    // naître. Le peindre alors le rendait visible une seconde ou deux avant d'être
+    // remplacé : c'est ce qui donnait l'impression que « les anciennes vues reviennent »
+    // à chaque ouverture. Quand l'état bascule sur le repli, la boucle le peint à l'image
+    // suivante — rien à orchestrer, l'état suffit.
+    const painted=app.dataset.renderer3d==="fallback";
     if(painted)decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
     app.querySelectorAll(".decor-levels [data-decor]").forEach(button=>{
       const active=Number(button.dataset.decor)===state.decorDensity;

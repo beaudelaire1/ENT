@@ -99,6 +99,15 @@ class TimerScriptResolutionTests(SimpleTestCase):
         self.code = strip_literals(path.read_text(encoding="utf-8"))
 
     def declared_names(self) -> set[str]:
+        """Les noms que la fermeture introduit, dans les formes que `sablier.js` emploie.
+
+        Sont reconnus : `function nom`, `const`/`let`/`var` simples, variables de boucle,
+        liaison de `catch`, paramètres de fonctions et de flèches, et déstructuration
+        d'objet à un niveau. Ne le sont pas : `class`, `function*`, déstructuration
+        imbriquée, `import`. Ce fichier est un script classique dans une fermeture unique
+        et n'en contient aucun ; le jour où il en contiendrait, le contrôle d'en face
+        signalerait le nom comme non résolu — un faux positif bruyant, jamais un silence.
+        """
         names: set[str] = set()
         names.update(re.findall(r"function\s+([A-Za-z_$][\w$]*)", self.code))
         names.update(re.findall(r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)", self.code))
