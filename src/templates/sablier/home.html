@@ -75,5 +75,7 @@
 {{ playlist_payload|json_script:"playlist-data" }}
 {{ decors|json_script:"decor-data" }}
 {{ ambience_aliases|json_script:"ambience-alias-data" }}
+{# Bougie de référence : photographie à fond transparent, posée sur l'univers 3D. #}
+{% get_static_prefix as static_prefix %}<script id="asset-data" type="application/json">{"candle":"{{ static_prefix }}sablier/img/9d0bd2716e3bd800f15353e2b00aed37b2cd03d5dd4ef81913afb47456967b8c.1%20(1).jpg?v={{ asset_version }}"}</script>
 {% endblock %}
 {% block scripts %}<script src="{% static 'sablier/decor.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/sablier.js' %}?v={{ asset_version }}" defer></script>{% endblock %}

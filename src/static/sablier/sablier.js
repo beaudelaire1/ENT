@@ -35,9 +35,18 @@ document.addEventListener("DOMContentLoaded", () => {
   state.ambience=ambienceAliases[state.ambience]||state.ambience;
   if(!Object.prototype.hasOwnProperty.call(decorNames,state.ambience))state.ambience=app.dataset.ambience;
   const decor=window.SablierDecor.create($("#decor-canvas"));
-  // Aucune photographie n'est chargée : la matière des objets est calculée, pas
-  // photographiée. Ce canvas n'est plus que le repli exact quand WebGL manque, et il
-  // garde pour cela ses dessins canoniques.
+  // La bougie de référence est une photographie, et elle le reste : c'est celle que
+  // l'utilisateur reconnaît. Son fond est transparent, si bien qu'elle se pose sur
+  // l'univers rendu en 3D — le lieu derrière elle est un vrai lieu, seul l'objet est
+  // photographique. Le canvas n'anime que ce qui vit : hauteur de cire, flamme, fumée.
+  const assets={};
+  try{
+    const manifest=window.SABLIER_ASSETS||JSON.parse(document.querySelector("#asset-data")?.textContent||"{}");
+    for(const [name,url] of Object.entries(manifest)){
+      const img=new Image();img.decoding="async";img.src=url;assets[name]=img;
+    }
+  }catch(_){}
+  const ready=(name)=>Boolean(assets[name]?.complete&&assets[name].naturalWidth>0);
 
   function parseDuration(value){
     value=value.trim().replace(",","."); let seconds;
@@ -364,12 +373,69 @@ document.addEventListener("DOMContentLoaded", () => {
     hourglassGrainPattern=ctx.createPattern(tile,"repeat");
     return hourglassGrainPattern;
   }
+  // Bougie de référence : la cire photographique reste mince et le bougeoir reste
+  // fixe. Seuls la hauteur, la flamme et la fumée évoluent avec le temps.
+  //
+  // La cire s'arrête plus bas qu'avant, et le halo est borné à la place disponible
+  // au-dessus de la flamme. Sur un décor peint uniforme, un dégradé coupé par le bord du
+  // canvas ne se voyait pas ; posé sur un univers en volume, il dessinait un rectangle
+  // clair en pleine nuit — la trace du canvas, exactement ce qui fait qu'un objet a l'air
+  // collé sur une interface au lieu d'être dans un lieu.
+  function drawCandlePhoto(progress){
+    if(!ready("candle")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.candle,{w,h}=resize(),{accent,text}=palette();
+    ctx.clearRect(0,0,w,h);
+    const baseY=h*.87,fullH=h*.62,iw=Math.min(w*.42,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
+    const waxTop=img.naturalHeight*.058,base=img.naturalHeight*.975;
+    const topSrc=waxTop+(1-progress)*(base-waxTop),srcH=base-topSrc,dh=srcH*scale,dx=w/2-iw/2,dy=baseY-dh,fx=w/2;
+    // Rayon maximal qui laisse le dégradé s'éteindre avant d'atteindre un bord.
+    const room=Math.max(1,Math.min(fx,dy-iw*.12));
+    if(progress>.004){glow(ctx,fx,dy-iw*.12,Math.min(iw*1.1,room),accent,.28);glow(ctx,fx,dy-iw*.05,Math.min(iw*.45,room),"#ffd98a",.2);}
+    ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);
+    if(progress>.004){
+      ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(fx,dy+1);ctx.lineTo(fx+iw*.006,dy-iw*.028);ctx.stroke();
+      const fh=iw*.3,flick=state.running?Math.sin(Date.now()/90)*iw*.012+Math.sin(Date.now()/47)*iw*.006:0;
+      ctx.save();ctx.translate(fx,dy-iw*.03);
+      ctx.fillStyle="rgba(255,150,40,.9)";ctx.shadowColor="#ff9b30";ctx.shadowBlur=iw*.22;
+      ctx.beginPath();ctx.moveTo(0,-fh-flick);
+      ctx.quadraticCurveTo(iw*.075,-fh*.38,0,0);ctx.quadraticCurveTo(-iw*.075,-fh*.38,0,-fh-flick);ctx.fill();
+      ctx.shadowBlur=0;ctx.fillStyle="#ffe9b0";
+      ctx.beginPath();ctx.moveTo(0,-fh*.62-flick*.5);
+      ctx.quadraticCurveTo(iw*.038,-fh*.24,0,-iw*.004);ctx.quadraticCurveTo(-iw*.038,-fh*.24,0,-fh*.62-flick*.5);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.95)";
+      ctx.beginPath();ctx.ellipse(0,-fh*.16,iw*.014,fh*.1,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }else{
+      ctx.globalAlpha=.4;ctx.strokeStyle=text;ctx.lineWidth=Math.max(1.2,iw*.008);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(fx,dy-2);
+      ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;
+    }
+  }
+  function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
+  function finish(){state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});logSession();}
+  // Une session achevée est envoyée au serveur : c'est ce qui alimente le temps réel de
+  // la grille de suivi. Un échec réseau ne doit rien casser — la session est perdue,
+  // le minuteur continue de fonctionner.
+  function logSession(){
+    const seconds=Math.round(state.total);
+    if(!(seconds>=1&&seconds<=86400))return;
+    const select=$("#session-competency");
+    fetch(app.dataset.logUrl,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":app.dataset.csrf},
+      body:JSON.stringify({seconds,intention:state.intention||"",competency:select?.value||null}),
+    }).then(response=>response.ok?response.json():null).then(data=>{
+      if(data?.competency){$("#stage-message").textContent=`${data.hours} h REPORTÉES SUR ${data.competency.toUpperCase()}`;const back=$("#return-after-session");if(back&&app.dataset.returnUrl)back.hidden=false;}
+    }).catch(()=>{});
+  }
+  function ambienceLabel(){const select=$("#ambience-select"),option=[...select.options].find(item=>item.value===state.ambience);return option?.textContent||state.ambience;}
   function render(force=false){
     if(state.running){state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining<=0&&!state.finished)finish();}
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
     if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
-    const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,candle:drawCandle,beads:drawBeads,moon:drawMoon,bars:drawBars,spiral:drawSpiral,sun:drawSun};
+    const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoon,bars:drawBars,spiral:drawSpiral,sun:drawSun};
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);
