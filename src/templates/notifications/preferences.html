@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Notifications · Préférences · MyENT{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div><p class="eyebrow">NOTIFICATIONS</p><h1>Ce dont vous voulez être informé</h1></div>
+  <a class="button" href="{% url 'notifications:list' %}">Voir mes notifications</a>
+</header>
+<section class="panel">
+  <p class="muted">Tout est activé tant que vous n’éteignez rien. L’email ne double que ce qui a une heure — une échéance, un rappel, une évaluation : le reste vous attend dans la cloche.</p>
+  <form method="post" class="stack-form">{% csrf_token %}
+    {% for row in rows %}
+      <fieldset class="preference-family">
+        <legend>{{ row.family.label }}</legend>
+        <p class="muted">{{ row.family.description }}</p>
+        <label class="check"><input type="checkbox" name="{{ row.family.key }}:enabled"{% if row.enabled %} checked{% endif %}> Dans l’application</label>
+        {% if row.has_urgent %}
+          <label class="check"><input type="checkbox" name="{{ row.family.key }}:email"{% if row.email %} checked{% endif %}> Aussi par email, pour ce qui est urgent</label>
+        {% endif %}
+        <ul class="muted event-list">
+          {% for event in row.events %}<li>{{ event.label }}{% if event.urgent %} <span class="badge">email</span>{% endif %}</li>{% endfor %}
+        </ul>
+      </fieldset>
+    {% endfor %}
+    <button class="button primary">Enregistrer</button>
+  </form>
+</section>
+{% endblock %}

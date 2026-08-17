@@ -27,6 +27,35 @@ class Notification(models.Model):
         return self.title
 
 
+class NotificationPreference(models.Model):
+    """Ce que l'utilisateur accepte de recevoir, famille par famille.
+
+    Une ligne par famille et par personne, créée à la demande. L'absence de ligne vaut
+    consentement : on est informé de tout tant qu'on n'a rien éteint, ce qui évite qu'un
+    utilisateur existant se retrouve muet parce que la table est arrivée après lui.
+    """
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notification_preferences"
+    )
+    family = models.CharField("famille", max_length=32)
+    enabled = models.BooleanField("dans l'application", default=True)
+    # L'email ne concerne de toute façon que les événements urgents ; ce réglage permet
+    # de n'en garder que la trace dans l'application.
+    email = models.BooleanField("aussi par email", default=True)
+
+    class Meta:
+        verbose_name = "préférence de notification"
+        verbose_name_plural = "préférences de notification"
+        ordering = ["family"]
+        constraints = [
+            models.UniqueConstraint(fields=["owner", "family"], name="unique_preference_per_family"),
+        ]
+
+    def __str__(self):
+        return f"{self.owner} · {self.family}"
+
+
 class EmailDelivery(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="email_deliveries")
     dedupe_key = models.CharField("clé de déduplication", max_length=120)

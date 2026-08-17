@@ -23,10 +23,13 @@ class ReminderTests(TestCase):
 
     @patch("planner.tasks.send_mail")
     def test_delivery_is_idempotent(self, send_mail):
+        # Le compte porte sur la notification du rappel, et non sur le total : la
+        # création de la tâche en produit une elle aussi, et compter tout ferait de ce
+        # test l'otage de tout ce que l'ENT apprend à signaler.
         reminder = Reminder.objects.get(task=self.task)
         self.assertEqual(deliver_reminder.run(reminder.pk), "sent")
         self.assertEqual(deliver_reminder.run(reminder.pk), "already-sent")
-        self.assertEqual(Notification.objects.count(), 1)
+        self.assertEqual(Notification.objects.filter(dedupe_key=f"reminder:{reminder.pk}").count(), 1)
         self.assertEqual(EmailDelivery.objects.count(), 1)
         send_mail.assert_called_once()
 
