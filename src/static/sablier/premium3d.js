@@ -26,8 +26,14 @@ import { disposeTextures, radialSprite } from "./premium3d/textures.js";
 // studio neutre : ils entrent ici dans le lieu choisi par l'utilisateur, sous sa lumière,
 // comme les cinq autres. Digital et Zen restent du texte et des cercles HTML — ce sont
 // des lectures de l'heure, pas des objets.
+// La bougie n'est pas de la liste : la sienne est une photographie, à fond transparent,
+// que l'utilisateur reconnaît et a demandé à garder. Elle se dessine sur son canvas
+// au-dessus de l'univers rendu — le lieu derrière elle reste un lieu en volume, avec sa
+// lumière et sa brume. Un objet photographié dans une scène rendue n'est pas une
+// régression : c'est le même partage du travail que pour Digital et Zen, où la 3D tient
+// le lieu et le reste tient l'objet.
 const SUPPORTED = new Set([
-  "ring", "hourglass", "wave", "candle", "beads", "bars", "spiral", "moon", "sun",
+  "ring", "hourglass", "wave", "beads", "bars", "spiral", "moon", "sun",
 ]);
 
 // Les astres ne se posent pas. Un sablier, une bougie ou un mâlâ appartiennent au sol du
@@ -188,6 +194,8 @@ function createRuntime(THREE, nodes) {
     ring: () => makeRingRuntime(THREE, helpers, state),
     hourglass: () => makeHourglassRuntime(THREE, helpers, state),
     wave: () => makeWaveRuntime(THREE, helpers, state),
+    // Bougie en volume : conservée et prête, mais absente de `SUPPORTED` — c'est la
+    // photographie qui tient ce rôle. Rebrancher l'une ou l'autre ne tient qu'à cette liste.
     candle: () => makeCandleRuntime(THREE, helpers, state),
     beads: () => makeBeadsRuntime(THREE, helpers),
     bars: () => makeBarsRuntime(THREE, helpers, state),
@@ -196,11 +204,16 @@ function createRuntime(THREE, nodes) {
     sun: celestial.sun,
   };
 
-  // Empreinte au sol d'un objet : le point le plus bas de sa silhouette et son rayon.
-  // Mesurée sur la géométrie plutôt que déclarée à la main — neuf objets, chacun avec son
+  // Silhouette d'un objet dans ses propres unités : point le plus bas, hauteur, rayon.
+  // Mesurée sur la géométrie plutôt que déclarée à la main — huit objets, chacun avec son
   // propre profil, et une constante oubliée suffit à faire flotter l'un d'eux au-dessus de
   // son ombre. Les sprites en sont exclus : une flamme ou un halo débordent largement du
   // corps sans jamais toucher le sol.
+  //
+  // La mesure se fait *avant* d'attacher l'objet au support, tant qu'il n'a pas de parent :
+  // sa matrice monde est alors sa matrice locale. Mesuré une fois attaché, il rapportait un
+  // encombrement déjà multiplié par l'échelle du mode précédent, et le cadrage dérivait à
+  // chaque changement d'objet — un sablier finissait par sortir du cadre par le haut.
   const bounds = new THREE.Box3();
   const corner = new THREE.Vector3();
   function measure(target) {
@@ -210,10 +223,15 @@ function createRuntime(THREE, nodes) {
       if (!node.isMesh || node.isSprite) return;
       bounds.expandByObject(node);
     });
-    if (bounds.isEmpty()) return { base: -OBJECT_HEIGHT / 2, radius: 1.6 };
+    if (bounds.isEmpty()) return { base: -OBJECT_HEIGHT / 2, height: OBJECT_HEIGHT, radius: 1.6 };
     bounds.getSize(corner);
     return {
       base: bounds.min.y,
+      // Hauteur réelle de la silhouette. La supposer identique pour tous les objets —
+      // une constante de référence — cadrait juste ceux qui la respectaient : un sablier
+      // dont le bâti monte plus haut sortait du cadre par le haut, tandis qu'un objet
+      // plus ramassé s'y perdait au milieu.
+      height: Math.max(corner.y, 0.001),
       radius: Math.max(Math.abs(bounds.min.x), bounds.max.x, Math.abs(bounds.min.z), bounds.max.z),
     };
   }
@@ -310,8 +328,8 @@ function createRuntime(THREE, nodes) {
     if (!supported) return;
 
     active = factories[mode]();
-    objectRoot.add(active.object);
     active.footprint = measure(active.object);
+    objectRoot.add(active.object);
   }
 
   // Digital et Zen n'ont pas d'objet en volume : leur lecture de l'heure reste en HTML,
@@ -349,12 +367,25 @@ function createRuntime(THREE, nodes) {
     const fill = skyborne ? 0.6 : (mobile ? 0.94 : 0.86);
     const target = Math.min(wrapRect.width, wrapRect.height) * fill;
     const unitsPerPixel = (halfHeight * 2) / stageRect.height;
-    const scale = (target * unitsPerPixel) / OBJECT_HEIGHT;
+    // La hauteur mesurée de l'objet, et non une constante : c'est elle qui fait qu'un
+    // cadrage HTML donne la même occupation à l'écran pour les neuf objets.
+    const span = active?.footprint?.height || OBJECT_HEIGHT;
+    let scale = (target * unitsPerPixel) / span;
+
+    if (!skyborne) {
+      // Un objet posé ne dispose pas de toute la hauteur de la zone HTML. Le sol se
+      // projette aux deux tiers de l'image — l'horizon est à hauteur d'œil, et le point de
+      // contact un peu en dessous —, si bien que la place réellement disponible va de ce
+      // contact au haut du cadre. Cadré sur la zone entière, un sablier dépassait par le
+      // haut : sa moitié supérieure était coupée net.
+      const headroom = (camera.position.y + halfHeight) * 0.94;
+      scale = Math.min(scale, headroom / span);
+    }
 
     objectRoot.position.set(ndcX * halfWidth, camera.position.y + ndcY * halfHeight, -distance);
     objectRoot.scale.setScalar(scale);
 
-    const half = (OBJECT_HEIGHT / 2) * scale;
+    const half = (span / 2) * scale;
     // Chaque objet déclare le point le plus bas de sa silhouette. Les supposer tous
     // centrés sur une hauteur de référence laissait la bougie — dont la cire s'arrête
     // bien au-dessus de cette limite — flotter à un mètre de son ombre.

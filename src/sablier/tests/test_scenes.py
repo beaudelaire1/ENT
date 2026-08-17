@@ -81,6 +81,9 @@ class SceneRegistryTests(SimpleTestCase):
 
 class PremiumVisualRuntimeTests(SimpleTestCase):
     GRAPHICAL_MODES = ("ring", "hourglass", "wave", "candle", "beads", "moon", "bars", "spiral", "sun")
+    # Les objets rendus en volume. La bougie en est absente : la sienne est une
+    # photographie, conservée à la demande de l'utilisateur.
+    VOLUMETRIC_MODES = ("ring", "hourglass", "wave", "beads", "moon", "bars", "spiral", "sun")
 
     def read_static(self, relative_path):
         path = settings.BASE_DIR / "static" / "sablier" / relative_path
@@ -156,25 +159,51 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         self.assertIn("fallbackCanvas.style.visibility", premium)
         self.assertIn("renderer3dReason", premium)
 
-    def test_all_time_objects_use_one_canonical_renderer(self):
-        """Les neuf objets viennent du même moteur, dans le même lieu.
+    def test_every_mode_has_exactly_one_renderer(self):
+        """Chaque visualisation a un rendu, et un seul, désigné sans ambiguïté.
 
-        La 2D reste un repli intégral — un dessin par mode — mais aucun mode ne
-        garde de chemin de rendu privilégié : c'est ce qui avait laissé cohabiter
-        des photos plates et des objets en volume dans une même série.
+        Huit objets sont rendus en volume dans le lieu choisi. La bougie est une
+        photographie — celle que l'utilisateur reconnaît, gardée à sa demande — et son
+        fond transparent la pose sur le même univers 3D. Ce qui compte est qu'aucun
+        mode n'ait deux rendus concurrents : c'est ce mélange qui avait produit un
+        écran où des photos plates voisinaient avec des objets éclairés par leur lieu.
         """
         engine = self.read_static("sablier.js")
         premium = self.read_static("premium3d.js")
         painters = (
             "const painters={ring:drawRing,hourglass:drawHourglass,wave:drawWave,"
-            "candle:drawCandle,beads:drawBeads,moon:drawMoon,bars:drawBars,"
+            "candle:drawCandlePhoto,beads:drawBeads,moon:drawMoon,bars:drawBars,"
             "spiral:drawSpiral,sun:drawSun}"
         )
         self.assertIn(painters, engine)
-        for mode in self.GRAPHICAL_MODES:
+        for mode in self.VOLUMETRIC_MODES:
             with self.subTest(mode=mode):
                 self.assertIn(f'"{mode}"', premium)
-        for removed in ("drawCandlePhoto", "drawHourglassPhoto", "drawWavePhoto", "#asset-data"):
+
+        # La bougie est volontairement hors de la liste des objets en volume : sans
+        # cela, la photographie et l'objet 3D se superposeraient dans le même cadre.
+        supported = next(line for line in premium.splitlines() if line.startswith('  "ring", "hourglass"'))
+        self.assertNotIn('"candle"', supported)
+        self.assertEqual(
+            set(self.GRAPHICAL_MODES) - set(self.VOLUMETRIC_MODES),
+            {"candle"},
+        )
+
+    def test_the_candle_photograph_is_the_only_image_asset(self):
+        """Une seule photographie subsiste, et c'est un choix explicite.
+
+        Les six autres visuels photographiques ont été remplacés par des objets en
+        volume : leur manifeste ne doit pas revenir par inadvertance, sinon deux
+        rendus se disputeraient à nouveau le même mode.
+        """
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        engine = self.read_static("sablier.js")
+        images = sorted(path.name for path in (settings.BASE_DIR / "static" / "sablier" / "img").glob("*.jpg"))
+        self.assertEqual(len(images), 1, images)
+        self.assertIn("9d0bd271", images[0])
+        self.assertIn('id="asset-data"', template)
+        self.assertIn("function drawCandlePhoto", engine)
+        for removed in ("drawHourglassPhoto", "drawWavePhoto", "drawMoonPhoto", "drawSunPhoto", "drawRingPhoto"):
             with self.subTest(removed=removed):
                 self.assertNotIn(removed, engine)
 
