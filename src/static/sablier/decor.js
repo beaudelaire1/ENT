@@ -45,17 +45,35 @@
   };
 
   window.SablierDecor = stub;
-  // L'objet temporel possède un unique renderer canonique dans sablier.js.
-  // Les univers restent indépendants et ne peuvent donc plus remplacer sa forme.
-  window.SablierPremium3DReady = Promise.resolve(null);
-  window.SablierWorld3DReady = import(new URL("world3d.js" + version, here).href)
+
+  // Le lieu est rendu en volume par `premium3d.js`, dans un seul contexte WebGL ; le décor
+  // peint n'est que son repli. Trois états, et un seul basculement visible :
+  //
+  //   booting  — personne n'est encore en charge. Rien du lieu ne s'affiche.
+  //   three    — la scène a sa première image et prend le lieu.
+  //   fallback — la 3D est hors jeu ; le décor peint apparaît, avec le motif de l'échec.
+  //
+  // Poser `booting` ici, avant tout rendu, est ce qui empêche le décor peint de s'afficher
+  // pendant la construction du lieu — c'est cet affichage-là qui donnait l'impression que
+  // « les anciennes vues reviennent » à chaque ouverture de page.
+  const app = document.querySelector("#focus-app");
+  if (app) app.dataset.renderer3d = "booting";
+  // Ne renonce que si personne n'a encore tranché : un échec tardif ne doit pas effacer
+  // une scène qui rend déjà.
+  const giveUp = (reason) => {
+    if (app?.dataset.renderer3d !== "booting") return;
+    app.dataset.renderer3d = "fallback";
+    app.dataset.renderer3dReason = reason;
+  };
+
+  // Un démarrage muet ne doit jamais devenir un écran vide définitif : si aucune image
+  // n'est venue au bout de ce délai, le repli prend la main de lui-même.
+  setTimeout(() => giveUp("slow-start"), 8000);
+
+  window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)
     .catch((error) => {
-      const app = document.querySelector("#focus-app");
-      if (app) {
-        app.dataset.world3d = "fallback";
-        app.dataset.world3dReason = "world-module-load";
-      }
-      console.error("Univers 3D indisponible", error);
+      giveUp("premium-module-load");
+      console.error("Sablier premium 3D indisponible", error);
       return null;
     });
   window.SablierDecorReady = load("decor-core.js").then(() => load("seasonal-worlds.js"));

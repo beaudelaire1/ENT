@@ -3,6 +3,7 @@
 {% block content %}
 <header class="page-header"><div><p class="eyebrow">PRÉFÉRENCES</p><h1>Votre environnement</h1></div></header>
 <section class="panel narrow"><form method="post" class="stack-form">{% csrf_token %}{{ form.as_p }}<button class="button primary">Enregistrer</button></form></section>
+<section class="panel narrow secondary-action"><h2>Notifications</h2><p class="muted">Choisissez ce dont l’ENT vous informe : tâches, agenda, formations, progression, révisions, bibliothèque. Tout est activé tant que vous n’éteignez rien.</p><a class="button" href="{% url 'notifications:preferences' %}">Régler mes notifications</a></section>
 <section class="panel narrow secondary-action"><h2>Portabilité de vos données</h2><p class="muted">Téléchargez vos formations, suivis, notes, tâches, événements et sessions dans un document JSON lisible. Les fichiers et musiques ne sont pas dupliqués dans cette archive.</p><a class="button" href="{% url 'accounts:export' %}">Exporter mes données</a></section>
 {% endblock %}
 

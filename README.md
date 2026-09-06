@@ -11,12 +11,15 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 - recherche globale indexée : une entrée par objet dans `core.SearchEntry`, tenue à jour par signaux, interrogée en plein texte PostgreSQL (configuration `french`, titre pondéré au-dessus du corps, syntaxe `websearch`) avec repli `icontains` sous SQLite ;
 - formations génériques : catalogue, import/export, année, période courante, regroupements, matières, compétences et métriques libres ;
 - grille de suivi de compétences : une ligne par matière avec ses chiffres saisissables sur place, une ligne par compétence avec niveau de maîtrise, heures estimées et réelles, commentaires ; totaux par matière et par période calculés, tout s’enregistre en un seul envoi ;
-- Sablier web avec huit visualisations (anneau, sablier, marée, bougie, perles, lune, digital, zen), neuf ambiances qui colorent la scène et l'animent d'un décor — pétales, lucioles, feuilles, neige, pluie, vagues, sable, étoiles —, plein écran et reprise exacte après actualisation ;
+- Sablier web avec onze visualisations (anneau, sablier, marée, bougie, perles, lune, colonnes, spirale, soleil, digital, zen) et vingt-quatre univers, plein écran et reprise exacte après actualisation ;
+- scène immersive rendue en WebGL : le sablier, la bougie, les perles, la Lune et le Soleil sont des objets en volume, à matières physiques et à cartes de relief calculées, posés dans un lieu qui existe vraiment autour d'eux — relief, eau, végétation, brume, colonnes de lumière. Le ciel de l'univers choisi éclaire l'objet et son ombre tombe sur son sol ; le dessin 2D reste le repli exact quand WebGL est indisponible ;
 - bibliothèque audio privée, téléversement de plusieurs pistes en une fois, et playlists indépendantes du minuteur ;
 - journal corrigeable des sessions Sablier, avec temps manuel, temps des sessions et total séparés ;
 - notifications internes, emails, invitations à usage unique, réinitialisation de mot de passe, limitation des tentatives de connexion et préférences d’apparence.
 
 Le serveur est un monolithe Django 5.2/Python 3.12. JavaScript ne gère que les interactions du navigateur, dont le moteur de Sablier. Le code Qt historique reste une référence archivée et n’est pas une dépendance de production.
+
+Rien n’est chargé depuis un CDN : Three.js est copié dans `src/static/vendor` par `npm run vendor`, qui vend l’arbre complet — moteur, noyau et modules d’exemple — et refuse de rendre la main si un import sort du dossier. Aucune texture n’est téléchargée non plus : le grain du sable, la nacre, le métal brossé, le régolithe et les reliefs des paysages sont calculés au chargement par bruit fractal et cellulaire.
 
 ## Démarrage local avec Docker
 
@@ -35,6 +38,8 @@ L’application est alors disponible sur `http://localhost:8000`. PostgreSQL et 
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt -r requirements-dev.txt
+npm install --ignore-scripts
+npm run vendor          # copie Three.js dans src/static/vendor ; sans elle, le Sablier retombe sur son dessin 2D
 python src/manage.py migrate
 python src/manage.py generate_chime
 python src/manage.py runserver

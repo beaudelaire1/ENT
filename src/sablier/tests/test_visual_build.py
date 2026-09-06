@@ -29,22 +29,12 @@ class VisualRuntimeBuildTests(SimpleTestCase):
         self.assertNotIn("npm install --ignore-scripts", workflow)
         self.assertIn("cache-dependency-path: package-lock.json", workflow)
 
-    def test_generated_three_vendor_files_are_not_versioned_inputs(self):
+    def test_generated_three_vendor_tree_is_not_a_versioned_input(self):
+        """Le dossier vendu est un produit de compilation, jamais une source.
+
+        Il contient désormais un arbre entier — noyau, modules d'exemple, shaders —
+        et non plus deux fichiers : l'ignorer au fichier près laissait rentrer dans
+        l'historique tout ce qui n'était pas nommé.
+        """
         gitignore = self.repo_text(".gitignore")
-        for path in (
-            "/src/static/vendor/three.module.js",
-            "/src/static/vendor/three.core.js",
-        ):
-            with self.subTest(path=path):
-                self.assertIn(path, gitignore)
-
-    def test_vendor_command_generates_complete_three_module_graph(self):
-        package = json.loads(self.repo_text("package.json"))
-        vendor = package["scripts"]["vendor"]
-        self.assertIn("three.module.js", vendor)
-        self.assertIn("three.core.js", vendor)
-
-        workflow = self.repo_text(".github/workflows/ci.yml")
-        self.assertIn("test -s src/static/vendor/three.module.js", workflow)
-        self.assertIn("test -s src/static/vendor/three.core.js", workflow)
-        self.assertIn("import('./src/static/vendor/three.module.js')", workflow)
+        self.assertIn("/src/static/vendor/", gitignore)

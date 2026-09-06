@@ -52,15 +52,16 @@ document.addEventListener("DOMContentLoaded", () => {
   if (state.running) state.remaining = Math.max(0,(state.endsAt-Date.now())/1000);
   if (state.running && state.remaining <= 0) { state.running=false; state.finished=true; }
   let lastSecond = -1, warningCue=false, frame=0;
-  const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio");
+  const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio"),stage=$("#focus-stage");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
   const ambienceAliases=JSON.parse(document.querySelector("#ambience-alias-data")?.textContent||"{}");
   state.ambience=ambienceAliases[state.ambience]||state.ambience;
   if(!Object.prototype.hasOwnProperty.call(decorNames,state.ambience))state.ambience=app.dataset.ambience;
   const decor=window.SablierDecor.create($("#decor-canvas"));
-  // Les rendus historiques sont les références canoniques. Les images locales
-  // apportent leur matière, tandis que Canvas conserve les animations temporelles.
-  // Aucun second moteur ne peut ensuite les remplacer par une réinterprétation.
+  // La bougie de référence est une photographie, et elle le reste : c'est celle que
+  // l'utilisateur reconnaît. Son fond est transparent, si bien qu'elle se pose sur
+  // l'univers rendu en 3D — le lieu derrière elle est un vrai lieu, seul l'objet est
+  // photographique. Le canvas n'anime que ce qui vit : hauteur de cire, flamme, fumée.
   const assets={};
   try{
     const manifest=window.SABLIER_ASSETS||JSON.parse(document.querySelector("#asset-data")?.textContent||"{}");
@@ -85,20 +86,45 @@ document.addEventListener("DOMContentLoaded", () => {
     else{sessionClock.begin(state,Date.now(),crypto.randomUUID(),$("#session-competency")?.value);state.endsAt=Date.now()+state.remaining*1000;state.running=true;}
     save();render(true);
   }
+<<<<<<< HEAD
   function reset(){sessionClock.clear(state);state.running=false;state.finished=false;state.remaining=state.total;state.endsAt=0;warningCue=false;save();render(true);}
   function adjust(seconds){if(state.finished)reset();if(state.running){sessionClock.accrue(state,Date.now());state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);}state.remaining=clamp(state.remaining+seconds,0,86400);state.total=Math.max(1,state.total,state.remaining);state.finished=false;if(state.running)state.endsAt=Date.now()+state.remaining*1000;warningCue=false;save();render(true);}
+=======
+  function reset(){state.running=false;state.finished=false;state.remaining=state.total;state.endsAt=0;warningCue=false;save();render(true);}
+  function adjust(seconds){state.remaining=clamp(state.remaining+seconds,0,86400);state.total=Math.max(1,state.total,state.remaining);state.finished=false;if(state.running)state.endsAt=Date.now()+state.remaining*1000;warningCue=false;save();render(true);}
+  // Dimensions utiles du canvas de l'objet, en unités CSS. Mémorisées à chaque
+  // redimensionnement pour que `glow` connaisse ses bords sans relire la mise en page.
+  const extent={w:0,h:0};
+>>>>>>> 4068fa34cd11473dbb43000a41d78cdd95858ede
   function resize(){
     const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),pixelW=Math.max(1,Math.round(rect.width*dpr)),pixelH=Math.max(1,Math.round(rect.height*dpr));
     if(canvas.width!==pixelW||canvas.height!==pixelH){canvas.width=pixelW;canvas.height=pixelH;ctx.setTransform(dpr,0,0,dpr,0,0);}
+    extent.w=rect.width;extent.h=rect.height;
     return {w:rect.width,h:rect.height};
   }
   function palette(){const css=getComputedStyle(app);return {accent:css.getPropertyValue("--focus-accent").trim(),border:css.getPropertyValue("--focus-border").trim(),text:css.getPropertyValue("--focus-text").trim(),surface:css.getPropertyValue("--focus-surface").trim()};}
+  // Ligne d'horizon, en coordonnées du canvas de l'objet. Quand le lieu est rendu en
+  // volume, c'est *lui* qui la donne : un soleil qui se couche sous un horizon inventé,
+  // alors que celui du paysage est ailleurs, met deux horizons dans la même image et
+  // trahit aussitôt le canvas. Sinon on retombe sur la proportion d'origine, qui reste
+  // juste pour le décor peint.
+  function horizonLine(ratio){
+    const published=Number(app.dataset.worldHorizon);
+    if(app.dataset.renderer3d==="three"&&Number.isFinite(published)){
+      // L'horizon est compté depuis le haut de la scène ; on le ramène aux coordonnées du
+      // canvas de l'objet. Les deux mesures sont prises au même instant, donc le
+      // défilement de la page s'annule entre elles.
+      return published-(canvas.getBoundingClientRect().top-stage.getBoundingClientRect().top);
+    }
+    return extent.h*ratio;
+  }
   function rgba(color,alpha){
     const valueColor=color||"",match=/^#([0-9a-f]{6})$/i.exec(valueColor);
     if(match){const value=Number.parseInt(match[1],16);return `rgba(${value>>16},${(value>>8)&255},${value&255},${alpha})`;}
     const hsl=/^hsl\((.+)\)$/i.exec(valueColor);
     return hsl?`hsla(${hsl[1]},${alpha})`:valueColor;
   }
+<<<<<<< HEAD
   // Grain de tramage, fabriqué une fois. Un dégradé étalé sur plusieurs centaines de
   // pixels ne dispose que d'une poignée de valeurs sur huit bits : il se casse en
   // anneaux concentriques réguliers. Un bruit très faible superposé au halo déplace
@@ -134,6 +160,20 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle=getDither();
     ctx.fillRect(x-r,y-r,r*2,r*2);
     ctx.restore();
+=======
+  // Halo de lumière. Le rayon est borné à la distance du bord le plus proche : un dégradé
+  // que le canvas tronque cesse d'être une lumière et devient une arête. Sur l'ancien
+  // décor peint, uniforme, cela ne se voyait pas ; posé sur un univers rendu en volume,
+  // le même dégradé dessine un rectangle clair en pleine nuit — la trace du canvas, ce
+  // qui fait qu'un objet a l'air collé sur une interface au lieu d'être dans un lieu.
+  // La règle est ici, une fois, plutôt que réglée à la main dans chaque visuel.
+  function glow(ctx,x,y,r,color,alpha=.22){
+    const radius=Math.min(r,x,y,extent.w-x,extent.h-y);
+    if(!(radius>0))return;
+    const gradient=ctx.createRadialGradient(x,y,0,x,y,radius);
+    gradient.addColorStop(0,rgba(color,alpha));gradient.addColorStop(.45,rgba(color,alpha*.35));gradient.addColorStop(1,rgba(color,0));
+    ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
+>>>>>>> 4068fa34cd11473dbb43000a41d78cdd95858ede
   }
   // Contraste des volumes. Chaque visuel réglait ses dégradés au cas par cas et finissait
   // par s'éteindre sur les bords : une forme dont les flancs se fondent dans le fond
@@ -798,7 +838,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const img=assets.sun,{w,h}=resize(),unit=Math.min(w,h),journey=1-progress,
       daylight=Math.sin(Math.PI*journey),warmth=Math.abs(journey-.5)*2;
     ctx.clearRect(0,0,w,h);
-    const cx=w/2,horizon=h*.62,arcX=unit*.4,arcY=unit*.35,d=unit*.31,r=d/2,
+    const cx=w/2,horizon=horizonLine(.62),arcX=unit*.4,arcY=unit*.35,d=unit*.31,r=d/2,
       x=cx-arcX+2*arcX*journey,
       y=horizon+r*.62+r*.58*journey-Math.sin(Math.PI*journey)*(arcY+r*.72),
       sunHue=42-20*warmth-8*journey;
@@ -807,11 +847,30 @@ document.addEventListener("DOMContentLoaded", () => {
     // reste dans ce canvas transparent : aucun rectangle ne peut se détacher du décor.
     ctx.save();ctx.beginPath();ctx.rect(0,0,w,horizon+unit*.018);ctx.clip();
     glow(ctx,x,y,d*(.82+.18*daylight),glowColor,.22+.12*daylight);
-    ctx.filter=`sepia(${20+52*warmth}%) saturate(${108+118*warmth}%) hue-rotate(${-2-13*journey}deg) brightness(${74+38*daylight}%) contrast(${96+12*warmth}%)`;
-    ctx.shadowColor=glowColor;ctx.shadowBlur=d*(.3+.26*daylight);ctx.drawImage(img,x-r,y-r,d,d);ctx.shadowBlur=0;ctx.filter="none";
+    // L'astre garde l'image validée ; seule sa teinte suit l'heure. Elle n'est plus obtenue
+    // par un filtre de canvas : `contrast()` et `brightness()` ont un terme constant, si
+    // bien qu'appliqués à une image à fond transparent ils donnent une couleur aux pixels
+    // vides et remplissent tout le rectangle de dessin. Sur l'ancien décor peint, ce
+    // rectangle chaud se confondait avec le ciel ; sur un paysage rendu en volume, il se
+    // détachait en pleine nuit, opaque et net — et un découpage circulaire ne suffisait pas
+    // à le contenir.
+    //
+    // `source-atop` ne peint que là où l'image est déjà opaque : la transparence est alors
+    // préservée par construction, et non par une précaution qu'on peut oublier.
+    ctx.drawImage(img,x-r,y-r,d,d);
+    ctx.save();
+    ctx.globalCompositeOperation="source-atop";
+    ctx.globalAlpha=.32+.24*warmth;
+    ctx.fillStyle=`hsl(${sunHue},${88+8*warmth}%,${52+16*daylight}%)`;
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
     ctx.restore();
-    ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.14+.18*warmth})`;ctx.lineWidth=Math.max(1,unit*.0022);
-    ctx.beginPath();ctx.moveTo(cx-unit*.43,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.43,horizon);ctx.stroke();
+    ctx.restore();
+    // Le trait d'horizon n'a de sens que sur le décor peint, qui n'en a pas. Le paysage en
+    // volume porte le sien : en dessiner un second par-dessus ferait deux lignes.
+    if(app.dataset.renderer3d!=="three"){
+      ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.14+.18*warmth})`;ctx.lineWidth=Math.max(1,unit*.0022);
+      ctx.beginPath();ctx.moveTo(cx-unit*.43,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.43,horizon);ctx.stroke();
+    }
   }
   // Anneau : une vraie jauge d'horlogerie porte les graduations ; le temps
   // restant est un arc lumineux posé dans sa gorge.
@@ -852,13 +911,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if(painters[mode])painters[mode](progress);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);
-    decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
+    // Le décor peint en 2D est le repli, et uniquement le repli. On ne le peint donc que
+    // dans cet état — pas pendant `booting`, où la scène en volume est encore en train de
+    // naître. Le peindre alors le rendait visible une seconde ou deux avant d'être
+    // remplacé : c'est ce qui donnait l'impression que « les anciennes vues reviennent »
+    // à chaque ouverture. Quand l'état bascule sur le repli, la boucle le peint à l'image
+    // suivante — rien à orchestrer, l'état suffit.
+    const painted=app.dataset.renderer3d==="fallback";
+    if(painted)decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
     app.querySelectorAll(".decor-levels [data-decor]").forEach(button=>{
       const active=Number(button.dataset.decor)===state.decorDensity;
       button.classList.toggle("active",active);
       button.setAttribute("aria-pressed",String(active));
     });
-    decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
+    if(painted)decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
   }
   function loop(){render();frame=requestAnimationFrame(loop)}
   $("#apply-duration").addEventListener("click",()=>{const input=$("#duration-input"),seconds=parseDuration(input.value);input.setCustomValidity("");if(seconds)setDuration(seconds);else {input.setCustomValidity("Durée invalide (maximum 24 h).");input.reportValidity();}});

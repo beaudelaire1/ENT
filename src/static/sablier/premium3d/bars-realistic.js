@@ -32,21 +32,13 @@ export function makeBarsRuntime(THREE, helpers) {
     metalness: 0.75,
     roughness: 0.3,
   });
-  const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffb45e,
-    transparent: true,
-    opacity: 0.18,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  });
-
-  const base = mesh(new THREE.BoxGeometry(4.9, 0.28, 1.58), graphite);
-  base.position.y = -1.77;
+  // Le bâti est structurel, pas décoratif : il tient les montants et les quatorze
+  // tubes de verre, qui sans lui tomberaient. C'est ce qui le distingue d'un socle —
+  // le placage d'acier et la rampe lumineuse qui le doublaient, eux, ne servaient
+  // qu'à faire joli sur fond neutre et ont été retirés.
+  const base = mesh(new THREE.BoxGeometry(4.9, 0.24, 1.5), graphite);
+  base.position.y = -1.75;
   group.add(base);
-
-  const baseInset = mesh(new THREE.BoxGeometry(4.58, 0.08, 1.27), steel);
-  baseInset.position.y = -1.61;
-  group.add(baseInset);
 
   const frontRail = mesh(new THREE.BoxGeometry(5.02, 0.065, 0.11), chrome);
   frontRail.position.set(0, -1.55, 0.81);
@@ -54,11 +46,6 @@ export function makeBarsRuntime(THREE, helpers) {
   const backRail = frontRail.clone();
   backRail.position.z = -0.81;
   group.add(backRail);
-
-  const lightShelf = mesh(new THREE.PlaneGeometry(4.5, 0.72), glowMaterial, { cast: false, receive: false });
-  lightShelf.rotation.x = -Math.PI / 2;
-  lightShelf.position.set(0, -1.57, 0.02);
-  group.add(lightShelf);
 
   const fills = [];
   const menisci = [];
@@ -186,7 +173,6 @@ export function makeBarsRuntime(THREE, helpers) {
     if (!reducedMotion) {
       const pulse = 0.78 + Math.sin(time * 0.0018) * 0.08;
       amber.emissiveIntensity = pulse;
-      glowMaterial.opacity = 0.13 + Math.sin(time * 0.0012) * 0.025;
       group.rotation.y = Math.sin(time * 0.00013) * 0.052;
     } else {
       group.rotation.y = 0;
