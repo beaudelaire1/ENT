@@ -54,7 +54,7 @@ def to_revisit(user, path, period=None, *, limit: int = 6) -> list[Revision]:
     records = list(
         ProgressRecord.objects.filter(owner=user, competency__path=path)
         .select_related("competency", "competency__path")
-        .exclude(mastery_level=ProgressRecord.Mastery.MASTERED)
+        .exclude(mastery_level=ProgressRecord.Mastery.MASTERED, level_origin=ProgressRecord.Origin.MANUAL)
     )
     if period is not None:
         allowed = set(
@@ -73,10 +73,12 @@ def to_revisit(user, path, period=None, *, limit: int = 6) -> list[Revision]:
         assessment = upcoming.get(record.competency_id)
         if record.target_is_late:
             found.append(Revision(record, f"objectif « {record.target_label.lower()} » dépassé", rank=0))
-        elif assessment is not None and record.mastery_level < ProgressRecord.Mastery.ACQUIRED:
+        elif assessment is not None and record.confirmed_level < ProgressRecord.Mastery.ACQUIRED:
             days = (timezone.localdate(assessment.scheduled_for) - timezone.localdate()).days
             when = "aujourd’hui" if days <= 0 else ("demain" if days == 1 else f"dans {days} jours")
             found.append(Revision(record, f"{assessment.title} {when}", rank=1))
+        elif record.is_suggested:
+            found.append(Revision(record, "niveau suggéré à confirmer ou corriger", rank=2))
         elif record.assessed_at is not None and now - record.assessed_at > STALE_AFTER:
             weeks = (now - record.assessed_at).days // 7
             found.append(Revision(record, f"autoévalué il y a {weeks} semaines", rank=2))

@@ -7,7 +7,9 @@ from django.utils import timezone
 
 
 @transaction.atomic
-def record_session(user, *, seconds: int, started_at, intention: str = "", competency=None):
+def record_session(
+    user, *, seconds: int, started_at, intention: str = "", competency=None, client_id=None, ended_at=None
+):
     """Enregistre une session terminée et reporte son temps sur la compétence visée.
 
     Le report est cumulatif et ne touche qu'au temps réel : ce que l'utilisateur a saisi
@@ -18,13 +20,15 @@ def record_session(user, *, seconds: int, started_at, intention: str = "", compe
 
     from .models import FocusSession
 
-    session = FocusSession.objects.create(
-        owner=user,
-        competency=competency,
-        intention=intention[:80],
-        started_at=started_at,
-        seconds=seconds,
+    values = dict(
+        competency=competency, intention=intention[:80], started_at=started_at, seconds=seconds, ended_at=ended_at
     )
+    if client_id is not None:
+        session, created = FocusSession.objects.get_or_create(owner=user, client_id=client_id, defaults=values)
+        if not created:
+            return session
+    else:
+        session = FocusSession.objects.create(owner=user, **values)
     if competency is None:
         return session
 

@@ -4,6 +4,7 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -23,11 +24,13 @@ def home(request):
     from formations.revision import to_revisit
     from library.models import LibraryItem
     from notifications.models import Notification
+    from planner.calendar import day_bounds, events_in_window
     from planner.models import CalendarEvent, Task
 
     widgets = ensure_default_widgets(request.user)
     now = timezone.now()
     today = timezone.localdate()
+    day_start, day_end = day_bounds(today)
     formations = LearningPath.objects.filter(owner=request.user).select_related("current_period").order_by("title")
     current_path = formations.filter(status=LearningPath.Status.ACTIVE, current_period__isnull=False).first()
     academic = None
@@ -43,7 +46,7 @@ def home(request):
                 "competency"
             )
         )
-        acquired = sum(record.mastery_level >= ProgressRecord.Mastery.ACQUIRED for record in records)
+        acquired = sum(record.confirmed_level >= ProgressRecord.Mastery.ACQUIRED for record in records)
         # Une compétence principale dans une matière pèse le double d'une compétence
         # seulement rappelée ailleurs, et le niveau entre pour ce qu'il vaut plutôt qu'en
         # tout ou rien : voir `formations.progression.weighted_progress`.
@@ -58,7 +61,8 @@ def home(request):
             "average": period_average(request.user, period),
             "competencies": len(competency_ids),
             "acquired": acquired,
-            "progress_percent": weighted_progress(records, primary_ids),
+            "progress_percent": weighted_progress(records, primary_ids, competency_ids=competency_ids),
+            "suggested": sum(record.is_suggested for record in records),
             # Ce qui appelle un retour — objectif dépassé, évaluation proche, niveau
             # ancien — et sa raison. Une liste que l'on consulte, jamais une notification
             # qui interrompt.
@@ -74,9 +78,9 @@ def home(request):
         }
     context = {
         "widgets": widgets,
-        "events_today": CalendarEvent.objects.filter(owner=request.user, starts_at__date=today).order_by("starts_at")[
-            :8
-        ],
+        "events_today": events_in_window(CalendarEvent.objects.filter(owner=request.user), day_start, day_end).order_by(
+            "starts_at"
+        )[:8],
         "tasks": Task.objects.filter(owner=request.user)
         .exclude(status=Task.Status.DONE)
         .order_by("priority", "due_at")[:8],
@@ -95,20 +99,28 @@ def save_layout(request):
     try:
         payload = json.loads(request.body)
         widgets = payload["widgets"]
-        if not isinstance(widgets, list):
+        if not isinstance(widgets, list) or len(widgets) > len(DashboardWidget.Kind.values):
             raise ValueError
+        kinds = set()
+        for data in widgets:
+            if (
+                not isinstance(data, dict)
+                or not isinstance(data.get("kind"), str)
+                or data["kind"] not in DashboardWidget.Kind.values
+                or data["kind"] in kinds
+                or type(data.get("visible", True)) is not bool
+            ):
+                raise ValueError
+            kinds.add(data["kind"])
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         return JsonResponse({"error": "Disposition invalide."}, status=400)
-    allowed = set(DashboardWidget.Kind.values)
-    for position, data in enumerate(widgets):
-        kind = data.get("kind")
-        if kind not in allowed:
-            return JsonResponse({"error": "Widget inconnu."}, status=400)
-        DashboardWidget.objects.update_or_create(
-            owner=request.user,
-            kind=kind,
-            defaults={"position": position, "visible": bool(data.get("visible", True))},
-        )
+    with transaction.atomic():
+        for position, data in enumerate(widgets):
+            DashboardWidget.objects.update_or_create(
+                owner=request.user,
+                kind=data["kind"],
+                defaults={"position": position, "visible": data.get("visible", True)},
+            )
     return JsonResponse({"ok": True})
 
 

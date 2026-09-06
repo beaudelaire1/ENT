@@ -130,7 +130,7 @@ def level_from_result(result) -> int | None:
     return None if ratio is None else level_for_ratio(ratio)
 
 
-def weighted_progress(records, primary_ids) -> int:
+def weighted_progress(records, primary_ids, *, competency_ids=None) -> int:
     """La progression d'ensemble, en pourcentage, pondérée par l'importance des compétences.
 
     Deux différences avec un simple « acquises sur total ». Le niveau entre pour ce qu'il
@@ -139,12 +139,13 @@ def weighted_progress(records, primary_ids) -> int:
     aucun mouvement. Et une compétence principale pèse le double d'une compétence
     seulement rappelée.
     """
-    total = 0
-    obtained = 0
-    for record in records:
-        weight = PRIMARY_WEIGHT if record.competency_id in primary_ids else SECONDARY_WEIGHT
+    records = {record.competency_id: record for record in records}
+    total = obtained = 0
+    for competency_id in set(competency_ids if competency_ids is not None else records):
+        weight = PRIMARY_WEIGHT if competency_id in primary_ids else SECONDARY_WEIGHT
         total += weight * 4
-        obtained += weight * record.mastery_level
+        record = records.get(competency_id)
+        obtained += weight * (record.confirmed_level if record else 0)
     return round(obtained * 100 / total) if total else 0
 
 

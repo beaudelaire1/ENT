@@ -32,31 +32,15 @@ html[data-theme="light"] .focus-app { --focus-bg:#f3f5fb;--focus-panel:#ffffff;-
   transition:background-color .7s ease,box-shadow .7s ease;
 }
 
-/* La lumière vient d'un endroit cohérent avec chaque scène. Le canvas ajoute le
-   paysage ; ces couches donnent la profondeur atmosphérique qui manquait au fond plat. */
-.focus-app[data-ambience="printemps"] .focus-stage,
-.focus-app[data-ambience="ete"] .focus-stage {
-  background:radial-gradient(circle at 78% 25%,color-mix(in srgb,var(--focus-accent) 22%,transparent),transparent 28%),linear-gradient(180deg,color-mix(in srgb,var(--focus-tint) 9%,var(--focus-bg)),var(--focus-bg) 68%);
-}
-.focus-app[data-ambience="automne"] .focus-stage,
-.focus-app[data-ambience="sahara"] .focus-stage,
-.focus-app[data-ambience="braises"] .focus-stage {
-  background:radial-gradient(ellipse at 50% 100%,color-mix(in srgb,var(--focus-accent) 24%,transparent),transparent 58%),linear-gradient(180deg,var(--focus-bg),color-mix(in srgb,var(--focus-tint) 11%,var(--focus-bg)));
-}
-.focus-app[data-ambience="hiver"] .focus-stage,
-.focus-app[data-ambience="pluie"] .focus-stage,
-.focus-app[data-ambience="orage"] .focus-stage {
-  background:linear-gradient(165deg,color-mix(in srgb,var(--focus-tint) 13%,var(--focus-bg)),var(--focus-bg) 58%),radial-gradient(circle at 20% 10%,color-mix(in srgb,var(--focus-accent) 12%,transparent),transparent 38%);
-}
-.focus-app[data-ambience="ocean"] .focus-stage {
-  background:linear-gradient(180deg,color-mix(in srgb,var(--focus-tint) 9%,var(--focus-bg)) 0 63%,color-mix(in srgb,var(--focus-tint) 17%,var(--focus-bg)) 64%,var(--focus-bg));
-}
-.focus-app[data-ambience="foret"] .focus-stage {
-  background:radial-gradient(ellipse at 50% 10%,color-mix(in srgb,var(--focus-accent) 15%,transparent),transparent 42%),linear-gradient(90deg,color-mix(in srgb,var(--focus-tint) 17%,var(--focus-bg)),var(--focus-bg) 25% 75%,color-mix(in srgb,var(--focus-tint) 17%,var(--focus-bg)));
-}
-.focus-app[data-ambience="aurore"] .focus-stage,
-.focus-app[data-ambience="nuit"] .focus-stage {
-  background:radial-gradient(ellipse at 50% 18%,color-mix(in srgb,var(--focus-accent) 17%,transparent),transparent 44%),linear-gradient(180deg,color-mix(in srgb,var(--focus-tint) 12%,var(--focus-bg)),var(--focus-bg) 72%);
+/* Fond d'attente, le temps que l'univers WebGL rende sa première image. Il prend la
+   teinte du ciel de la scène pour que l'arrivée du décor ne se voie pas comme un
+   basculement. Les scènes n'ont plus chacune leur dégradé maison : la lumière de
+   chaque lieu est désormais calculée dans la scène elle-même, et non simulée ici par
+   des couches CSS qui ne pouvaient pas s'accorder avec elle. */
+.focus-app[data-ambience] .focus-stage {
+  background:
+    radial-gradient(ellipse at 50% 24%,color-mix(in srgb,var(--world-sky) 88%,transparent),transparent 62%),
+    linear-gradient(180deg,var(--world-sky),color-mix(in srgb,var(--world-horizon) 62%,var(--world-ground)) 58%,var(--world-ground));
 }
 .focus-stage::after {
   content:"";position:absolute;inset:0;z-index:2;pointer-events:none;

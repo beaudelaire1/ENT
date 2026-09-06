@@ -21,6 +21,7 @@
       {% if academic %}
         <div class="academic-heading"><div><p class="eyebrow">{{ academic.path.title }}</p><h3>{{ academic.period.title }}</h3></div>{% if academic.average.exists %}<p class="result-score"><strong>{{ academic.average.value }}</strong>/20</p>{% endif %}</div>
         <label for="academic-progress">Progression : {{ academic.progress_percent }} % · {{ academic.acquired }} compétence(s) acquise(s) sur {{ academic.competencies }}</label>
+        <p class="muted">La progression porte sur toutes les compétences de la période et leurs niveaux confirmés. Les compétences non renseignées comptent pour zéro.{% if academic.suggested %} {{ academic.suggested }} niveau(x) suggéré(s) restent à confirmer.{% endif %}</p>
         {% comment %}
           La barre suit la progression pondérée et non le seul décompte des acquises : un
           niveau intermédiaire y compte pour ce qu'il vaut, et une compétence principale
@@ -56,6 +57,6 @@
   </section>
 {% endif %}{% endfor %}
 </div>
-<p class="visually-hidden" id="layout-status" aria-live="polite"></p>
+<p class="muted" id="layout-status" aria-live="polite"></p>
 {% endblock %}
 {% block scripts %}<script src="{% static 'dashboard/dashboard.js' %}" defer></script>{% endblock %}

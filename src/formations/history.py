@@ -75,7 +75,7 @@ def level_timeline(user, path, *, months: int = 12) -> list[Point]:
     events = list(
         ProgressEvent.objects.filter(record__owner=user, record__competency__path=path)
         .order_by("created_at", "pk")
-        .values_list("record_id", "level", "created_at")
+        .values_list("record_id", "level", "created_at", "origin")
     )
     if not events:
         return []
@@ -86,8 +86,8 @@ def level_timeline(user, path, *, months: int = 12) -> list[Point]:
     index = 0
     for boundary in boundaries:
         while index < len(events) and timezone.localtime(events[index][2]).date() <= boundary:
-            record_id, level, _moment = events[index]
-            levels[record_id] = level
+            record_id, level, _moment, origin = events[index]
+            levels[record_id] = level if origin == ProgressRecord.Origin.MANUAL else 0
             index += 1
         acquired = sum(1 for level in levels.values() if level >= ACQUIRED)
         points.append(Point(label=f"{MONTHS[boundary.month - 1]} {boundary.year}", acquired=acquired, total=total))

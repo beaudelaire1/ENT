@@ -36,7 +36,7 @@
         <h2>{{ day.date|date:"D d"|capfirst }}</h2>
         {% for event in day.events %}
           <article class="agenda-entry">
-            <time>{{ event.starts_at|time:"H:i" }}</time>
+            <time>{% if event.all_day %}Journée entière{% elif event.starts_at|date:"Y-m-d" != day.date|date:"Y-m-d" %}En cours{% else %}{{ event.starts_at|time:"H:i" }}{% endif %}</time>
             <a href="{% url 'planner:event_edit' event.pk %}">{{ event.title }}</a>
             {% if event.unit %}<span class="muted">{{ event.unit.title }}</span>{% endif %}
           </article>

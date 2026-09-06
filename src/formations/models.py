@@ -668,7 +668,7 @@ class ProgressRecord(TimeStampedModel):
         ]
 
     # Les valeurs retenues à la lecture, pour savoir plus tard ce qui a bougé.
-    TRACKED_ON_LOAD = ("mastery_level", "actual_hours", "manual_hours", "session_hours")
+    TRACKED_ON_LOAD = ("mastery_level", "actual_hours", "manual_hours", "session_hours", "level_origin")
 
     @classmethod
     def from_db(cls, db, field_names, values):
@@ -755,7 +755,8 @@ class ProgressRecord(TimeStampedModel):
         if update_fields is not None and ({"manual_hours", "session_hours", "actual_hours"} & set(update_fields)):
             kwargs["update_fields"] = list({*update_fields, "manual_hours", "actual_hours"})
         super().save(*args, **kwargs)
-        if self.mastery_level != departure:
+        origin_changed = getattr(self, "_loaded_level_origin", self.level_origin) != self.level_origin
+        if self.mastery_level != departure or origin_changed:
             # Après l'écriture seulement : un journal qui mentionnerait un niveau que la
             # transaction n'a pas retenu serait pire que pas de journal du tout.
             ProgressEvent.objects.create(
@@ -766,9 +767,15 @@ class ProgressRecord(TimeStampedModel):
             )
         self._suggested_write = False
         self._loaded_mastery_level = self.mastery_level
+        self._loaded_level_origin = self.level_origin
         self._loaded_actual_hours = self.actual_hours
         self._loaded_manual_hours = self.manual_hours
         self._loaded_session_hours = self.session_hours
+
+    @property
+    def confirmed_level(self) -> int:
+        """Une proposition reste à confirmer avant d'entrer dans les synthèses."""
+        return 0 if self.is_suggested else self.mastery_level
 
     @property
     def percent(self) -> int:
@@ -780,7 +787,7 @@ class ProgressRecord(TimeStampedModel):
         """L'objectif est-il atteint ? ``None`` quand aucun objectif n'est fixé."""
         if self.target_level is None:
             return None
-        return self.mastery_level >= self.target_level
+        return self.confirmed_level >= self.target_level
 
     @property
     def is_suggested(self) -> bool:

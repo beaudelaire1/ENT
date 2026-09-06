@@ -205,7 +205,8 @@ def struggling_competencies(user, assessment, *, limit=None):
     weak = [
         {"competency": competency, "record": records.get(competency.pk)}
         for competency in competencies
-        if records.get(competency.pk) is None or records[competency.pk].mastery_level < ProgressRecord.Mastery.ACQUIRED
+        if records.get(competency.pk) is None
+        or records[competency.pk].confirmed_level < ProgressRecord.Mastery.ACQUIRED
     ]
     weak.sort(key=lambda row: (row["record"].mastery_level if row["record"] else 0, row["competency"].title))
     return weak[:limit] if limit else weak

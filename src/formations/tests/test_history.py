@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
+from datetime import timezone as datetime_timezone
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -16,6 +18,9 @@ from formations.models import Competency, LearningPath, Period, ProgressEvent, P
 
 class JournalTestCase(TestCase):
     def setUp(self):
+        clock = patch("django.utils.timezone.now", return_value=datetime(2026, 8, 12, 12, tzinfo=datetime_timezone.utc))
+        clock.start()
+        self.addCleanup(clock.stop)
         self.user = get_user_model().objects.create_user("etudiant", password="motdepasse")
         self.path = LearningPath.objects.create(owner=self.user, title="Licence")
         self.period = Period.objects.create(path=self.path, title="Semestre 5")

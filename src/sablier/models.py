@@ -51,30 +51,25 @@ class FocusPreference(models.Model):
         DENSE = 3, "Cinématique"
 
     class Ambience(models.TextChoices):
+        """Neuf lieux, neuf atmosphères.
+
+        Le catalogue en comptait vingt-quatre, mais quinze d'entre eux n'étaient que la
+        même scène reteintée : la même forêt en vert puis en orange, le même refuge en
+        gris puis en rouge. Un univers qui ne se distingue que par sa couleur n'ajoute
+        rien au choix de l'utilisateur, et disperse le travail de décor sur des scènes
+        qu'aucune ne peut alors être menée à son terme. Les univers retirés sont
+        redirigés vers le lieu dont ils étaient issus (voir ``scenes.LEGACY_REPLACED``).
+        """
+
         ARBRE_ETOILES = "arbre_etoiles", "Arbre des étoiles"
-        FONTAINE = "fontaine", "Fontaine de l’Éternité"
-        EDEN = "eden", "Éden"
-        FLEUVE_TEMPS = "fleuve_temps", "Fleuve du Temps"
-        SOUVENIRS = "souvenirs", "Souvenirs"
-        INTERSTELLAIRE = "interstellaire", "Interstellaire"
-        GALAXIE = "galaxie", "Galaxie"
-        HEAVEN = "heaven", "Heaven — Hauts Cieux"
-        OASIS = "oasis", "Oasis des confins"
-        ABYSSES = "abysses", "Sanctuaire abyssal"
         REFUGE_PLUIE = "refuge_pluie", "Refuge sous la pluie"
+        FORET = "foret", "Forêt des origines"
+        OCEAN = "ocean", "Falaises de l'infini"
+        SAHARA = "sahara", "Observatoire des sables"
         AURORES = "aurores", "Vallée des aurores"
-        PRINTEMPS = "printemps", "Printemps"
-        ETE = "ete", "Été"
-        AUTOMNE = "automne", "Automne"
-        HIVER = "hiver", "Hiver"
-        PLUIE = "pluie", "Pluie"
-        OCEAN = "ocean", "Océan"
-        SAHARA = "sahara", "Sahara"
-        FORET = "foret", "Forêt"
-        ORAGE = "orage", "Orage"
-        BRAISES = "braises", "Braises"
-        AURORE = "aurore", "Aurore"
-        NUIT = "nuit", "Nuit"
+        GALAXIE = "galaxie", "Odyssée stellaire"
+        FLEUVE_TEMPS = "fleuve_temps", "Fleuve du Temps"
+        ABYSSES = "abysses", "Sanctuaire abyssal"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_preference")
     default_duration_seconds = models.PositiveIntegerField(
@@ -178,6 +173,8 @@ class FocusSession(TimeStampedModel):
     """
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_sessions")
+    client_id = models.UUIDField(null=True, blank=True, editable=False)
+    ended_at = models.DateTimeField("fin effective", null=True, blank=True)
     competency = models.ForeignKey(
         "formations.Competency",
         verbose_name="compétence",
@@ -201,6 +198,7 @@ class FocusSession(TimeStampedModel):
         verbose_name = "session de concentration"
         verbose_name_plural = "sessions de concentration"
         ordering = ["-started_at"]
+        constraints = [models.UniqueConstraint(fields=["owner", "client_id"], name="unique_focus_session_per_client")]
 
     @property
     def hours(self) -> Decimal:

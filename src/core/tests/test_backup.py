@@ -42,7 +42,7 @@ class FakeS3:
         self.deleted.extend(item["Key"] for item in Delete["Objects"])
 
 
-def run(client, *, options=None, **environment):
+def run(client, *, options=None, now=None, **environment):
     """Exécute la commande avec un pg_dump simulé et un S3 en mémoire.
 
     Une variable passée à ``None`` est vidée plutôt que supprimée : la commande teste la
@@ -57,7 +57,9 @@ def run(client, *, options=None, **environment):
         mock.patch.dict("os.environ", values, clear=False),
         mock.patch.object(Command, "client", staticmethod(lambda: client)),
         mock.patch.object(Command, "dump_database", dump),
+        mock.patch("core.management.commands.backup_database.datetime") as clock,
     ):
+        clock.now.return_value = now or datetime(2026, 8, 12, tzinfo=timezone.utc)
         call_command("backup_database", **(options or {}))
 
 
@@ -136,6 +138,17 @@ class MediaArchiveTests(SimpleTestCase):
 
 
 class FullRunTests(SimpleTestCase):
+    def test_full_run_respects_weekly_and_monthly_tiers(self):
+        for moment, expected in (
+            (datetime(2026, 9, 6, tzinfo=timezone.utc), {"daily", "weekly"}),
+            (datetime(2026, 11, 1, tzinfo=timezone.utc), {"daily", "weekly", "monthly"}),
+        ):
+            with self.subTest(moment=moment), tempfile.TemporaryDirectory() as media:
+                client = FakeS3()
+                with override_settings(MEDIA_ROOT=Path(media), USE_S3=False):
+                    run(client, now=moment)
+                self.assertEqual({key.split("/")[1] for _, key in client.uploaded}, expected)
+
     def test_database_and_media_are_both_uploaded(self):
         client = FakeS3()
         with tempfile.TemporaryDirectory() as media:

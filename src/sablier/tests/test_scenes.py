@@ -39,43 +39,40 @@ class SceneRegistryTests(SimpleTestCase):
         self.assertEqual(len(signatures), len(set(signatures)))
         self.assertEqual(len(renderers), len(set(renderers)))
 
-    def test_catalog_restores_every_distinct_historical_universe(self):
+    def test_catalog_keeps_only_universes_built_as_distinct_places(self):
+        """Chaque univers doit être un lieu, pas une teinte.
+
+        Le catalogue promettait vingt-quatre univers alors que le décor n'en
+        construisait que huit : les seize autres étaient la même scène recolorée. Ce
+        test fixe la contrepartie de la réduction — aucun univers ne peut revenir sans
+        que son décor existe réellement.
+        """
         expected = {
             "arbre_etoiles",
-            "fontaine",
-            "eden",
-            "fleuve_temps",
-            "souvenirs",
-            "interstellaire",
-            "galaxie",
-            "heaven",
-            "oasis",
-            "abysses",
             "refuge_pluie",
-            "aurores",
-            "printemps",
-            "ete",
-            "automne",
-            "hiver",
-            "pluie",
             "foret",
             "ocean",
             "sahara",
-            "orage",
-            "braises",
-            "aurore",
-            "nuit",
+            "aurores",
+            "galaxie",
+            "fleuve_temps",
+            "abysses",
         }
         self.assertEqual({scene.key for scene in scenes.SCENES}, expected)
-        self.assertEqual(len(scenes.SCENES), 24)
+        self.assertEqual(len(scenes.SCENES), 9)
 
-    def test_only_the_pre_catalogue_concentration_alias_is_replaced(self):
-        self.assertEqual(scenes.LEGACY_REPLACED, {"concentration": "arbre_etoiles"})
+    def test_every_retired_universe_redirects_to_the_place_it_came_from(self):
+        """Une préférence enregistrée ne doit jamais pointer dans le vide."""
+        for retired, replacement in scenes.LEGACY_REPLACED.items():
+            with self.subTest(retired=retired):
+                self.assertNotIn(retired, scenes.BY_KEY)
+                self.assertIn(replacement, scenes.BY_KEY)
+        self.assertEqual(scenes.LEGACY_REPLACED["concentration"], "arbre_etoiles")
 
     def test_browser_storage_also_converges_to_the_curated_catalog(self):
         engine = (settings.BASE_DIR / "static" / "sablier" / "sablier.js").read_text(encoding="utf-8")
         template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
-        self.assertIn('ambienceAliases[state.ambience]||state.ambience', engine)
+        self.assertIn("ambienceAliases[state.ambience]||state.ambience", engine)
         self.assertIn('json_script:"ambience-alias-data"', template)
 
 
@@ -313,7 +310,7 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         for fragment in (
             "function drawWavePhoto(progress)",
             'ctx.globalCompositeOperation="destination-out"',
-            'ctx.globalAlpha=.42',
+            "ctx.globalAlpha=.42",
             "journey=1-progress",
             "Math.sin(Math.PI*journey)",
             "ctx.filter=",

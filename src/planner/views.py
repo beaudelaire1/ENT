@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from core.deletion import confirm_delete
 from core.navigation import crumb, safe_next
 
+from .calendar import day_bounds, events_in_window, overlaps
 from .forms import CalendarEventForm, TaskForm
 from .models import CalendarEvent, Task
 from .services import expand_event_series, expand_task_series, sync_event_reminder, sync_task_reminder
@@ -51,16 +52,19 @@ def agenda(request):
         week_end = week_start + timedelta(days=7)
         start = timezone.make_aware(datetime.combine(week_start, time.min))
         end = timezone.make_aware(datetime.combine(week_end, time.min))
-        events = list(events.filter(starts_at__lt=end, ends_at__gte=start).order_by("starts_at"))
+        events = list(events_in_window(events, start, end).order_by("starts_at"))
         tasks = list(tasks.filter(due_at__gte=start, due_at__lt=end).order_by("due_at"))
-        days = [
-            {
-                "date": week_start + timedelta(days=offset),
-                "events": [event for event in events if event.starts_at.date() == week_start + timedelta(days=offset)],
-                "tasks": [task for task in tasks if task.due_at.date() == week_start + timedelta(days=offset)],
-            }
-            for offset in range(7)
-        ]
+        days = []
+        for offset in range(7):
+            day = week_start + timedelta(days=offset)
+            day_start, day_end = day_bounds(day)
+            days.append(
+                {
+                    "date": day,
+                    "events": [event for event in events if overlaps(event, day_start, day_end)],
+                    "tasks": [task for task in tasks if timezone.localdate(task.due_at) == day],
+                }
+            )
         return render(
             request,
             "planner/agenda.html",
@@ -87,7 +91,7 @@ def agenda(request):
     previous_month = (anchor - timedelta(days=1)).replace(day=1)
     start = timezone.make_aware(datetime.combine(anchor, time.min))
     end = timezone.make_aware(datetime.combine(next_month, time.min))
-    events = events.filter(starts_at__lt=end, ends_at__gte=start)
+    events = events_in_window(events, start, end)
     tasks = tasks.filter(due_at__gte=start, due_at__lt=end)
     return render(
         request,
@@ -184,7 +188,7 @@ def task_toggle(request, pk):
         target.status = target_status
         target.save(update_fields=["status", "updated_at"])
         sync_task_reminder(target)
-    return redirect(request.POST.get("next") or "planner:tasks")
+    return redirect(safe_next(request, reverse("planner:tasks")))
 
 
 @login_required

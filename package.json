@@ -4,9 +4,14 @@
   "version": "1.0.0",
   "description": "Dépendances front locales nécessaires aux visualisations immersives de MyENT.",
   "scripts": {
-    "vendor": "node -e \"const fs=require('fs');fs.mkdirSync('src/static/vendor',{recursive:true});for(const file of ['three.module.js','three.core.js'])fs.copyFileSync('node_modules/three/build/'+file,'src/static/vendor/'+file)\""
+    "vendor": "node -e \"const fs=require('fs');fs.mkdirSync('src/static/vendor',{recursive:true});for(const file of ['three.module.js','three.core.js'])fs.copyFileSync('node_modules/three/build/'+file,'src/static/vendor/'+file)\"",
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "three": "0.184.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
   }
 }

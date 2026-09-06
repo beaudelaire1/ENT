@@ -81,3 +81,11 @@ jobs:
           accounts.tests core.tests dashboard.tests formations.tests
           library.tests notifications.tests planner.tests sablier.tests
       - run: coverage report
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-traces
+          path: .dist/browser-results

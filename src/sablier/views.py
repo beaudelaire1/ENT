@@ -15,6 +15,7 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
@@ -160,7 +161,7 @@ def session_toggle_excluded(request, pk):
         excluded=not bool(session.excluded_at),
     )
     messages.success(request, "Session réincluse." if session.excluded_at else "Session exclue du temps suivi.")
-    return redirect(request.POST.get("next") or "sablier:sessions")
+    return redirect(safe_next(request, reverse("sablier:sessions")))
 
 
 @login_required
@@ -394,13 +395,54 @@ def log_session(request):
     """Enregistre une session terminée, envoyée par le minuteur."""
     try:
         data = json.loads(request.body)
+        if not isinstance(data, dict) or isinstance(data.get("seconds"), bool):
+            raise ValueError
         seconds = int(data["seconds"])
+        if not 1 <= seconds <= 86400 or isinstance(data["seconds"], float):
+            raise ValueError
         intention = str(data.get("intention") or "")
         competency_id = data.get("competency")
-    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        client_id = uuid.UUID(str(data["session_id"])) if data.get("session_id") else None
+        now = timezone.now()
+        started_at, ended_at = now - timedelta(seconds=seconds), None
+        if client_id:
+            if str(data.get("owner")) != str(request.user.pk):
+                return JsonResponse({"error": "Reconnectez-vous au compte de cette session."}, status=403)
+            started_at = parse_datetime(str(data.get("started_at", "")))
+            ended_at = parse_datetime(str(data.get("ended_at", "")))
+            if (
+                not started_at
+                or not ended_at
+                or timezone.is_naive(started_at)
+                or timezone.is_naive(ended_at)
+                or ended_at > now + timedelta(minutes=5)
+                or (ended_at - started_at).total_seconds() < seconds - 1
+            ):
+                raise ValueError
+        if competency_id is not None and competency_id != "":
+            competency_id = int(competency_id)
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError, OverflowError):
         return JsonResponse({"error": "Requête invalide."}, status=400)
     if not 1 <= seconds <= 86400:
         return JsonResponse({"error": "Durée hors limites."}, status=400)
+
+    def receipt(session):
+        return JsonResponse(
+            {
+                "ok": True,
+                "session_id": str(session.client_id) if session.client_id else None,
+                "owner": request.user.pk,
+                "hours": str(session.hours),
+                "competency": session.competency.title if session.competency else None,
+            }
+        )
+
+    if client_id:
+        existing = (
+            FocusSession.objects.filter(owner=request.user, client_id=client_id).select_related("competency").first()
+        )
+        if existing:
+            return receipt(existing)
 
     competency = None
     if competency_id:
@@ -411,17 +453,13 @@ def log_session(request):
     session = record_session(
         request.user,
         seconds=seconds,
-        started_at=timezone.now() - timedelta(seconds=seconds),
+        started_at=started_at,
         intention=intention,
         competency=competency,
+        client_id=client_id,
+        ended_at=ended_at,
     )
-    return JsonResponse(
-        {
-            "ok": True,
-            "hours": str(session.hours),
-            "competency": competency.title if competency else None,
-        }
-    )
+    return receipt(session)
 
 
 @login_required
