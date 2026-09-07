@@ -5,17 +5,19 @@ MyENT est un environnement numérique personnel modulaire. Il réunit organisati
 ## Socle disponible
 
 - tableau de bord personnalisable et responsive ;
-- agenda en vues mois et semaine, tâches reliables aux études, rappels, et séries explicites dont chaque occurrence reste modifiable ;
+- agenda en vues mois et semaine, tâches reliables aux études, rappels et séries explicites dont chaque occurrence reste modifiable ;
+- priorités de tâches à deux niveaux distincts : importance intrinsèque (`Haute`, `Normale`, `Basse`) et cap choisi pour aujourd’hui, la semaine et le mois ;
 - suppression confirmée de tout objet, annonçant ce qui disparaîtra en cascade ;
 - bibliothèque filtrable et paginée de liens, fichiers privés et notes riches assainies, avec éditeur local sans CDN ;
 - recherche globale indexée : une entrée par objet dans `core.SearchEntry`, tenue à jour par signaux, interrogée en plein texte PostgreSQL (configuration `french`, titre pondéré au-dessus du corps, syntaxe `websearch`) avec repli `icontains` sous SQLite ;
 - formations génériques : catalogue, import/export, année, période courante, regroupements, matières, compétences et métriques libres ;
 - grille de suivi de compétences : une ligne par matière avec ses chiffres saisissables sur place, une ligne par compétence avec niveau de maîtrise, heures estimées et réelles, commentaires ; totaux par matière et par période calculés, tout s’enregistre en un seul envoi ;
-- Sablier web avec onze visualisations (anneau, sablier, marée, bougie, perles, lune, colonnes, spirale, soleil, digital, zen) et vingt-quatre univers, plein écran et reprise exacte après actualisation ;
-- scène immersive rendue en WebGL : le sablier, la bougie, les perles, la Lune et le Soleil sont des objets en volume, à matières physiques et à cartes de relief calculées, posés dans un lieu qui existe vraiment autour d'eux — relief, eau, végétation, brume, colonnes de lumière. Le ciel de l'univers choisi éclaire l'objet et son ombre tombe sur son sol ; le dessin 2D reste le repli exact quand WebGL est indisponible ;
+- Sablier web avec onze visualisations (anneau, sablier, marée, bougie, perles, lune, colonnes, spirale, soleil, digital, zen) et neuf univers réellement distincts, plein écran et reprise exacte après actualisation ;
+- scène immersive rendue en WebGL : chacun des neuf univers est un lieu en volume. Les six objets disposant d’un visuel validé (anneau, sablier, marée, bougie, lune, soleil) sont composés sur ce lieu avec fond transparent ; perles, colonnes et spirale restent des objets volumétriques. Le dessin 2D reste le repli quand WebGL est indisponible ;
 - bibliothèque audio privée, téléversement de plusieurs pistes en une fois, et playlists indépendantes du minuteur ;
-- journal corrigeable des sessions Sablier, avec temps manuel, temps des sessions et total séparés ;
-- notifications internes, emails, invitations à usage unique, réinitialisation de mot de passe, limitation des tentatives de connexion et préférences d’apparence.
+- journal corrigeable des sessions Sablier, avec synchronisation différée en cas de perte réseau, temps manuel, temps des sessions et total séparés ;
+- notifications internes et emails dédupliqués, préférences par famille, invitations à usage unique, réinitialisation de mot de passe, limitation des tentatives de connexion et préférences d’apparence ;
+- export personnel versionné incluant les relations nécessaires des tâches, séries, priorités temporelles, formations, bibliothèque, sessions, pistes audio et playlists ; les fichiers binaires restent volontairement hors de l’export JSON.
 
 Le serveur est un monolithe Django 5.2/Python 3.12. JavaScript ne gère que les interactions du navigateur, dont le moteur de Sablier. Le code Qt historique reste une référence archivée et n’est pas une dépendance de production.
 
@@ -55,5 +57,13 @@ python src/manage.py makemigrations --check --dry-run
 python src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests notifications.tests planner.tests sablier.tests
 coverage run src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests notifications.tests planner.tests sablier.tests && coverage report
 ```
+
+Sur un déploiement réel, la chaîne de notifications peut être diagnostiquée sans attendre le prochain passage de Celery Beat :
+
+```powershell
+python src/manage.py check_notifications --user <nom_utilisateur> --scan
+```
+
+La commande distingue notamment l’absence de worker/beat, un backend email console, l’absence de `EMAIL_HOST`, les préférences désactivées et les dernières notifications du compte.
 
 Consulter [le déploiement Coolify](docs/DEPLOYMENT.md), [la migration de l’existant](docs/MIGRATION.md) et [la feuille de maturation](docs/ROADMAP.md). Les sources historiques se trouvent dans [oldVersion](oldVersion/README.md).
