@@ -7,6 +7,7 @@ from django.urls import reverse
 from formations.curated_resources import RESOURCES, UNIT_BUNDLES, recommendations_for
 from formations.management.commands.load_licence_guyane import PROGRAMME
 from formations.models import LearningPath, LearningUnit, Period
+from formations.resource_services import attach_curated_recommendations
 from formations.tests.factories import competency_in
 from library.models import LibraryItem
 
@@ -207,6 +208,32 @@ class CuratedResourceImportTests(TestCase):
         existing.refresh_from_db()
         self.assertEqual(existing.title, "Mon intitulé")
         self.assertIn(existing, self.competency.resources.all())
+
+    def test_the_scanned_course_already_imported_is_rewritten_in_place(self):
+        """Une bibliothèque qui contient déjà le scan doit recevoir son remplaçant.
+
+        Sans alias, la synchronisation créerait une seconde ligne pour le polycopié
+        composé et laisserait le manuscrit rattaché aux mêmes compétences : l'étudiant
+        se retrouverait avec les deux, sans savoir lequel fait foi.
+        """
+        item = LibraryItem.objects.create(
+            owner=self.user,
+            kind=LibraryItem.Kind.LINK,
+            purpose=LibraryItem.Purpose.COURSE,
+            title="Cours de topologie",
+            url="https://pro.univ-lille.fr/fileadmin/user_upload/pages_pros/emmanuel_fricain/Cours-Topologie.pdf",
+            legacy_source="curated",
+            legacy_id="topology_course_lille",
+        )
+        self.competency.resources.add(item)
+
+        attach_curated_recommendations(owner=self.user, competency=self.competency, replace_managed=True)
+
+        item.refresh_from_db()
+        self.assertEqual(item.legacy_id, "topology_course_toulouse")
+        self.assertEqual(item.url, RESOURCES["topology_course_toulouse"].url)
+        self.assertNotIn("Cours-Topologie.pdf", item.url)
+        self.assertEqual(LibraryItem.objects.filter(owner=self.user, legacy_id="topology_course_lille").count(), 0)
 
     def test_import_requires_post(self):
         self.assertEqual(self.client.get(self.import_url).status_code, 405)

@@ -22,6 +22,11 @@ CURATED_KEY_ALIASES = {
     "geometry_affine_course_lyon": ("geometry_course_exercises_saclay",),
     "geometry_affine_practice_lyon": ("geometry_interactive_unisciel",),
     "geometry_affine_summary_lyon": ("geometry_advanced_ens",),
+    # Le cours de topologie manuscrit a déjà été importé dans des bibliothèques. Sans cet
+    # alias, la synchronisation créerait une seconde ligne pour le polycopié composé et
+    # laisserait le scan en place, rattaché aux mêmes compétences. Avec lui, la ligne
+    # existante est réécrite : même entrée de bibliothèque, nouveau document.
+    "topology_course_toulouse": ("topology_course_lille",),
 }
 
 
