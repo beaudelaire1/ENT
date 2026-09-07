@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const storageKey = `myent:sablier:${app.dataset.user}`;
   const defaultTotal = Number(app.dataset.total) || 300;
   let state = {total:defaultTotal,remaining:defaultTotal,running:false,finished:false,endsAt:0,mode:app.dataset.mode,intention:$("#session-intention").value,warning:Number(app.dataset.warning)||60,focusLevel:Number(app.dataset.focusLevel)||2,ambience:app.dataset.ambience,decorDensity:Number(app.dataset.decorDensity??2)};
+  // Le navigateur garde l'état de la session en cours — c'est lui qui permet de
+  // retrouver un décompte exact après une actualisation. Mais les réglages enregistrés
+  // sur le serveur font foi dès qu'ils sont plus récents que cette copie locale : sans
+  // cet arbitrage, enregistrer ses préférences n'avait aucun effet visible, l'ancienne
+  // copie locale les réécrasant à chaque chargement.
   try {
     const stored = JSON.parse(localStorage.getItem(storageKey) || "{}");
     const settings = ["mode", "ambience", "focusLevel", "decorDensity"];
@@ -24,17 +29,21 @@ document.addEventListener("DOMContentLoaded", () => {
       $("#session-sync-retry").hidden = message === "Sessions enregistrées.";
     },
   });
+  // Reprise d'un ancien état sans horodatage : seule cette transition utilise l'estimation historique.
   if (!state.sessionId && (state.running || (!state.finished && state.remaining < state.total))) {
     const started = state.running ? state.endsAt - state.total * 1000 : Date.now() - (state.total - state.remaining) * 1000;
     sessionClock.begin(state, started, crypto.randomUUID(), $("#session-competency")?.value);
     if (!state.running) state.activeSeconds = state.total - state.remaining;
   }
+  // Une session achevée pendant la fermeture de l'onglet part dans la file avant tout nouveau lancement.
   if (state.running && state.endsAt <= Date.now()) {
     const completed = sessionClock.payload(state, app.dataset.user, Date.now());
     if (completed && !state.queued) sessionSync.enqueue(completed);
     state.running = false; state.finished = true; state.remaining = 0; state.queued = true;
     save();
   }
+  // Un lancement depuis une compétence est une intention explicite : il prime sur une
+  // ancienne session conservée dans ce navigateur.
   if (app.dataset.contextual === "true" && !["reload", "back_forward"].includes(performance.getEntriesByType("navigation")[0]?.type)) {
     state = {...state,total:defaultTotal,remaining:defaultTotal,running:false,finished:false,endsAt:0,intention:$("#session-intention").value};
     sessionClock.clear(state);
@@ -49,6 +58,10 @@ document.addEventListener("DOMContentLoaded", () => {
   state.ambience=ambienceAliases[state.ambience]||state.ambience;
   if(!Object.prototype.hasOwnProperty.call(decorNames,state.ambience))state.ambience=app.dataset.ambience;
   const decor=window.SablierDecor.create($("#decor-canvas"));
+  // La bougie de référence est une photographie, et elle le reste : c'est celle que
+  // l'utilisateur reconnaît. Son fond est transparent, si bien qu'elle se pose sur
+  // l'univers rendu en 3D — le lieu derrière elle est un vrai lieu, seul l'objet est
+  // photographique. Le canvas n'anime que ce qui vit : hauteur de cire, flamme, fumée.
   const assets={};
   try{
     const manifest=window.SABLIER_ASSETS||JSON.parse(document.querySelector("#asset-data")?.textContent||"{}");
@@ -75,6 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function reset(){sessionClock.clear(state);state.running=false;state.finished=false;state.remaining=state.total;state.endsAt=0;warningCue=false;save();render(true);}
   function adjust(seconds){if(state.finished)reset();if(state.running){sessionClock.accrue(state,Date.now());state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);}state.remaining=clamp(state.remaining+seconds,0,86400);state.total=Math.max(1,state.total,state.remaining);state.finished=false;if(state.running)state.endsAt=Date.now()+state.remaining*1000;warningCue=false;save();render(true);}
+  // Dimensions utiles du canvas de l'objet, en unités CSS. Mémorisées à chaque
+  // redimensionnement pour que `glow` connaisse ses bords sans relire la mise en page.
   const extent={w:0,h:0};
   function resize(){
     const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),pixelW=Math.max(1,Math.round(rect.width*dpr)),pixelH=Math.max(1,Math.round(rect.height*dpr));
@@ -83,9 +98,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return {w:rect.width,h:rect.height};
   }
   function palette(){const css=getComputedStyle(app);return {accent:css.getPropertyValue("--focus-accent").trim(),border:css.getPropertyValue("--focus-border").trim(),text:css.getPropertyValue("--focus-text").trim(),surface:css.getPropertyValue("--focus-surface").trim()};}
+  // Ligne d'horizon, en coordonnées du canvas de l'objet. Quand le lieu est rendu en
+  // volume, c'est *lui* qui la donne : un soleil qui se couche sous un horizon inventé,
+  // alors que celui du paysage est ailleurs, met deux horizons dans la même image et
+  // trahit aussitôt le canvas. Sinon on retombe sur la proportion d'origine, qui reste
+  // juste pour le décor peint.
   function horizonLine(ratio){
     const published=Number(app.dataset.worldHorizon);
     if(app.dataset.renderer3d==="three"&&Number.isFinite(published)){
+      // L'horizon est compté depuis le haut de la scène ; on le ramène aux coordonnées du
+      // canvas de l'objet. Les deux mesures sont prises au même instant, donc le
+      // défilement de la page s'annule entre elles.
       return published-(canvas.getBoundingClientRect().top-stage.getBoundingClientRect().top);
     }
     return extent.h*ratio;
@@ -96,6 +119,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const hsl=/^hsl\((.+)\)$/i.exec(valueColor);
     return hsl?`hsla(${hsl[1]},${alpha})`:valueColor;
   }
+  // Grain de tramage, fabriqué une fois. Un dégradé étalé sur plusieurs centaines de
+  // pixels ne dispose que d'une poignée de valeurs sur huit bits : il se casse en
+  // anneaux concentriques réguliers. Un bruit très faible superposé au halo déplace
+  // chaque palier d'un cran au hasard, et les anneaux disparaissent.
   let ditherPattern=null;
   function getDither(){
     if(ditherPattern)return ditherPattern;
@@ -123,15 +150,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     ctx.save();
     ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
+    // Le grain ne s'applique qu'à ce qui vient d'être peint : le fond reste intact.
     ctx.globalCompositeOperation="source-atop";
     ctx.globalAlpha=.05;
     ctx.fillStyle=getDither();
     ctx.fillRect(x-radius,y-radius,radius*2,radius*2);
     ctx.restore();
   }
+  // Contraste des volumes. Chaque visuel réglait ses dégradés au cas par cas et finissait
+  // par s'éteindre sur les bords : une forme dont les flancs se fondent dans le fond
+  // paraît plus petite qu'elle n'est. Ces deux fonctions donnent un langage commun —
+  // flanc éclairé franc, ombre tenue, liseré qui referme la silhouette.
   function litColumn(x0,x1,{accent,text,border}){
     const g=ctx.createLinearGradient(x0,0,x1,0);
-    g.addColorStop(0,rgba(border,.98));g.addColorStop(.12,rgba(accent,.86));g.addColorStop(.34,rgba(text,.97));g.addColorStop(.55,accent);g.addColorStop(.84,rgba(accent,.66));g.addColorStop(1,rgba(border,.98));
+    g.addColorStop(0,rgba(border,.98));      // arête d'ombre, opaque : elle tient le bord
+    g.addColorStop(.12,rgba(accent,.86));
+    g.addColorStop(.34,rgba(text,.97));      // reflet, la zone la plus claire
+    g.addColorStop(.55,accent);
+    g.addColorStop(.84,rgba(accent,.66));
+    g.addColorStop(1,rgba(border,.98));
     return g;
   }
   function limb(color,width,alpha){ctx.strokeStyle=rgba(color,alpha);ctx.lineWidth=width;ctx.stroke();}
@@ -144,26 +181,733 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.lineWidth=1;ctx.strokeStyle=rgba(text,.13);ctx.beginPath();ctx.arc(cx,cy,r-line*.7,0,Math.PI*2);ctx.stroke();
   }
   function bottlePath(cx,cy,hw,hh){const neck=hw*.1;ctx.beginPath();ctx.moveTo(cx-hw,cy-hh);ctx.bezierCurveTo(cx-hw*.94,cy-hh*.46,cx-hw*.23,cy-hh*.19,cx-neck,cy);ctx.bezierCurveTo(cx-hw*.23,cy+hh*.19,cx-hw*.94,cy+hh*.46,cx-hw,cy+hh);ctx.lineTo(cx+hw,cy+hh);ctx.bezierCurveTo(cx+hw*.94,cy+hh*.46,cx+hw*.23,cy+hh*.19,cx+neck,cy);ctx.bezierCurveTo(cx+hw*.23,cy-hh*.19,cx+hw*.94,cy-hh*.46,cx+hw,cy-hh);ctx.closePath();}
-  function drawHourglass(progress){const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,cy=h*.41,hh=h*.31,hw=Math.min(w*.22,h*.23);ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,Math.max(hw,hh)*1.18,accent,.09);const frame=ctx.createLinearGradient(cx-hw*1.3,0,cx+hw*1.3,0);frame.addColorStop(0,border);frame.addColorStop(.28,rgba(text,.52));frame.addColorStop(.52,surface);frame.addColorStop(.76,rgba(text,.42));frame.addColorStop(1,border);ctx.fillStyle=frame;for(const y of [cy-hh-13,cy+hh-1]){ctx.beginPath();ctx.roundRect(cx-hw*1.25,y,hw*2.5,16,7);ctx.fill();ctx.strokeStyle=rgba(text,.22);ctx.lineWidth=1;ctx.stroke();}for(const x of [cx-hw*1.08,cx+hw*1.08]){ctx.fillStyle=frame;ctx.beginPath();ctx.roundRect(x-5,cy-hh,10,hh*2,5);ctx.fill();}bottlePath(cx,cy,hw,hh);const glass=ctx.createLinearGradient(cx-hw,0,cx+hw,0);glass.addColorStop(0,rgba(text,.2));glass.addColorStop(.18,rgba(text,.045));glass.addColorStop(.5,rgba(accent,.025));glass.addColorStop(.82,rgba(text,.045));glass.addColorStop(1,rgba(text,.2));ctx.fillStyle=glass;ctx.fill();ctx.strokeStyle=rgba(text,.58);ctx.lineWidth=1.6;ctx.stroke();ctx.save();bottlePath(cx,cy,hw-4,hh-5);ctx.clip();ctx.fillStyle=litColumn(cx-hw,cx+hw,{accent,text,border});const topY=cy-hh,floorY=cy+hh,received=1-progress;if(progress>.001){const surface=cy-(cy-topY)*progress;ctx.fillRect(cx-hw,surface,hw*2,cy-surface+1);}let peak=floorY;if(received>.001){const level=floorY-(floorY-cy)*received,mound=(floorY-cy)*.16*(1-received)*Math.min(1,received*6);peak=level-mound;ctx.fillRect(cx-hw,level,hw*2,floorY-level+1);ctx.beginPath();ctx.moveTo(cx-hw,level+1);ctx.lineTo(cx,peak);ctx.lineTo(cx+hw,level+1);ctx.closePath();ctx.fill();}if(state.running&&progress>.001){ctx.strokeStyle=rgba(text,.82);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy-1);ctx.lineTo(cx,peak);ctx.stroke();ctx.strokeStyle=accent;ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(cx+1.5,cy);ctx.lineTo(cx+1.5,peak);ctx.stroke();}ctx.fillStyle=rgba(text,.65);for(let i=0;i<18;i++){const seed=(i*47)%101/101,x=cx-hw*.72+seed*hw*1.44,y=received>.001?floorY-4-((i*29)%70)/70*Math.max(3,(floorY-peak)*.72):cy;ctx.globalAlpha=.18+(i%4)*.08;ctx.beginPath();ctx.arc(x,y,Math.max(.6,hw*.006),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;ctx.restore();ctx.strokeStyle=rgba(text,.28);ctx.lineWidth=Math.max(1,hw*.018);ctx.lineCap="round";for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(cx+side*hw*.68,cy-hh*.72);ctx.quadraticCurveTo(cx+side*hw*.48,cy-hh*.3,cx+side*hw*.14,cy-hh*.08);ctx.stroke();ctx.beginPath();ctx.moveTo(cx+side*hw*.14,cy+hh*.08);ctx.quadraticCurveTo(cx+side*hw*.48,cy+hh*.3,cx+side*hw*.68,cy+hh*.72);ctx.stroke();}}
-  function drawWave(progress){const {w,h}=resize(),{accent,border,text}=palette(),cx=w/2,cy=h*.42,r=Math.min(w,h)*.34;ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,r*1.18,accent,.08);ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const level=cy+r-2*r*progress,phase=state.running?Date.now()/850:0,water=ctx.createLinearGradient(0,level,0,cy+r);water.addColorStop(0,rgba(text,.76));water.addColorStop(.08,accent);water.addColorStop(.65,rgba(accent,.72));water.addColorStop(1,rgba(border,.9));for(let layer=2;layer>=0;layer--){const offset=layer*6,amp=7+layer*3;ctx.globalAlpha=1-layer*.2;ctx.fillStyle=layer===0?water:rgba(accent,.54-layer*.08);ctx.beginPath();ctx.moveTo(cx-r,cy+r);for(let x=cx-r;x<=cx+r;x+=4){const wave=Math.sin(x/(34+layer*19)+phase*(1-layer*.12)+layer*1.7)*amp+Math.sin(x/17-phase*.55)*2;ctx.lineTo(x,level+offset+wave);}ctx.lineTo(cx+r,cy+r);ctx.closePath();ctx.fill();}ctx.globalAlpha=.72;ctx.strokeStyle=rgba(text,.72);ctx.lineWidth=1.4;ctx.beginPath();for(let x=cx-r;x<=cx+r;x+=4){const y=level+Math.sin(x/34+phase)*7+Math.sin(x/17-phase*.55)*2;x===cx-r?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.globalAlpha=.2;ctx.strokeStyle=text;for(let i=0;i<7;i++){const y=level+18+i*18,width=r*(.12+i*.035);ctx.beginPath();ctx.moveTo(cx-width,y);ctx.lineTo(cx+width,y);ctx.stroke();}ctx.restore();ctx.globalAlpha=1;ctx.strokeStyle=rgba(text,.55);ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=rgba(text,.1);ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r-5,0,Math.PI*2);ctx.stroke();}
-  function drawCandle(progress){const {w,h}=resize(),cx=w/2,bodyW=Math.min(w,h)*.235,full=h*.6,base=h*.83,top=base-full*progress,radius=bodyW*.16;ctx.clearRect(0,0,w,h);if(progress>.004){glow(ctx,cx,top-bodyW*.48,bodyW*2.45,"#ff9d32",.24);glow(ctx,cx,top-bodyW*.25,bodyW*1.05,"#fff1c2",.12);}const holder=ctx.createLinearGradient(cx-bodyW*1.15,0,cx+bodyW*1.15,0);holder.addColorStop(0,"#4a2608");holder.addColorStop(.2,"#a96512");holder.addColorStop(.46,"#f5d477");holder.addColorStop(.62,"#a66110");holder.addColorStop(1,"#3a1d07");ctx.fillStyle=holder;ctx.beginPath();ctx.ellipse(cx,base+9,bodyW*1.08,12,0,0,Math.PI*2);ctx.fill();limb("#f8d980",1.2,.5);ctx.beginPath();ctx.roundRect(cx-bodyW*1.1,base-3,bodyW*2.2,14,7);ctx.fill();limb("#f8d980",1.2,.56);ctx.strokeStyle="#d79b32";ctx.lineWidth=Math.max(2,bodyW*.025);for(const side of [-1,1]){ctx.beginPath();ctx.ellipse(cx+side*bodyW*1.08,base+4,bodyW*.26,8,0,0,Math.PI*2);ctx.stroke();}if(progress>.004){ctx.globalAlpha=.45;glow(ctx,cx,base,bodyW*1.28,"#ffae42",.24);ctx.globalAlpha=1;}if(progress>.004){const wax=ctx.createLinearGradient(cx-bodyW/2,0,cx+bodyW/2,0);wax.addColorStop(0,"#d7c38b");wax.addColorStop(.2,"#f2e3b5");wax.addColorStop(.48,"#fff8dc");wax.addColorStop(.72,"#f2dfac");wax.addColorStop(1,"#c9b476");ctx.fillStyle=wax;ctx.beginPath();ctx.roundRect(cx-bodyW/2,top,bodyW,base-top,radius);ctx.fill();limb("#fff5d2",2,.72);ctx.fillStyle="#f5e5b7";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.06,bodyW*.49,bodyW*.12,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#d6a85c";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.065,bodyW*.22,bodyW*.055,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#f2c46d";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.062,bodyW*.12,bodyW*.028,0,0,Math.PI*2);ctx.fill();const flicker=state.running?Math.sin(Date.now()/90)*bodyW*.02:0,flameH=bodyW*.62;ctx.strokeStyle="#24170c";ctx.lineWidth=Math.max(2,bodyW*.035);ctx.beginPath();ctx.moveTo(cx,top+2);ctx.quadraticCurveTo(cx+bodyW*.03,top-bodyW*.08,cx-bodyW*.02,top-bodyW*.17);ctx.stroke();ctx.beginPath();ctx.moveTo(cx,top-flameH-flicker);ctx.quadraticCurveTo(cx+bodyW*.22,top-flameH*.33,cx,top-2);ctx.quadraticCurveTo(cx-bodyW*.22,top-flameH*.33,cx,top-flameH-flicker);ctx.fillStyle="#ff9d32";ctx.shadowColor="#ff8b25";ctx.shadowBlur=bodyW*.55;ctx.fill();ctx.shadowBlur=0;ctx.fillStyle="#fff0b8";ctx.beginPath();ctx.moveTo(cx,top-flameH*.66-flicker*.5);ctx.quadraticCurveTo(cx+bodyW*.09,top-flameH*.26,cx,top-bodyW*.035);ctx.quadraticCurveTo(cx-bodyW*.09,top-flameH*.26,cx,top-flameH*.66-flicker*.5);ctx.fill();ctx.fillStyle="rgba(255,255,255,.82)";ctx.beginPath();ctx.ellipse(cx,top-bodyW*.1,bodyW*.06,bodyW*.13,0,0,Math.PI*2);ctx.fill();}else{ctx.globalAlpha=.45;ctx.strokeStyle="#d9dee2";ctx.lineWidth=Math.max(2,bodyW*.03);ctx.lineCap="round";ctx.beginPath();ctx.moveTo(cx,base-6);ctx.quadraticCurveTo(cx+bodyW*.28,base-bodyW*.7,cx-bodyW*.12,base-bodyW*1.3);ctx.stroke();ctx.globalAlpha=1;}}
-  function drawBeads(progress){const {w,h}=resize(),{accent,border,text}=palette(),total=24,remaining=Math.ceil(progress*total),cx=w/2,cy=h*.41,r=Math.min(w,h)*.032,rx=Math.min(w,h)*.28,ry=Math.min(w,h)*.18;ctx.clearRect(0,0,w,h);for(let i=0;i<total;i++){const angle=Math.PI+(i/(total-1))*Math.PI,x=cx+Math.cos(angle)*rx,y=cy+Math.sin(angle)*ry+(i/(total-1))*r*2,active=i<remaining;const pearl=ctx.createRadialGradient(x-r*.3,y-r*.35,r*.08,x,y,r);pearl.addColorStop(0,active?rgba(text,.98):rgba(text,.42));pearl.addColorStop(.45,active?rgba(accent,.82):rgba(border,.7));pearl.addColorStop(1,rgba(border,.95));ctx.fillStyle=pearl;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);limb(text,1,active?.35:.16);}}
-  function drawMoon(progress){const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,cy=h*.44,r=Math.min(w,h)*.37;ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,r*1.6,accent,.2);const shadowed=ctx.createRadialGradient(cx-r*.3,cy-r*.35,r*.1,cx,cy,r);shadowed.addColorStop(0,rgba(border,.5));shadowed.addColorStop(.7,rgba(border,.34));shadowed.addColorStop(1,rgba(border,.2));if(progress<=.001){ctx.fillStyle=shadowed;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);limb(text,2,.5);return;}ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const lunar=ctx.createRadialGradient(cx-r*.34,cy-r*.4,r*.06,cx,cy,r*1.06);lunar.addColorStop(0,rgba(text,.99));lunar.addColorStop(.28,rgba(text,.9));lunar.addColorStop(.62,accent);lunar.addColorStop(1,rgba(accent,.82));ctx.fillStyle=lunar;ctx.fillRect(cx-r,cy-r,r*2,r*2);for(const [dx,dy,size,a] of [[-.3,-.24,.15,.3],[.26,-.33,.1,.34],[.33,.2,.18,.26],[-.2,.32,.11,.32],[.04,.03,.08,.24]]){ctx.fillStyle=rgba(surface,a);ctx.beginPath();ctx.ellipse(cx+dx*r,cy+dy*r,size*r,size*r*.74,-.3,0,Math.PI*2);ctx.fill();}ctx.globalCompositeOperation="destination-out";ctx.fillStyle="#000";ctx.beginPath();ctx.arc(cx-2*r*progress,cy,r,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation="destination-over";ctx.fillStyle=shadowed;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation="source-over";ctx.restore();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);limb(text,2,.55);}
-  function drawBars(progress){const {w,h}=resize(),{border,text,surface}=palette(),count=9,unit=Math.min(w,h),span=unit*.74,gap=span/count,barW=gap*.58,base=h*.68,maxH=h*.45,alive=progress*count,ox=w/2-span/2,heights=[.54,.76,.64,.88,1,.82,.93,.7,.58];ctx.clearRect(0,0,w,h);glow(ctx,w/2,base,span*.62,"#ffad52",.12);const plinth=ctx.createLinearGradient(ox,0,ox+span,0);plinth.addColorStop(0,rgba(border,.98));plinth.addColorStop(.24,rgba(text,.7));plinth.addColorStop(.5,rgba(surface,.96));plinth.addColorStop(.76,rgba(text,.65));plinth.addColorStop(1,rgba(border,.98));ctx.fillStyle=plinth;ctx.beginPath();ctx.roundRect(ox-gap*.18,base,span+gap*.36,unit*.075,unit*.02);ctx.fill();for(let i=0;i<count;i++){const full=maxH*heights[i],x=ox+i*gap+(gap-barW)/2,fill=Math.max(0,Math.min(1,alive-i)),inner=barW*.62;const shell=ctx.createLinearGradient(x,0,x+barW,0);shell.addColorStop(0,"rgba(205,231,240,.13)");shell.addColorStop(.18,"rgba(255,255,255,.62)");shell.addColorStop(.42,"rgba(179,213,226,.12)");shell.addColorStop(.78,"rgba(255,255,255,.36)");shell.addColorStop(1,"rgba(117,151,166,.28)");ctx.fillStyle=shell;ctx.beginPath();ctx.roundRect(x,base-full,barW,full,barW*.42);ctx.fill();ctx.strokeStyle=rgba(text,.5);ctx.lineWidth=Math.max(1,unit*.002);ctx.stroke();if(fill>0){const height=Math.max(inner*.3,(full-inner*.16)*fill),ix=x+(barW-inner)/2,top=base-height-inner*.08,amber=ctx.createLinearGradient(ix,0,ix+inner,0);amber.addColorStop(0,"#7a3508");amber.addColorStop(.2,"#dc761b");amber.addColorStop(.48,"#ffd07a");amber.addColorStop(.72,"#e58b2e");amber.addColorStop(1,"#6b2b07");ctx.fillStyle=amber;ctx.beginPath();ctx.roundRect(ix,top,inner,height,inner*.42);ctx.fill();}}}
-  function drawSpiral(progress){const {w,h}=resize(),{border,text,surface}=palette(),cx=w/2,cy=h*.39,turns=4.6,maxR=Math.min(w,h)*.31;ctx.clearRect(0,0,w,h);const plate=ctx.createRadialGradient(cx-maxR*.42,cy-maxR*.48,maxR*.04,cx,cy,maxR*1.12);plate.addColorStop(0,rgba(text,.18));plate.addColorStop(.34,rgba(surface,.9));plate.addColorStop(.72,rgba(border,.99));plate.addColorStop(1,"rgba(2,4,7,.99)");ctx.fillStyle=plate;ctx.beginPath();ctx.arc(cx,cy,maxR*1.1,0,Math.PI*2);ctx.fill();ctx.lineWidth=Math.max(3,maxR*.055);ctx.lineCap="round";ctx.strokeStyle="#65717d";ctx.beginPath();for(let i=0;i<=420;i++){const t=i/420,a=t*turns*Math.PI*2-Math.PI/2,r=maxR*(.16+.74*t),x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();if(progress>.001){ctx.strokeStyle="#e89a35";ctx.shadowColor="#ff9d32";ctx.shadowBlur=maxR*.08;ctx.beginPath();for(let i=0;i<=Math.max(1,Math.round(420*progress));i++){const t=i/420,a=t*turns*Math.PI*2-Math.PI/2,r=maxR*(.16+.74*t),x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.shadowBlur=0;}}
-  function drawSun(progress){const {w,h}=resize(),{accent,border,text}=palette(),cx=w/2,horizon=h*.64,arc=Math.min(w,h)*.35,r=Math.min(w,h)*.09;ctx.clearRect(0,0,w,h);ctx.strokeStyle=border;ctx.lineWidth=1.5;ctx.globalAlpha=.4;ctx.beginPath();ctx.arc(cx,horizon,arc,Math.PI,0);ctx.stroke();ctx.globalAlpha=1;const angle=Math.PI*(1-progress),x=cx+Math.cos(angle)*arc,y=horizon-Math.sin(angle)*arc;if(y<=horizon+1){glow(ctx,x,y,r*2.6,accent,.24);const disc=ctx.createRadialGradient(x-r*.3,y-r*.35,r*.08,x,y,r);disc.addColorStop(0,rgba(text,.99));disc.addColorStop(.35,accent);disc.addColorStop(1,rgba(accent,.95));ctx.fillStyle=disc;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}}
+  function drawHourglass(progress){const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,cy=h*.41,hh=h*.31,hw=Math.min(w*.22,h*.23);ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,Math.max(hw,hh)*1.18,accent,.09);
+    // Montants en bois/métal : trois valeurs plutôt qu'un aplat donnent du volume.
+    const frame=ctx.createLinearGradient(cx-hw*1.3,0,cx+hw*1.3,0);frame.addColorStop(0,border);frame.addColorStop(.28,rgba(text,.52));frame.addColorStop(.52,surface);frame.addColorStop(.76,rgba(text,.42));frame.addColorStop(1,border);
+    ctx.fillStyle=frame;for(const y of [cy-hh-13,cy+hh-1]){ctx.beginPath();ctx.roundRect(cx-hw*1.25,y,hw*2.5,16,7);ctx.fill();ctx.strokeStyle=rgba(text,.22);ctx.lineWidth=1;ctx.stroke();}
+    for(const x of [cx-hw*1.08,cx+hw*1.08]){ctx.fillStyle=frame;ctx.beginPath();ctx.roundRect(x-5,cy-hh,10,hh*2,5);ctx.fill();}
+    bottlePath(cx,cy,hw,hh);const glass=ctx.createLinearGradient(cx-hw,0,cx+hw,0);glass.addColorStop(0,rgba(text,.2));glass.addColorStop(.18,rgba(text,.045));glass.addColorStop(.5,rgba(accent,.025));glass.addColorStop(.82,rgba(text,.045));glass.addColorStop(1,rgba(text,.2));ctx.fillStyle=glass;ctx.fill();ctx.strokeStyle=rgba(text,.58);ctx.lineWidth=1.6;ctx.stroke();
+    // Le sable est éclairé de la gauche comme les autres volumes : un dégradé vertical le
+    // faisait s'éteindre vers le bas, où la masse est justement la plus épaisse.
+    ctx.save();bottlePath(cx,cy,hw-4,hh-5);ctx.clip();ctx.fillStyle=litColumn(cx-hw,cx+hw,{accent,text,border});
+    // Le sable est peint sur toute la largeur et c'est le découpage qui lui donne sa
+    // forme : il épouse ainsi exactement la paroi, y compris là où elle s'évase.
+    // Le dessiner comme un trapèze à bords droits laissait des vides contre la courbe.
+    const topY=cy-hh,floorY=cy+hh,received=1-progress;
+    if(progress>.001){
+      const surface=cy-(cy-topY)*progress;               // la surface descend vers le col
+      ctx.fillRect(cx-hw,surface,hw*2,cy-surface+1);
+    }
+    let peak=floorY;
+    if(received>.001){
+      const level=floorY-(floorY-cy)*received;           // le niveau monte du fond vers le col
+      const mound=(floorY-cy)*.16*(1-received)*Math.min(1,received*6);
+      peak=level-mound;
+      ctx.fillRect(cx-hw,level,hw*2,floorY-level+1);
+      ctx.beginPath();ctx.moveTo(cx-hw,level+1);ctx.lineTo(cx,peak);ctx.lineTo(cx+hw,level+1);ctx.closePath();ctx.fill();
+    }
+    if(state.running&&progress>.001){ctx.strokeStyle=rgba(text,.82);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy-1);ctx.lineTo(cx,peak);ctx.stroke();ctx.strokeStyle=accent;ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(cx+1.5,cy);ctx.lineTo(cx+1.5,peak);ctx.stroke();}
+    // Quelques grains rendent les deux masses moins parfaitement numériques.
+    ctx.fillStyle=rgba(text,.65);for(let i=0;i<18;i++){const seed=(i*47)%101/101,x=cx-hw*.72+seed*hw*1.44,y=received>.001?floorY-4-((i*29)%70)/70*Math.max(3,(floorY-peak)*.72):cy;ctx.globalAlpha=.18+(i%4)*.08;ctx.beginPath();ctx.arc(x,y,Math.max(.6,hw*.006),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+    ctx.restore();
+    // Reflets verticaux sur le verre, interrompus au col.
+    ctx.strokeStyle=rgba(text,.28);ctx.lineWidth=Math.max(1,hw*.018);ctx.lineCap="round";for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(cx+side*hw*.68,cy-hh*.72);ctx.quadraticCurveTo(cx+side*hw*.48,cy-hh*.3,cx+side*hw*.14,cy-hh*.08);ctx.stroke();ctx.beginPath();ctx.moveTo(cx+side*hw*.14,cy+hh*.08);ctx.quadraticCurveTo(cx+side*hw*.48,cy+hh*.3,cx+side*hw*.68,cy+hh*.72);ctx.stroke();}
+  }
+  // Marée : le niveau descend, la surface ondule. La houle n'avance que si le compte
+  // à rebours tourne, sinon l'écran bougerait sans que rien ne se passe.
+  function drawWave(progress){
+    const {w,h}=resize(),{accent,border,text}=palette(),cx=w/2,cy=h*.42,r=Math.min(w,h)*.34;
+    ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,r*1.18,accent,.08);
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+    const level=cy+r-2*r*progress,phase=state.running?Date.now()/850:0,water=ctx.createLinearGradient(0,level,0,cy+r);water.addColorStop(0,rgba(text,.76));water.addColorStop(.08,accent);water.addColorStop(.65,rgba(accent,.72));water.addColorStop(1,rgba(border,.9));
+    for(let layer=2;layer>=0;layer--){const offset=layer*6,amp=7+layer*3;ctx.globalAlpha=1-layer*.2;ctx.fillStyle=layer===0?water:rgba(accent,.54-layer*.08);ctx.beginPath();ctx.moveTo(cx-r,cy+r);for(let x=cx-r;x<=cx+r;x+=4){const wave=Math.sin(x/(34+layer*19)+phase*(1-layer*.12)+layer*1.7)*amp+Math.sin(x/17-phase*.55)*2;ctx.lineTo(x,level+offset+wave);}ctx.lineTo(cx+r,cy+r);ctx.closePath();ctx.fill();}
+    // Écume et reflet : deux traits fins suffisent à donner une surface d'eau.
+    ctx.globalAlpha=.72;ctx.strokeStyle=rgba(text,.72);ctx.lineWidth=1.4;ctx.beginPath();for(let x=cx-r;x<=cx+r;x+=4){const y=level+Math.sin(x/34+phase)*7+Math.sin(x/17-phase*.55)*2;x===cx-r?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+    ctx.globalAlpha=.2;ctx.strokeStyle=text;for(let i=0;i<7;i++){const y=level+18+i*18,width=r*(.12+i*.035);ctx.beginPath();ctx.moveTo(cx-width,y);ctx.lineTo(cx+width,y);ctx.stroke();}
+    ctx.restore();ctx.globalAlpha=1;ctx.strokeStyle=rgba(text,.55);ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=rgba(text,.1);ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r-5,0,Math.PI*2);ctx.stroke();
+  }
+  // Bougie mince canonique : sa matière et sa largeur ne dépendent jamais de
+  // l'univers. Seule sa hauteur traduit le temps restant.
+  function drawCandle(progress){
+    const {w,h}=resize(),cx=w/2,
+      bodyW=Math.min(w,h)*.235,full=h*.6,base=h*.83,
+      top=base-full*progress,radius=bodyW*.16;
+    ctx.clearRect(0,0,w,h);
+    // Le halo de la flamme est peint d'abord : il baigne la scène, la cire s'y détache.
+    if(progress>.004){
+      glow(ctx,cx,top-bodyW*.48,bodyW*2.45,"#ff9d32",.24);
+      glow(ctx,cx,top-bodyW*.25,bodyW*1.05,"#fff1c2",.12);
+    }
+    // Bougeoir : assise, fût, et le reflet chaud que la flamme y dépose.
+    const holder=ctx.createLinearGradient(cx-bodyW*1.15,0,cx+bodyW*1.15,0);
+    holder.addColorStop(0,"#4a2608");holder.addColorStop(.2,"#a96512");
+    holder.addColorStop(.46,"#f5d477");holder.addColorStop(.62,"#a66110");holder.addColorStop(1,"#3a1d07");
+    ctx.fillStyle=holder;
+    ctx.beginPath();ctx.ellipse(cx,base+9,bodyW*1.08,12,0,0,Math.PI*2);ctx.fill();
+    limb("#f8d980",1.2,.5);
+    ctx.beginPath();ctx.roundRect(cx-bodyW*1.1,base-3,bodyW*2.2,14,7);ctx.fill();limb("#f8d980",1.2,.56);
+    ctx.strokeStyle="#d79b32";ctx.lineWidth=Math.max(2,bodyW*.025);
+    for(const side of [-1,1]){ctx.beginPath();ctx.ellipse(cx+side*bodyW*1.08,base+4,bodyW*.26,8,0,0,Math.PI*2);ctx.stroke();}
+    if(progress>.004){ctx.globalAlpha=.45;glow(ctx,cx,base,bodyW*1.28,"#ffae42",.24);ctx.globalAlpha=1;}
+    if(progress>.004){
+      const wax=ctx.createLinearGradient(cx-bodyW/2,0,cx+bodyW/2,0);
+      wax.addColorStop(0,"#d7c38b");wax.addColorStop(.2,"#f2e3b5");wax.addColorStop(.48,"#fff8dc");wax.addColorStop(.72,"#f2dfac");wax.addColorStop(1,"#c9b476");
+      ctx.fillStyle=wax;
+      ctx.beginPath();ctx.roundRect(cx-bodyW/2,top,bodyW,base-top,radius);ctx.fill();
+      // Liseré : c'est lui qui donne sa taille apparente à la bougie.
+      limb("#fff5d2",2,.72);
+      // Cuvette de cire autour de la mèche, creusée par la flamme.
+      ctx.fillStyle="#f5e5b7";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.06,bodyW*.49,bodyW*.12,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#d6a85c";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.065,bodyW*.22,bodyW*.055,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#f2c46d";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.062,bodyW*.12,bodyW*.028,0,0,Math.PI*2);ctx.fill();
+      // Mèche puis flamme : cœur blanc, manteau coloré, halo. Trois valeurs, sinon la
+      // flamme n'est qu'une tache de la couleur d'ambiance.
+      const flicker=state.running?Math.sin(Date.now()/90)*bodyW*.02:0,flameH=bodyW*.62;
+      ctx.strokeStyle="#24170c";ctx.lineWidth=Math.max(2,bodyW*.035);
+      ctx.beginPath();ctx.moveTo(cx,top+2);ctx.quadraticCurveTo(cx+bodyW*.03,top-bodyW*.08,cx-bodyW*.02,top-bodyW*.17);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx,top-flameH-flicker);
+      ctx.quadraticCurveTo(cx+bodyW*.22,top-flameH*.33,cx,top-2);
+      ctx.quadraticCurveTo(cx-bodyW*.22,top-flameH*.33,cx,top-flameH-flicker);
+      ctx.fillStyle="#ff9d32";ctx.shadowColor="#ff8b25";ctx.shadowBlur=bodyW*.55;ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle="#fff0b8";
+      ctx.beginPath();ctx.moveTo(cx,top-flameH*.66-flicker*.5);
+      ctx.quadraticCurveTo(cx+bodyW*.09,top-flameH*.26,cx,top-bodyW*.035);
+      ctx.quadraticCurveTo(cx-bodyW*.09,top-flameH*.26,cx,top-flameH*.66-flicker*.5);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.82)";
+      ctx.beginPath();ctx.ellipse(cx,top-bodyW*.1,bodyW*.06,bodyW*.13,0,0,Math.PI*2);ctx.fill();
+    }else{
+      // Mèche éteinte : un filet de fumée plutôt qu'une bougie disparue.
+      ctx.globalAlpha=.45;ctx.strokeStyle="#d9dee2";ctx.lineWidth=Math.max(2,bodyW*.03);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(cx,base-6);
+      ctx.quadraticCurveTo(cx+bodyW*.28,base-bodyW*.7,cx-bodyW*.12,base-bodyW*1.3);
+      ctx.stroke();ctx.globalAlpha=1;
+    }
+  }
+  // Perles : un collier suspendu se défait au fil du temps, et ce qui tombe s'entasse
+  // dans une coupe.
+  //
+  // La version précédente posait vingt-quatre disques identiques sur une ellipse
+  // parfaite, puis rangeait les perles écoulées en grille. Trois choses manquaient
+  // pour que cela pèse quelque chose : la profondeur — une perle au fond de la boucle
+  // doit être plus petite et plus sombre que celle qui est devant ; l'ordre de tracé —
+  // le fond se peint avant le devant, sinon la boucle s'aplatit ; et le contact — sans
+  // ombre portée sous chaque perle, le tas flotte au-dessus de la coupe.
+  function drawBeads(progress){
+    const {w,h}=resize(),{accent,border,text,surface}=palette(),unit=Math.min(w,h),total=24,
+      remaining=Math.ceil(progress*total),cx=w/2,cy=h*.36,rx=unit*.28,ry=unit*.1,drop=unit*.115,
+      r=unit*.032,shimmer=state.running?Date.now()/720:0,bowlY=h*.72,bowlR=unit*.26;
+    ctx.clearRect(0,0,w,h);
+    // Pas de halo coloré derrière l'objet : il le détacherait du décor comme une
+    // vignette posée dessus, alors que la nacre et le métal se suffisent.
+
+    // Le fil pend : les perles suivent une chaînette, pas un cercle. Le paramètre
+    // `angle` décrit le tour de la boucle, `depth` dit à quelle distance on se trouve.
+    const cordPoint=(t)=>{
+      const a=-Math.PI/2+t*Math.PI*2;
+      const depth=(Math.cos(a)+1)/2;                       // 0 au fond, 1 devant
+      return {x:cx+Math.sin(a)*rx, y:cy+drop*Math.pow(Math.sin(a*.5),2)*2-ry*Math.cos(a), depth};
+    };
+    ctx.strokeStyle=rgba(border,.5);ctx.lineWidth=Math.max(1,unit*.0035);
+    ctx.beginPath();
+    for(let i=0;i<=96;i++){const p=cordPoint(i/96);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}
+    ctx.stroke();
+
+    // La coupe se peint en deux temps, de part et d'autre des perles : d'abord le fond
+    // et la paroi du fond, puis — après le tas — le rebord avant. Les perles se
+    // trouvent alors prises *dans* la coupe. Peinte d'un seul bloc, elle redevient un
+    // disque sur lequel des billes seraient posées.
+    const bowlBack=()=>{
+      const wall=ctx.createLinearGradient(cx-bowlR,0,cx+bowlR,0);
+      wall.addColorStop(0,rgba(border,.97));wall.addColorStop(.3,rgba(text,.42));
+      wall.addColorStop(.52,rgba(surface,.8));wall.addColorStop(1,rgba(border,.99));
+      ctx.fillStyle=wall;ctx.beginPath();
+      ctx.ellipse(cx,bowlY,bowlR,bowlR*.3,0,Math.PI,Math.PI*2);ctx.fill();
+      const hollow=ctx.createRadialGradient(cx,bowlY-bowlR*.1,bowlR*.04,cx,bowlY,bowlR);
+      hollow.addColorStop(0,"rgba(0,0,0,.74)");hollow.addColorStop(.55,"rgba(0,0,0,.5)");
+      hollow.addColorStop(1,rgba(border,.42));
+      ctx.fillStyle=hollow;ctx.beginPath();
+      ctx.ellipse(cx,bowlY,bowlR*.98,bowlR*.28,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx,bowlY,bowlR,bowlR*.3,0,Math.PI,Math.PI*2);limb(text,1.3,.34);
+    };
+    const bowlFront=()=>{
+      // Seule la paroi avant repasse par-dessus le tas : une lèvre fine, éclairée en
+      // haut à gauche. Un flanc plein referait un disque et cacherait les perles.
+      const front=ctx.createLinearGradient(cx-bowlR,0,cx+bowlR,0);
+      front.addColorStop(0,rgba(border,.99));front.addColorStop(.3,rgba(text,.6));
+      front.addColorStop(.54,rgba(surface,.94));front.addColorStop(1,rgba(border,.99));
+      ctx.fillStyle=front;ctx.beginPath();
+      ctx.ellipse(cx,bowlY,bowlR,bowlR*.3,0,0,Math.PI);
+      ctx.ellipse(cx,bowlY,bowlR*.93,bowlR*.22,0,Math.PI,0,true);
+      ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx,bowlY,bowlR,bowlR*.3,0,0,Math.PI);limb(text,1.4,.55);
+    };
+    bowlBack();
+
+    const pearl=(x,y,active,index,scale=1)=>{
+      const pr=r*scale,pulse=active&&state.running?1+Math.sin(shimmer*4+index*1.73)*.03:1,
+        size=pr*pulse;
+      // Ombre de contact d'abord : elle appartient au support, pas à la perle.
+      ctx.save();
+      ctx.fillStyle="rgba(0,0,0,.42)";ctx.filter=`blur(${Math.max(1,size*.22)}px)`;
+      ctx.beginPath();ctx.ellipse(x+size*.16,y+size*.62,size*.86,size*.3,0,0,Math.PI*2);ctx.fill();
+      ctx.filter="none";
+      // Nacre : un noyau clair décentré vers la source, un corps coloré, un bord qui
+      // se rallume — c'est ce rebond de lumière qui distingue une sphère d'un rond.
+      const nacre=ctx.createRadialGradient(x-size*.36,y-size*.4,size*.03,x,y,size*1.02);
+      if(active){
+        nacre.addColorStop(0,"rgba(255,255,255,.99)");
+        nacre.addColorStop(.14,"rgba(232,250,255,.97)");
+        nacre.addColorStop(.44,rgba(accent,.82));
+        nacre.addColorStop(.74,rgba(text,.5));
+        nacre.addColorStop(.93,rgba(border,.92));
+        nacre.addColorStop(1,rgba(text,.42));
+      }else{
+        nacre.addColorStop(0,rgba(text,.46));
+        nacre.addColorStop(.3,rgba(surface,.82));
+        nacre.addColorStop(.78,rgba(border,.95));
+        nacre.addColorStop(1,rgba(border,.99));
+      }
+      ctx.fillStyle=nacre;ctx.beginPath();ctx.arc(x,y,size,0,Math.PI*2);ctx.fill();
+      // Bande irisée : la nacre renvoie une couleur qui glisse selon l'angle.
+      if(active){
+        const sheen=ctx.createLinearGradient(x-size,y-size*.3,x+size*.6,y+size);
+        sheen.addColorStop(0,"rgba(255,255,255,0)");
+        sheen.addColorStop(.42,"rgba(206,236,255,.3)");
+        sheen.addColorStop(.58,"rgba(255,226,246,.22)");
+        sheen.addColorStop(1,"rgba(255,255,255,0)");
+        ctx.fillStyle=sheen;ctx.beginPath();ctx.arc(x,y,size*.97,0,Math.PI*2);ctx.fill();
+      }
+      ctx.beginPath();ctx.arc(x,y,size,0,Math.PI*2);limb(text,Math.max(.7,size*.05),active?.4:.18);
+      // Éclat spéculaire, et son écho sourd sur la face opposée.
+      ctx.fillStyle=`rgba(255,255,255,${active?.9:.4})`;
+      ctx.beginPath();ctx.ellipse(x-size*.33,y-size*.37,size*.19,size*.12,-.6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=`rgba(255,255,255,${active?.2:.08})`;
+      ctx.beginPath();ctx.ellipse(x+size*.3,y+size*.34,size*.22,size*.09,-.5,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    };
+
+    // Les perles encore sur le fil sont triées par profondeur : le fond de la boucle
+    // se peint en premier, et il est plus petit et plus sombre.
+    const onCord=[];
+    for(let i=0;i<remaining;i++){
+      const p=cordPoint(i/total);
+      onCord.push({...p,index:i});
+    }
+    onCord.sort((a,b)=>a.depth-b.depth);
+    for(const bead of onCord){
+      ctx.save();
+      ctx.globalAlpha=.62+bead.depth*.38;
+      pearl(bead.x,bead.y,true,bead.index,.74+bead.depth*.34);
+      ctx.restore();
+    }
+
+    // Le tas : chaque perle cherche sa place, un peu en désordre, et s'enfonce dans
+    // le creux de la coupe. Des rangées régulières se lisent comme un tableau.
+    const fallenCount=total-remaining;
+    for(let f=0;f<fallenCount;f++){
+      const seed=(f*2654435761)%1000/1000,seed2=(f*40503)%997/997;
+      const row=Math.floor(f/7),col=f%7;
+      const spread=(col-3+(row%2?.5:0))/3.4;
+      const x=cx+spread*bowlR*.78+(seed-.5)*r*.5;
+      const sink=Math.pow(Math.abs(spread),1.8)*bowlR*.1;
+      const y=bowlY-r*.2-row*r*1.05+sink+(seed2-.5)*r*.22;
+      pearl(x,y,false,f,.86+seed*.12);
+    }
+    bowlFront();
+  }
+  // Lune : elle décroît comme le temps restant, de la pleine lune au croissant.
+  function drawMoon(progress){
+    const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,cy=h*.44,r=Math.min(w,h)*.37;
+    ctx.clearRect(0,0,w,h);
+    glow(ctx,cx,cy,r*1.6,accent,.2);
+    // Le disque sombre : c'est la lumière qui recule, pas la lune. Sans lui, un croissant
+    // flottait seul et l'astre paraissait rétrécir au fil du décompte.
+    const shadowed=ctx.createRadialGradient(cx-r*.3,cy-r*.35,r*.1,cx,cy,r);
+    shadowed.addColorStop(0,rgba(border,.5));shadowed.addColorStop(.7,rgba(border,.34));shadowed.addColorStop(1,rgba(border,.2));
+    if(progress<=.001){
+      ctx.fillStyle=shadowed;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);limb(text,2,.5);
+      ctx.setLineDash([4,9]);ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);limb(text,1.2,.3);ctx.setLineDash([]);
+      return;
+    }
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+    // Face éclairée : le bord reste lumineux au lieu de s'éteindre, pour que le disque
+    // se referme franchement sur le fond.
+    const lunar=ctx.createRadialGradient(cx-r*.34,cy-r*.4,r*.06,cx,cy,r*1.06);
+    lunar.addColorStop(0,rgba(text,.99));lunar.addColorStop(.28,rgba(text,.9));
+    lunar.addColorStop(.62,accent);lunar.addColorStop(1,rgba(accent,.82));
+    ctx.fillStyle=lunar;ctx.fillRect(cx-r,cy-r,r*2,r*2);
+    // Mers et cratères : intérieur creusé, bord éclairé du côté du soleil.
+    for(const [dx,dy,size,a] of [[-.3,-.24,.15,.3],[.26,-.33,.1,.34],[.33,.2,.18,.26],[-.2,.32,.11,.32],[.04,.03,.08,.24],[-.06,-.52,.07,.22],[.5,-.06,.09,.2]]){
+      ctx.fillStyle=rgba(surface,a);
+      ctx.beginPath();ctx.ellipse(cx+dx*r,cy+dy*r,size*r,size*r*.74,-.3,0,Math.PI*2);ctx.fill();
+      limb(border,1.6,a*1.3);
+      ctx.beginPath();ctx.ellipse(cx+dx*r-size*r*.1,cy+dy*r-size*r*.12,size*r*.86,size*r*.6,-.3,Math.PI*.9,Math.PI*1.9);limb(text,1.4,a*.9);
+    }
+    // Un disque d'ombre de même rayon glisse depuis la gauche : entièrement écarté à
+    // 100 % (pleine lune), exactement superposé à 0 % (lune noire).
+    //
+    // La couleur doit être opaque. `destination-out` retire de l'alpha en proportion de
+    // celle de la source : le dernier `fillStyle` posé était un cratère à 20 %, si bien
+    // que l'ombre n'enlevait qu'un cinquième de la lumière. La lune restait un disque
+    // uniformément clair, sans phase lisible — et donc sans forme à percevoir.
+    ctx.globalCompositeOperation="destination-out";
+    ctx.fillStyle="#000";
+    ctx.beginPath();ctx.arc(cx-2*r*progress,cy,r,0,Math.PI*2);ctx.fill();
+    // La face nuit est repeinte *derrière* ce qui subsiste. L'effacement emporte tout ce
+    // qui se trouve sous lui, disque sombre compris : peint avant, il disparaissait avec
+    // la lumière et l'on retombait sur un croissant flottant.
+    ctx.globalCompositeOperation="destination-over";
+    ctx.fillStyle=shadowed;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.globalCompositeOperation="source-over";
+    // Terminateur : la frontière jour/nuit se dessine, sinon la coupure paraît plate.
+    ctx.beginPath();ctx.arc(cx-2*r*progress,cy,r,0,Math.PI*2);limb(text,1.6,.3);
+    ctx.restore();
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);limb(text,2,.55);
+  }
+  // Colonnes : une banque de tubes de verre gradués, remplis d'ambre liquide.
+  // La matière descend colonne après colonne ; le châssis reste toujours visible.
+  function drawBars(progress){
+    const {w,h}=resize(),{border,text,surface}=palette(),count=9,unit=Math.min(w,h),
+      span=unit*.74,gap=span/count,barW=gap*.58,base=h*.68,maxH=h*.45,
+      alive=progress*count,ox=w/2-span/2,heights=[.54,.76,.64,.88,1,.82,.93,.7,.58];
+    ctx.clearRect(0,0,w,h);glow(ctx,w/2,base,span*.62,"#ffad52",.12);
+    const plinth=ctx.createLinearGradient(ox,0,ox+span,0);plinth.addColorStop(0,rgba(border,.98));plinth.addColorStop(.24,rgba(text,.7));plinth.addColorStop(.5,rgba(surface,.96));plinth.addColorStop(.76,rgba(text,.65));plinth.addColorStop(1,rgba(border,.98));
+    ctx.fillStyle=plinth;ctx.beginPath();ctx.roundRect(ox-gap*.18,base,span+gap*.36,unit*.075,unit*.02);ctx.fill();limb(text,1.2,.36);
+    ctx.fillStyle="rgba(255,169,73,.12)";ctx.beginPath();ctx.roundRect(ox,base+unit*.012,span,unit*.034,unit*.012);ctx.fill();
+    for(let i=0;i<count;i++){
+      const full=maxH*heights[i],x=ox+i*gap+(gap-barW)/2,fill=Math.max(0,Math.min(1,alive-i)),inner=barW*.62;
+      const shell=ctx.createLinearGradient(x,0,x+barW,0);shell.addColorStop(0,"rgba(205,231,240,.13)");shell.addColorStop(.18,"rgba(255,255,255,.62)");shell.addColorStop(.42,"rgba(179,213,226,.12)");shell.addColorStop(.78,"rgba(255,255,255,.36)");shell.addColorStop(1,"rgba(117,151,166,.28)");
+      ctx.fillStyle=shell;ctx.beginPath();ctx.roundRect(x,base-full,barW,full,barW*.42);ctx.fill();ctx.strokeStyle=rgba(text,.5);ctx.lineWidth=Math.max(1,unit*.002);ctx.stroke();
+      if(fill>0){
+        const height=Math.max(inner*.3,(full-inner*.16)*fill),ix=x+(barW-inner)/2,top=base-height-inner*.08,
+          amber=ctx.createLinearGradient(ix,0,ix+inner,0);amber.addColorStop(0,"#7a3508");amber.addColorStop(.2,"#dc761b");amber.addColorStop(.48,"#ffd07a");amber.addColorStop(.72,"#e58b2e");amber.addColorStop(1,"#6b2b07");
+        ctx.fillStyle=amber;ctx.shadowColor="rgba(255,143,43,.65)";ctx.shadowBlur=unit*.018;ctx.beginPath();ctx.roundRect(ix,top,inner,height,inner*.42);ctx.fill();ctx.shadowBlur=0;
+        ctx.fillStyle="rgba(255,228,166,.82)";ctx.beginPath();ctx.ellipse(ix+inner/2,top+inner*.12,inner*.48,inner*.15,0,0,Math.PI*2);ctx.fill();
+      }
+      // Colliers métalliques et graduations donnent une échelle réelle aux niveaux.
+      ctx.fillStyle=plinth;ctx.beginPath();ctx.roundRect(x-barW*.08,base-full-barW*.04,barW*1.16,barW*.14,barW*.05);ctx.fill();ctx.beginPath();ctx.roundRect(x-barW*.08,base-barW*.1,barW*1.16,barW*.14,barW*.05);ctx.fill();
+      ctx.strokeStyle=rgba(text,.32);ctx.lineWidth=1;for(let tick=1;tick<4;tick++){const y=base-full*tick/4;ctx.beginPath();ctx.moveTo(x+barW*.72,y);ctx.lineTo(x+barW*.96,y);ctx.stroke();}
+    }
+  }
+  // Spirale : un ressort d'horlogerie sous verre, enchâssé dans une platine métallique.
+  //
+  // Un ressort de barillet n'est pas un trait : c'est un ruban d'acier plat, posé sur
+  // la tranche. Le tracer au pinceau donnait une ligne dessinée, plate quelle que soit
+  // son épaisseur. Ici chaque spire est un vrai contour rempli — bord intérieur et bord
+  // extérieur calculés séparément — ce qui permet d'éclairer sa tranche supérieure et
+  // d'assombrir celle du dessous. C'est cette différence entre les deux arêtes qui
+  // donne au métal son épaisseur.
+  function drawSpiral(progress){
+    const {w,h}=resize(),{border,text,surface}=palette(),cx=w/2,cy=h*.39,
+      turns=4.6,maxR=Math.min(w,h)*.31,steps=560,band=maxR*.05;
+    ctx.clearRect(0,0,w,h);
+
+    // La platine : métal brossé, éclairé en haut à gauche, creusé au centre.
+    const plate=ctx.createRadialGradient(cx-maxR*.42,cy-maxR*.48,maxR*.04,cx,cy,maxR*1.12);
+    plate.addColorStop(0,rgba(text,.18));plate.addColorStop(.34,rgba(surface,.9));
+    plate.addColorStop(.72,rgba(border,.99));plate.addColorStop(1,"rgba(2,4,7,.99)");
+    ctx.fillStyle=plate;ctx.beginPath();ctx.arc(cx,cy,maxR*1.1,0,Math.PI*2);ctx.fill();
+    // Brossage circulaire : de fines stries concentriques, sinon la platine est un aplat.
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,maxR*1.09,0,Math.PI*2);ctx.clip();
+    for(let i=0;i<70;i++){
+      const rr=maxR*(.18+i/70*.92),tone=(i*37)%100/100;
+      ctx.strokeStyle=`rgba(255,255,255,${.008+tone*.022})`;ctx.lineWidth=Math.max(.6,maxR*.004);
+      ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);ctx.stroke();
+    }
+    ctx.restore();
+    ctx.beginPath();ctx.arc(cx,cy,maxR*1.1,0,Math.PI*2);limb(text,Math.max(2,maxR*.024),.62);
+    ctx.strokeStyle="rgba(255,255,255,.12)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(cx,cy,maxR*.99,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<48;i++){
+      const a=i*Math.PI/24,major=i%4===0,inner=maxR*(major?.93:.955),outer=maxR*1.005;
+      ctx.strokeStyle=rgba(text,major?.55:.2);ctx.lineWidth=major?Math.max(1.6,maxR*.008):1;
+      ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*inner,cy+Math.sin(a)*inner);
+      ctx.lineTo(cx+Math.cos(a)*outer,cy+Math.sin(a)*outer);ctx.stroke();
+    }
+
+    // Géométrie du ruban : rayon au paramètre `t`, et les deux bords qui l'encadrent.
+    const spiralAt=(t)=>{
+      const angle=t*turns*Math.PI*2-Math.PI/2,r=maxR*(.16+.74*t);
+      return {angle,r,x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r};
+    };
+    const ribbon=(from,to,paint)=>{
+      if(to-from<=.0008)return;
+      const count=Math.max(2,Math.round(steps*(to-from)));
+      ctx.beginPath();
+      for(let i=0;i<=count;i++){
+        const p=spiralAt(from+(to-from)*i/count),rr=p.r+band/2;
+        const x=cx+Math.cos(p.angle)*rr,y=cy+Math.sin(p.angle)*rr;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      for(let i=count;i>=0;i--){
+        const p=spiralAt(from+(to-from)*i/count),rr=p.r-band/2;
+        ctx.lineTo(cx+Math.cos(p.angle)*rr,cy+Math.sin(p.angle)*rr);
+      }
+      ctx.closePath();paint();
+    };
+    // Arête : une seule des deux bordures du ruban, tracée finement. Éclaircie en haut,
+    // assombrie en bas, elle donne l'épaisseur de la tranche.
+    const edge=(from,to,offset,color,width)=>{
+      if(to-from<=.0008)return;
+      const count=Math.max(2,Math.round(steps*(to-from)));
+      ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";
+      ctx.beginPath();
+      for(let i=0;i<=count;i++){
+        const p=spiralAt(from+(to-from)*i/count),rr=p.r+offset;
+        const x=cx+Math.cos(p.angle)*rr,y=cy+Math.sin(p.angle)*rr;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.stroke();
+    };
+
+    // Ombre portée du ressort sur la platine : décalée, floue, jamais nette.
+    ctx.save();ctx.filter=`blur(${Math.max(1.5,maxR*.018)}px)`;
+    ctx.translate(maxR*.022,maxR*.03);
+    ribbon(0,1,()=>{ctx.fillStyle="rgba(0,0,0,.55)";ctx.fill();});
+    ctx.restore();
+
+    // Ruban détendu : acier froid, mat.
+    ribbon(0,1,()=>{
+      const steel=ctx.createLinearGradient(cx-maxR,cy-maxR,cx+maxR,cy+maxR);
+      steel.addColorStop(0,"#5a646f");steel.addColorStop(.4,"#9aa6b3");
+      steel.addColorStop(.58,"#c2ccd6");steel.addColorStop(1,"#4d5763");
+      ctx.fillStyle=steel;ctx.fill();
+    });
+    edge(0,1,band/2,"rgba(255,255,255,.3)",Math.max(1,maxR*.006));
+    edge(0,1,-band/2,"rgba(0,0,0,.62)",Math.max(1,maxR*.007));
+
+    // Ruban encore armé : laiton chaud. La part restante se lit d'un coup d'œil.
+    if(progress>.0008){
+      ribbon(0,progress,()=>{
+        const brass=ctx.createLinearGradient(cx-maxR,cy-maxR,cx+maxR,cy+maxR);
+        brass.addColorStop(0,"#6b2f06");brass.addColorStop(.34,"#c9781d");
+        brass.addColorStop(.55,"#ffc46b");brass.addColorStop(.72,"#f0a03a");
+        brass.addColorStop(1,"#7a3908");
+        ctx.fillStyle=brass;ctx.fill();
+      });
+      edge(0,progress,band/2,"rgba(255,236,190,.72)",Math.max(1,maxR*.006));
+      edge(0,progress,-band/2,"rgba(52,20,2,.7)",Math.max(1,maxR*.007));
+      // Le point de détente : là où le métal froid prend le relais du métal armé.
+      const tip=spiralAt(progress);
+      ctx.save();ctx.shadowColor="#ff9d32";ctx.shadowBlur=maxR*.16;
+      ctx.fillStyle="#fff2cf";ctx.beginPath();
+      ctx.ellipse(tip.x,tip.y,band*.62,band*.44,tip.angle,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+
+    // Le barillet central, et la bonde qui retient le ruban.
+    const hub=ctx.createRadialGradient(cx-maxR*.05,cy-maxR*.06,1,cx,cy,maxR*.15);
+    hub.addColorStop(0,"#fff1c7");hub.addColorStop(.26,"#ffb14d");
+    hub.addColorStop(.64,"#6f2d08");hub.addColorStop(1,"#140c07");
+    ctx.fillStyle=hub;ctx.beginPath();ctx.arc(cx,cy,maxR*.13,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,maxR*.13,0,Math.PI*2);limb(text,Math.max(1.2,maxR*.008),.55);
+    ctx.fillStyle="rgba(10,14,18,.9)";ctx.beginPath();ctx.arc(cx,cy,maxR*.045,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.beginPath();ctx.ellipse(cx-maxR*.045,cy-maxR*.05,maxR*.035,maxR*.02,-.6,0,Math.PI*2);ctx.fill();
+
+    // Vis de platine : quatre points d'ancrage, fendus, qui donnent l'échelle.
+    for(const a of [Math.PI/4,Math.PI*.75,Math.PI*1.25,Math.PI*1.75]){
+      const x=cx+Math.cos(a)*maxR*1.04,y=cy+Math.sin(a)*maxR*1.04,sr=maxR*.036;
+      const head=ctx.createRadialGradient(x-sr*.4,y-sr*.4,sr*.1,x,y,sr);
+      head.addColorStop(0,rgba(text,.9));head.addColorStop(.6,rgba(surface,.9));head.addColorStop(1,rgba(border,.98));
+      ctx.fillStyle=head;ctx.beginPath();ctx.arc(x,y,sr,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(x,y,sr,0,Math.PI*2);limb(border,1,.7);
+      ctx.strokeStyle="rgba(0,0,0,.72)";ctx.lineWidth=Math.max(1,sr*.22);
+      ctx.beginPath();ctx.moveTo(x-sr*.6,y+sr*.12);ctx.lineTo(x+sr*.6,y-sr*.12);ctx.stroke();
+    }
+
+    // Le verre : un seul balayage oblique, et un liseré au bord. Deux traits suffisent
+    // à dire qu'une vitre couvre le mécanisme.
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,maxR*1.1,0,Math.PI*2);ctx.clip();
+    const sweep=ctx.createLinearGradient(cx-maxR,cy-maxR*1.1,cx+maxR*.4,cy+maxR);
+    sweep.addColorStop(0,"rgba(255,255,255,0)");sweep.addColorStop(.4,"rgba(255,255,255,.09)");
+    sweep.addColorStop(.52,"rgba(255,255,255,.16)");sweep.addColorStop(.64,"rgba(255,255,255,.05)");
+    sweep.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=sweep;ctx.fillRect(cx-maxR*1.2,cy-maxR*1.2,maxR*2.4,maxR*2.4);
+    ctx.restore();
+    ctx.strokeStyle="rgba(255,255,255,.2)";ctx.lineWidth=Math.max(1,maxR*.006);
+    ctx.beginPath();ctx.arc(cx,cy,maxR*1.085,Math.PI*1.05,Math.PI*1.62);ctx.stroke();
+  }
+  // Soleil : sa course dit l'heure qui reste, du lever au coucher.
+  function drawSun(progress){
+    const {w,h}=resize(),{accent,border,text}=palette(),cx=w/2,horizon=h*.64,
+      arc=Math.min(w,h)*.35,r=Math.min(w,h)*.09;
+    ctx.clearRect(0,0,w,h);const dusk=ctx.createLinearGradient(0,h*.12,0,horizon);dusk.addColorStop(0,rgba(accent,0));dusk.addColorStop(1,rgba(accent,.1));ctx.fillStyle=dusk;ctx.fillRect(cx-arc*1.3,h*.1,arc*2.6,horizon-h*.1);
+    ctx.strokeStyle=border;ctx.lineWidth=1.5;ctx.globalAlpha=.4;
+    ctx.beginPath();ctx.arc(cx,horizon,arc,Math.PI,0);ctx.stroke();      // la trajectoire
+    ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(cx-arc*1.25,horizon);ctx.lineTo(cx+arc*1.25,horizon);ctx.stroke();
+    ctx.globalAlpha=1;
+    // Le soleil part de l'ouest à 100 % et se couche à l'est : il descend avec le temps.
+    const angle=Math.PI*(1-progress),x=cx+Math.cos(angle)*arc,y=horizon-Math.sin(angle)*arc;
+    if(y<=horizon+1){
+      glow(ctx,x,y,r*2.6,accent,.24);const disc=ctx.createRadialGradient(x-r*.3,y-r*.35,r*.08,x,y,r);disc.addColorStop(0,rgba(text,.99));disc.addColorStop(.35,accent);disc.addColorStop(1,rgba(accent,.95));ctx.fillStyle=disc;ctx.shadowColor=accent;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;limb(text,1.6,.45);
+      ctx.strokeStyle=rgba(text,.3);ctx.lineWidth=1;for(let i=0;i<12;i++){const a=i*Math.PI/6,inner=r*1.25,outer=r*(1.42+(i%2)*.1);ctx.beginPath();ctx.moveTo(x+Math.cos(a)*inner,y+Math.sin(a)*inner);ctx.lineTo(x+Math.cos(a)*outer,y+Math.sin(a)*outer);ctx.stroke();}
+    }
+  }
+  // ------------------------------------------------------------------
+  // Rendus photoréalistes : la photo fournit la matière (verre, chrome, cire,
+  // nacre…), le canvas n'anime que ce qui vit — sable, eau, flamme, ombre.
+  // Chaque renderer retombe sur le tracé vectoriel tant que sa photo n'est
+  // pas chargée : jamais d'écran vide, même hors-ligne.
+  // ------------------------------------------------------------------
+  // Sablier : le sable est peint DERRIÈRE la photo, dans l'empreinte des
+  // ampoules ; la vitre lui garde ainsi ses reflets et ses épaisseurs.
   let hourglassGrainPattern=null;
-  function getHourglassGrainPattern(){if(hourglassGrainPattern)return hourglassGrainPattern;const tile=document.createElement("canvas"),grain=tile.getContext("2d");tile.width=128;tile.height=128;let seed=0x51ab1e;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);for(let i=0;i<1650;i++){const x=random()*tile.width,y=random()*tile.height,r=.22+random()*.88,tone=random();grain.fillStyle=tone>.78?`rgba(255,239,179,${.28+random()*.5})`:tone>.34?`rgba(210,151,61,${.25+random()*.5})`:`rgba(112,70,22,${.18+random()*.38})`;grain.beginPath();grain.arc(x,y,r,0,Math.PI*2);grain.fill();}hourglassGrainPattern=ctx.createPattern(tile,"repeat");return hourglassGrainPattern;}
-  function drawHourglassPhoto(progress){if(!ready("hourglass")){drawHourglass(progress);return;}const img=assets.hourglass,{w,h}=resize(),{accent}=palette();ctx.clearRect(0,0,w,h);const shapeWidth=1.34,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04,cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);const profile=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];const bulbPath=(yNeck,yEnd)=>{const H=yEnd-yNeck;ctx.beginPath();profile.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});for(let i=profile.length-1;i>=0;i--){const [t,f]=profile[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}ctx.closePath();};const sand=ctx.createLinearGradient(cx-hw,0,cx+hw,0);sand.addColorStop(0,"#9a6826");sand.addColorStop(.28,"#dfae55");sand.addColorStop(.5,"#f6d891");sand.addColorStop(.74,"#d9a04a");sand.addColorStop(1,"#8d5f22");const grain=getHourglassGrainPattern(),fillSand=(path)=>{ctx.fillStyle=sand;path();ctx.fill();if(grain){ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=grain;path();ctx.fill();ctx.restore();}};const received=1-progress;if(progress>.001){ctx.save();bulbPath(neckY,topY);ctx.clip();const surface=neckY-(neckY-topY)*progress;fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,surface,hw*2,neckY-surface+1);});ctx.restore();}let peak=floorY;if(received>.001){ctx.save();bulbPath(neckY,floorY);ctx.clip();const level=floorY-(floorY-neckY)*received,mound=Math.min(hw*.5,(floorY-neckY)*.32*Math.min(1,received*3.5));peak=level-mound;fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,level,hw*2,floorY-level+1);ctx.moveTo(cx-hw*.84,level+2);ctx.bezierCurveTo(cx-hw*.48,level-mound*.12,cx-hw*.2,peak+mound*.16,cx,peak);ctx.bezierCurveTo(cx+hw*.22,peak+mound*.14,cx+hw*.52,level-mound*.1,cx+hw*.84,level+2);ctx.closePath();});ctx.restore();}if(state.running&&progress>.001){ctx.strokeStyle="#f8e0a2";ctx.lineWidth=Math.max(1.2,iw*.005);ctx.beginPath();ctx.moveTo(cx,neckY+1);ctx.lineTo(cx,peak);ctx.stroke();const phase=Date.now()/46;for(let i=0;i<18;i++){const travel=((phase+i*7.17)%18)/18,y=neckY+(peak-neckY)*travel,x=cx+Math.sin(i*12.7+phase*.15)*iw*.0045;ctx.fillStyle=i%3===0?"rgba(255,239,188,.95)":"rgba(205,143,54,.92)";ctx.beginPath();ctx.arc(x,y,Math.max(.55,iw*(.0014+(i%4)*.00028)),0,Math.PI*2);ctx.fill();}}ctx.drawImage(img,ix,iy,iw,ih);}
-  function drawCandlePhoto(progress){if(!ready("candle")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}const img=assets.candle,{w,h}=resize(),{accent,text}=palette();ctx.clearRect(0,0,w,h);const baseY=h*.87,fullH=h*.7,iw=Math.min(w*.46,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth,waxTop=img.naturalHeight*.058,base=img.naturalHeight*.975,topSrc=waxTop+(1-progress)*(base-waxTop),srcH=base-topSrc,dh=srcH*scale,dx=w/2-iw/2,dy=baseY-dh,fx=w/2;if(progress>.004){glow(ctx,fx,dy-iw*.12,iw*1.1,accent,.28);glow(ctx,fx,dy-iw*.05,iw*.45,"#ffd98a",.2);}ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);if(progress>.004){ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.beginPath();ctx.moveTo(fx,dy+1);ctx.lineTo(fx+iw*.006,dy-iw*.028);ctx.stroke();const fh=iw*.3,flick=state.running?Math.sin(Date.now()/90)*iw*.012+Math.sin(Date.now()/47)*iw*.006:0;ctx.save();ctx.translate(fx,dy-iw*.03);ctx.fillStyle="rgba(255,150,40,.9)";ctx.shadowColor="#ff9b30";ctx.shadowBlur=iw*.22;ctx.beginPath();ctx.moveTo(0,-fh-flick);ctx.quadraticCurveTo(iw*.075,-fh*.38,0,0);ctx.quadraticCurveTo(-iw*.075,-fh*.38,0,-fh-flick);ctx.fill();ctx.restore();}else{ctx.globalAlpha=.4;ctx.strokeStyle=text;ctx.lineWidth=Math.max(1.2,iw*.008);ctx.beginPath();ctx.moveTo(fx,dy-2);ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;}}
-  function drawWavePhoto(progress){if(!ready("wave")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}const img=assets.wave,{w,h}=resize(),{accent}=palette(),unit=Math.min(w,h);ctx.clearRect(0,0,w,h);const iw=Math.min(w*.84,h*.8),ih=iw*img.naturalHeight/img.naturalWidth,ix=w/2-iw/2,iy=h*.44-ih/2,cx=w/2,cy=iy+ih*.52,rx=iw*.46,ry=ih*.42,bottom=cy+ry*.92,top=cy-ry*.76,phase=state.running?Date.now()/620:0;glow(ctx,cx,cy,iw*.58,accent,.08);ctx.save();ctx.globalAlpha=.42;ctx.filter="grayscale(1) contrast(1.32) brightness(.7)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.clip();if(progress>.002){const level=bottom-(bottom-top)*Math.pow(progress,.72),wave=(x)=>level+Math.sin((x-cx)/(unit*.055)+phase)*unit*.008+Math.sin((x-cx)/(unit*.022)-phase*.7)*unit*.003,water=ctx.createLinearGradient(0,level,0,bottom);water.addColorStop(0,"rgba(91,229,246,.96)");water.addColorStop(.28,"rgba(21,158,190,.96)");water.addColorStop(1,"rgba(3,59,96,.98)");ctx.fillStyle=water;ctx.beginPath();ctx.moveTo(cx-rx,level);for(let x=cx-rx;x<=cx+rx;x+=3)ctx.lineTo(x,wave(x));ctx.lineTo(cx+rx,bottom+ry);ctx.lineTo(cx-rx,bottom+ry);ctx.closePath();ctx.fill();}ctx.restore();}
-  function drawMoonPhoto(progress){if(!ready("moon")){drawMoon(progress);return;}const img=assets.moon,{w,h}=resize(),{accent}=palette();ctx.clearRect(0,0,w,h);const d=Math.min(w,h)*.74,cx=w/2,cy=h*.44,r=d/2;glow(ctx,cx,cy,r*1.8,accent,.2);ctx.drawImage(img,cx-r,cy-r,d,d);ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle="rgba(3,6,12,.97)";ctx.shadowColor="rgba(3,6,12,1)";ctx.shadowBlur=r*.14;ctx.beginPath();ctx.arc(cx-2.2*r*progress,cy,r,0,Math.PI*2);ctx.fill();ctx.restore();}
-  function drawSunPhoto(progress){if(!ready("sun")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}const img=assets.sun,{w,h}=resize(),unit=Math.min(w,h),journey=1-progress,daylight=Math.sin(Math.PI*journey),warmth=Math.abs(journey-.5)*2;ctx.clearRect(0,0,w,h);const cx=w/2,horizon=horizonLine(.62),arcX=unit*.4,arcY=unit*.35,d=unit*.31,r=d/2,x=cx-arcX+2*arcX*journey,y=horizon+r*.62+r*.58*journey-Math.sin(Math.PI*journey)*(arcY+r*.72),sunHue=42-20*warmth-8*journey,glowColor=`hsl(${sunHue},96%,62%)`;ctx.save();ctx.beginPath();ctx.rect(0,0,w,horizon+unit*.018);ctx.clip();glow(ctx,x,y,d*(.82+.18*daylight),glowColor,.22+.12*daylight);ctx.drawImage(img,x-r,y-r,d,d);ctx.save();ctx.globalCompositeOperation="source-atop";ctx.globalAlpha=.32+.24*warmth;ctx.fillStyle=`hsl(${sunHue},${88+8*warmth}%,${52+16*daylight}%)`;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();ctx.restore();if(app.dataset.renderer3d!=="three"){ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.14+.18*warmth})`;ctx.lineWidth=Math.max(1,unit*.0022);ctx.beginPath();ctx.moveTo(cx-unit*.43,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.43,horizon);ctx.stroke();}}
-  function drawRingPhoto(progress){if(!ready("ring")){drawRing(progress);return;}const img=assets.ring,{w,h}=resize(),{accent,text}=palette();ctx.clearRect(0,0,w,h);const d=Math.min(w,h)*.72,cx=w/2,cy=h*.42,r=d*.395;glow(ctx,cx,cy,d*.62,accent,.09);ctx.drawImage(img,cx-d/2,cy-d/2,d,d);if(progress>.001){const end=-Math.PI/2+Math.PI*2*progress,active=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);active.addColorStop(0,rgba(accent,.75));active.addColorStop(.55,accent);active.addColorStop(1,rgba(text,.98));ctx.strokeStyle=active;ctx.lineWidth=d*.035;ctx.lineCap="round";ctx.shadowColor=accent;ctx.shadowBlur=d*.06;ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,end);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=text;ctx.beginPath();ctx.arc(cx+Math.cos(end)*r,cy+Math.sin(end)*r,d*.012,0,Math.PI*2);ctx.fill();}}
+  function getHourglassGrainPattern(){
+    if(hourglassGrainPattern)return hourglassGrainPattern;
+    const tile=document.createElement("canvas"),grain=tile.getContext("2d");
+    tile.width=128;tile.height=128;
+    let seed=0x51ab1e;
+    const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+    for(let i=0;i<1650;i++){
+      const x=random()*tile.width,y=random()*tile.height,r=.22+random()*.88,tone=random();
+      grain.fillStyle=tone>.78?`rgba(255,239,179,${.28+random()*.5})`:tone>.34?`rgba(210,151,61,${.25+random()*.5})`:`rgba(112,70,22,${.18+random()*.38})`;
+      grain.beginPath();grain.arc(x,y,r,0,Math.PI*2);grain.fill();
+    }
+    hourglassGrainPattern=ctx.createPattern(tile,"repeat");
+    return hourglassGrainPattern;
+  }
+  function drawHourglassPhoto(progress){
+    if(!ready("hourglass")){drawHourglass(progress);return;}
+    const img=assets.hourglass,{w,h}=resize(),{accent}=palette();
+    ctx.clearRect(0,0,w,h);
+    // Le fichier source est cadré très verticalement. Une correction horizontale
+    // restitue les épaules du verre et l'assise métallique sans rogner l'objet.
+    const shapeWidth=1.34,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04;
+    const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;
+    glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);
+    // Profil réel des ampoules, mesuré sur la photo : t=0 au col, t=1 à
+    // l'extrémité. Le tracé épouse le verre au lieu de le dépasser.
+    const profile=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];
+    const bulbPath=(yNeck,yEnd)=>{
+      const H=yEnd-yNeck;
+      ctx.beginPath();
+      profile.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+      for(let i=profile.length-1;i>=0;i--){const [t,f]=profile[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}
+      ctx.closePath();
+    };
+    // Sable doré : dégradé horizontal, éclairé au centre comme la photo.
+    const sand=ctx.createLinearGradient(cx-hw,0,cx+hw,0);
+    sand.addColorStop(0,"#9a6826");sand.addColorStop(.28,"#dfae55");sand.addColorStop(.5,"#f6d891");sand.addColorStop(.74,"#d9a04a");sand.addColorStop(1,"#8d5f22");
+    const grain=getHourglassGrainPattern();
+    const fillSand=(path)=>{
+      ctx.fillStyle=sand;path();ctx.fill();
+      if(grain){ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=grain;path();ctx.fill();ctx.restore();}
+    };
+    const received=1-progress;
+    if(progress>.001){
+      ctx.save();bulbPath(neckY,topY);ctx.clip();
+      const surface=neckY-(neckY-topY)*progress;
+      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,surface,hw*2,neckY-surface+1);});
+      // Surface irrégulière et petit creux que le filet creuse dans les grains.
+      ctx.strokeStyle="rgba(255,231,165,.72)";ctx.lineWidth=Math.max(.8,iw*.0024);ctx.beginPath();
+      for(let x=cx-hw*.9;x<=cx+hw*.9;x+=3){const y=surface+Math.sin(x*.19)*1.15+Math.sin(x*.047)*.75;x===cx-hw*.9?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+      ctx.fillStyle="rgba(92,53,17,.32)";ctx.beginPath();ctx.ellipse(cx,surface+1,hw*.14,Math.max(1.5,hw*.025),0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+    let peak=floorY;
+    if(received>.001){
+      ctx.save();bulbPath(neckY,floorY);ctx.clip();
+      const level=floorY-(floorY-neckY)*received;
+      const mound=Math.min(hw*.5,(floorY-neckY)*.32*Math.min(1,received*3.5));
+      peak=level-mound;
+      fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,level,hw*2,floorY-level+1);ctx.moveTo(cx-hw*.84,level+2);ctx.bezierCurveTo(cx-hw*.48,level-mound*.12,cx-hw*.2,peak+mound*.16,cx,peak);ctx.bezierCurveTo(cx+hw*.22,peak+mound*.14,cx+hw*.52,level-mound*.1,cx+hw*.84,level+2);ctx.closePath();});
+      ctx.strokeStyle="rgba(255,229,160,.52)";ctx.lineWidth=Math.max(.8,iw*.002);ctx.beginPath();ctx.moveTo(cx-hw*.78,level);ctx.quadraticCurveTo(cx-hw*.18,peak+mound*.08,cx,peak);ctx.quadraticCurveTo(cx+hw*.2,peak+mound*.08,cx+hw*.78,level);ctx.stroke();
+      ctx.restore();
+    }
+    if(state.running&&progress>.001){
+      const stream=ctx.createLinearGradient(0,neckY,0,peak);
+      stream.addColorStop(0,"#f8e0a2");stream.addColorStop(1,"#d99f49");
+      ctx.strokeStyle=stream;ctx.lineCap="round";
+      ctx.lineWidth=Math.max(1.2,iw*.005);ctx.beginPath();ctx.moveTo(cx,neckY+1);ctx.lineTo(cx,peak);ctx.stroke();
+      ctx.lineWidth=Math.max(.6,iw*.002);ctx.strokeStyle="rgba(255,240,200,.9)";ctx.beginPath();ctx.moveTo(cx-iw*.002,neckY+1);ctx.lineTo(cx-iw*.002,peak);ctx.stroke();
+      const phase=Date.now()/46;
+      for(let i=0;i<18;i++){
+        const travel=((phase+i*7.17)%18)/18,y=neckY+(peak-neckY)*travel,x=cx+Math.sin(i*12.7+phase*.15)*iw*.0045;
+        ctx.fillStyle=i%3===0?"rgba(255,239,188,.95)":"rgba(205,143,54,.92)";ctx.beginPath();ctx.arc(x,y,Math.max(.55,iw*(.0014+(i%4)*.00028)),0,Math.PI*2);ctx.fill();
+      }
+    }
+    ctx.drawImage(img,ix,iy,iw,ih);
+  }
+  // Bougie de référence : la cire photographique reste mince et le bougeoir reste
+  // fixe. Seuls la hauteur, la flamme et la fumée évoluent avec le temps.
+  function drawCandlePhoto(progress){
+    if(!ready("candle")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.candle,{w,h}=resize(),{accent,text}=palette();
+    ctx.clearRect(0,0,w,h);
+    const baseY=h*.87,fullH=h*.7,iw=Math.min(w*.46,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
+    const waxTop=img.naturalHeight*.058,base=img.naturalHeight*.975;
+    const topSrc=waxTop+(1-progress)*(base-waxTop),srcH=base-topSrc,dh=srcH*scale,dx=w/2-iw/2,dy=baseY-dh,fx=w/2;
+    if(progress>.004){glow(ctx,fx,dy-iw*.12,iw*1.1,accent,.28);glow(ctx,fx,dy-iw*.05,iw*.45,"#ffd98a",.2);}
+    ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);
+    if(progress>.004){
+      ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(fx,dy+1);ctx.lineTo(fx+iw*.006,dy-iw*.028);ctx.stroke();
+      const fh=iw*.3,flick=state.running?Math.sin(Date.now()/90)*iw*.012+Math.sin(Date.now()/47)*iw*.006:0;
+      ctx.save();ctx.translate(fx,dy-iw*.03);
+      ctx.fillStyle="rgba(255,150,40,.9)";ctx.shadowColor="#ff9b30";ctx.shadowBlur=iw*.22;
+      ctx.beginPath();ctx.moveTo(0,-fh-flick);
+      ctx.quadraticCurveTo(iw*.075,-fh*.38,0,0);ctx.quadraticCurveTo(-iw*.075,-fh*.38,0,-fh-flick);ctx.fill();
+      ctx.shadowBlur=0;ctx.fillStyle="#ffe9b0";
+      ctx.beginPath();ctx.moveTo(0,-fh*.62-flick*.5);
+      ctx.quadraticCurveTo(iw*.038,-fh*.24,0,-iw*.004);ctx.quadraticCurveTo(-iw*.038,-fh*.24,0,-fh*.62-flick*.5);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.95)";
+      ctx.beginPath();ctx.ellipse(0,-fh*.16,iw*.014,fh*.1,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }else{
+      ctx.globalAlpha=.4;ctx.strokeStyle=text;ctx.lineWidth=Math.max(1.2,iw*.008);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(fx,dy-2);
+      ctx.quadraticCurveTo(fx+iw*.09,dy-iw*.2,fx-iw*.04,dy-iw*.38);ctx.stroke();ctx.globalAlpha=1;
+    }
+  }
+  // Marée : le récipient d'origine reste intact. L'eau est teintée dans le verre
+  // (et non derrière son fond blanc), afin que son niveau soit immédiatement lisible.
+  function drawWavePhoto(progress){
+    if(!ready("wave")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.wave,{w,h}=resize(),{accent}=palette(),unit=Math.min(w,h);
+    ctx.clearRect(0,0,w,h);
+    const iw=Math.min(w*.84,h*.8),ih=iw*img.naturalHeight/img.naturalWidth,
+      ix=w/2-iw/2,iy=h*.44-ih/2,cx=w/2,cy=iy+ih*.52,rx=iw*.46,ry=ih*.42,
+      bottom=cy+ry*.92,top=cy-ry*.76,phase=state.running?Date.now()/620:0;
+    glow(ctx,cx,cy,iw*.58,accent,.08);
+    // L'image du bocal contient un intérieur blanc, contrairement au verre transparent
+    // du sablier. On conserve sa forme, puis on évide optiquement ce blanc avant de
+    // reconstruire les arêtes froides et métalliques du même langage de matière.
+    ctx.save();ctx.globalAlpha=.42;ctx.filter="grayscale(1) contrast(1.32) brightness(.7)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.84,ry*.82,0,0,Math.PI*2);ctx.clip();ctx.globalCompositeOperation="destination-out";ctx.globalAlpha=.78;ctx.fillStyle="#000";ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);ctx.restore();
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.clip();
+    if(progress>.002){
+      const level=bottom-(bottom-top)*Math.pow(progress,.72),wave=(x)=>level+Math.sin((x-cx)/(unit*.055)+phase)*unit*.008+Math.sin((x-cx)/(unit*.022)-phase*.7)*unit*.003;
+      const water=ctx.createLinearGradient(0,level,0,bottom);water.addColorStop(0,"rgba(91,229,246,.96)");water.addColorStop(.28,"rgba(21,158,190,.96)");water.addColorStop(1,"rgba(3,59,96,.98)");
+      ctx.globalCompositeOperation="source-over";ctx.fillStyle=water;ctx.beginPath();ctx.moveTo(cx-rx,level);for(let x=cx-rx;x<=cx+rx;x+=3)ctx.lineTo(x,wave(x));ctx.lineTo(cx+rx,bottom+ry);ctx.lineTo(cx-rx,bottom+ry);ctx.closePath();ctx.fill();
+      // Une surface lumineuse et des caustiques mobiles rendent la matière liquide.
+      ctx.strokeStyle="rgba(151,225,236,.74)";ctx.lineWidth=Math.max(1.5,unit*.0045);ctx.shadowColor="rgba(48,171,199,.48)";ctx.shadowBlur=unit*.014;ctx.beginPath();for(let x=cx-rx*.94;x<=cx+rx*.94;x+=3){const y=wave(x);x===cx-rx*.94?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.shadowBlur=0;
+      for(let i=0;i<18;i++){
+        const px=cx+Math.sin(i*13.7+phase*.18)*rx*.76,py=level+(bottom-level)*(.16+(i%7)/8),span=unit*(.016+(i%4)*.006);
+        ctx.strokeStyle=i%3===0?"rgba(221,252,255,.52)":"rgba(128,230,244,.34)";ctx.lineWidth=i%4===0?2:1;ctx.beginPath();ctx.moveTo(px-span,py);ctx.quadraticCurveTo(px,py-unit*.008,px+span,py);ctx.stroke();
+      }
+      for(let i=0;i<13;i++){
+        const px=cx+Math.sin(i*9.31)*rx*.72,py=bottom-(bottom-level)*(.08+(i%9)/10),br=unit*(.0025+(i%4)*.0013);
+        ctx.strokeStyle="rgba(225,253,255,.62)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,br,0,Math.PI*2);ctx.stroke();
+      }
+    }
+    ctx.restore();
+    // Une passe très légère de la photo restitue ses reflets sans réintroduire le blanc.
+    ctx.save();ctx.globalCompositeOperation="screen";ctx.globalAlpha=.11;ctx.filter="grayscale(1) contrast(1.38) brightness(.9)";ctx.drawImage(img,ix,iy,iw,ih);ctx.restore();
+    const glassEdge=ctx.createLinearGradient(cx-rx,0,cx+rx,0);glassEdge.addColorStop(0,"rgba(111,148,163,.84)");glassEdge.addColorStop(.22,"rgba(231,246,250,.72)");glassEdge.addColorStop(.5,"rgba(148,181,192,.3)");glassEdge.addColorStop(.78,"rgba(238,250,252,.76)");glassEdge.addColorStop(1,"rgba(91,129,146,.86)");
+    ctx.strokeStyle=glassEdge;ctx.lineWidth=Math.max(1.4,unit*.004);ctx.beginPath();ctx.ellipse(cx,cy,rx*.94,ry*.94,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle="rgba(173,207,218,.48)";ctx.lineWidth=Math.max(1,unit*.0025);ctx.beginPath();ctx.ellipse(cx,cy-rx*.015,rx*.89,ry*.87,0,Math.PI*.72,Math.PI*1.25);ctx.stroke();
+  }
+  // Lune : la photo fournit les mers et cratères ; l'ombre qui la mange est un
+  // disque sombre à bord doux qui glisse depuis la gauche, comme la nuit.
+  function drawMoonPhoto(progress){
+    if(!ready("moon")){drawMoon(progress);return;}
+    const img=assets.moon,{w,h}=resize(),{accent}=palette();
+    ctx.clearRect(0,0,w,h);
+    const d=Math.min(w,h)*.74,cx=w/2,cy=h*.44,r=d/2;
+    glow(ctx,cx,cy,r*1.8,accent,.2);
+    ctx.drawImage(img,cx-r,cy-r,d,d);
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+    ctx.fillStyle="rgba(3,6,12,.97)";ctx.shadowColor="rgba(3,6,12,1)";ctx.shadowBlur=r*.14;
+    ctx.beginPath();ctx.arc(cx-2.2*r*progress,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  // Soleil : le disque photographique effectue un cycle continu. Il naît derrière
+  // le relief, monte dans un ciel qui s'éclaircit, puis disparaît entièrement derrière
+  // l'horizon pendant que la lumière vire progressivement vers le rouge du couchant.
+  function drawSunPhoto(progress){
+    if(!ready("sun")){const {w,h}=resize();ctx.clearRect(0,0,w,h);return;}
+    const img=assets.sun,{w,h}=resize(),unit=Math.min(w,h),journey=1-progress,
+      daylight=Math.sin(Math.PI*journey),warmth=Math.abs(journey-.5)*2;
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2,horizon=horizonLine(.62),arcX=unit*.4,arcY=unit*.35,d=unit*.31,r=d/2,
+      x=cx-arcX+2*arcX*journey,
+      y=horizon+r*.62+r*.58*journey-Math.sin(Math.PI*journey)*(arcY+r*.72),
+      sunHue=42-20*warmth-8*journey;
+    const glowColor=`hsl(${sunHue},96%,62%)`;
+    // L'univers WebGL fournit désormais le ciel et le relief. Seul l'astre validé
+    // reste dans ce canvas transparent : aucun rectangle ne peut se détacher du décor.
+    ctx.save();ctx.beginPath();ctx.rect(0,0,w,horizon+unit*.018);ctx.clip();
+    glow(ctx,x,y,d*(.82+.18*daylight),glowColor,.22+.12*daylight);
+    // L'astre garde l'image validée ; seule sa teinte suit l'heure. Elle n'est plus obtenue
+    // par un filtre de canvas : `contrast()` et `brightness()` ont un terme constant, si
+    // bien qu'appliqués à une image à fond transparent ils donnent une couleur aux pixels
+    // vides et remplissent tout le rectangle de dessin. Sur l'ancien décor peint, ce
+    // rectangle chaud se confondait avec le ciel ; sur un paysage rendu en volume, il se
+    // détachait en pleine nuit, opaque et net — et un découpage circulaire ne suffisait pas
+    // à le contenir.
+    //
+    // `source-atop` ne peint que là où l'image est déjà opaque : la transparence est alors
+    // préservée par construction, et non par une précaution qu'on peut oublier.
+    ctx.drawImage(img,x-r,y-r,d,d);
+    ctx.save();
+    ctx.globalCompositeOperation="source-atop";
+    ctx.globalAlpha=.32+.24*warmth;
+    ctx.fillStyle=`hsl(${sunHue},${88+8*warmth}%,${52+16*daylight}%)`;
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    ctx.restore();
+    // Le trait d'horizon n'a de sens que sur le décor peint, qui n'en a pas. Le paysage en
+    // volume porte le sien : en dessiner un second par-dessus ferait deux lignes.
+    if(app.dataset.renderer3d!=="three"){
+      ctx.strokeStyle=`hsla(${sunHue},94%,72%,${.14+.18*warmth})`;ctx.lineWidth=Math.max(1,unit*.0022);
+      ctx.beginPath();ctx.moveTo(cx-unit*.43,horizon);ctx.quadraticCurveTo(cx,horizon-unit*.018,cx+unit*.43,horizon);ctx.stroke();
+    }
+  }
+  // Anneau : une vraie jauge d'horlogerie porte les graduations ; le temps
+  // restant est un arc lumineux posé dans sa gorge.
+  function drawRingPhoto(progress){
+    if(!ready("ring")){drawRing(progress);return;}
+    const img=assets.ring,{w,h}=resize(),{accent,text}=palette();
+    ctx.clearRect(0,0,w,h);
+    const d=Math.min(w,h)*.72,cx=w/2,cy=h*.42,r=d*.395;
+    glow(ctx,cx,cy,d*.62,accent,.09);
+    ctx.drawImage(img,cx-d/2,cy-d/2,d,d);
+    if(progress>.001){
+      const end=-Math.PI/2+Math.PI*2*progress;
+      const active=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+      active.addColorStop(0,rgba(accent,.75));active.addColorStop(.55,accent);active.addColorStop(1,rgba(text,.98));
+      ctx.strokeStyle=active;ctx.lineWidth=d*.035;ctx.lineCap="round";
+      ctx.shadowColor=accent;ctx.shadowBlur=d*.06;
+      ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,end);ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.fillStyle=text;ctx.beginPath();ctx.arc(cx+Math.cos(end)*r,cy+Math.sin(end)*r,d*.012,0,Math.PI*2);ctx.fill();
+    }
+  }
   function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
-  function finish(){const completed=sessionClock.payload(state,app.dataset.user,Date.now());if(completed&&!state.queued){sessionSync.enqueue(completed);state.queued=true;}state.running=false;state.finished=true;state.remaining=0;save();flash();if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});sessionSync.flush();const back=$("#return-after-session");if(back&&app.dataset.returnUrl)back.hidden=false;}
+  function finish(){
+    const completed=sessionClock.payload(state,app.dataset.user,Date.now());
+    if(completed&&!state.queued){sessionSync.enqueue(completed);state.queued=true;}
+    state.running=false;state.finished=true;state.remaining=0;save();flash();
+    if(app.dataset.endSound==="true")finishAudio.play().catch(()=>{});
+    sessionSync.flush();
+    const back=$("#return-after-session");if(back&&app.dataset.returnUrl)back.hidden=false;
+  }
   function ambienceLabel(){const select=$("#ambience-select"),option=[...select.options].find(item=>item.value===state.ambience);return option?.textContent||state.ambience;}
-  function render(force=false){if(state.running){state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining<=0&&!state.finished)finish();}const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}const mode=state.mode;$("#visual-wrap").dataset.mode=mode;const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};if(painters[mode])painters[mode](progress);$("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";app.dataset.decorDensity=String(state.decorDensity);const painted=app.dataset.renderer3d==="fallback";if(painted)decor.use(decorNames[state.ambience]||"motes",state.decorDensity);app.querySelectorAll(".decor-levels [data-decor]").forEach(button=>{const active=Number(button.dataset.decor)===state.decorDensity;button.classList.toggle("active",active);button.setAttribute("aria-pressed",String(active));});if(painted)decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));}
+  function render(force=false){
+    if(state.running){state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining<=0&&!state.finished)finish();}
+    const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
+    if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
+    const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
+    const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
+    if(painters[mode])painters[mode](progress);
+    $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
+    app.dataset.decorDensity=String(state.decorDensity);
+    // Le décor peint en 2D est le repli, et uniquement le repli. On ne le peint donc que
+    // dans cet état — pas pendant `booting`, où la scène en volume est encore en train de
+    // naître. Le peindre alors le rendait visible une seconde ou deux avant d'être
+    // remplacé : c'est ce qui donnait l'impression que « les anciennes vues reviennent »
+    // à chaque ouverture. Quand l'état bascule sur le repli, la boucle le peint à l'image
+    // suivante — rien à orchestrer, l'état suffit.
+    const painted=app.dataset.renderer3d==="fallback";
+    if(painted)decor.use(decorNames[state.ambience]||"motes",state.decorDensity);
+    app.querySelectorAll(".decor-levels [data-decor]").forEach(button=>{
+      const active=Number(button.dataset.decor)===state.decorDensity;
+      button.classList.toggle("active",active);
+      button.setAttribute("aria-pressed",String(active));
+    });
+    if(painted)decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
+  }
   function loop(){render();frame=requestAnimationFrame(loop)}
   $("#apply-duration").addEventListener("click",()=>{const input=$("#duration-input"),seconds=parseDuration(input.value);input.setCustomValidity("");if(seconds)setDuration(seconds);else {input.setCustomValidity("Durée invalide (maximum 24 h).");input.reportValidity();}});
   app.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>setDuration(Number(b.dataset.preset)*60)));
@@ -173,10 +917,26 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#session-intention").addEventListener("input",e=>{state.intention=e.target.value;save();render(true)});
   if(state.sessionId&&state.competency)$("#session-competency").value=state.competency;
   $("#session-competency")?.addEventListener("change",e=>{state.competency=e.target.value||null;save();});
-  $("#session-sync-retry").addEventListener("click",()=>sessionSync.flush());window.addEventListener("online",()=>sessionSync.flush());document.addEventListener("visibilitychange",()=>{if(!document.hidden){render(true);sessionSync.flush();}});const retryInterval=setInterval(()=>sessionSync.flush(),30000);window.addEventListener("pagehide",()=>clearInterval(retryInterval),{once:true});sessionSync.flush();
-  $("#ambience-select").addEventListener("change",e=>{state.ambience=e.target.value;save();render(true)});$("#warning-slider").addEventListener("input",e=>{state.warning=Number(e.target.value);$("#warning-output").textContent=`${state.warning} s`;warningCue=false;save()});$("#main-control").addEventListener("click",startPause);$("#reset-control").addEventListener("click",reset);$("#minus-minute").addEventListener("click",()=>adjust(-60));$("#plus-minute").addEventListener("click",()=>adjust(60));
-  $("#scene-button").addEventListener("click",async()=>{app.classList.add("stage-mode");try{await app.requestFullscreen()}catch(_){}});document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)app.classList.remove("stage-mode")});document.addEventListener("keydown",e=>{if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;if(e.code==="Space"){e.preventDefault();startPause()}else if(e.key.toLowerCase()==="r")reset();else if(e.key==="F11"){e.preventDefault();$("#scene-button").click()}else if(e.key==="Escape"&&app.classList.contains("stage-mode")){document.exitFullscreen?.();app.classList.remove("stage-mode")}});
+  $("#session-sync-retry").addEventListener("click",()=>sessionSync.flush());
+  window.addEventListener("online",()=>sessionSync.flush());
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){render(true);sessionSync.flush();}});
+  const retryInterval=setInterval(()=>sessionSync.flush(),30000);
+  window.addEventListener("pagehide",()=>clearInterval(retryInterval),{once:true});
+  sessionSync.flush();
+  $("#ambience-select").addEventListener("change",e=>{state.ambience=e.target.value;save();render(true)});
+  $("#warning-slider").addEventListener("input",e=>{state.warning=Number(e.target.value);$("#warning-output").textContent=`${state.warning} s`;warningCue=false;save()});
+  $("#main-control").addEventListener("click",startPause);$("#reset-control").addEventListener("click",reset);$("#minus-minute").addEventListener("click",()=>adjust(-60));$("#plus-minute").addEventListener("click",()=>adjust(60));
+  $("#scene-button").addEventListener("click",async()=>{app.classList.add("stage-mode");try{await app.requestFullscreen()}catch(_){}});document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)app.classList.remove("stage-mode")});
+  document.addEventListener("keydown",e=>{if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;if(e.code==="Space"){e.preventDefault();startPause()}else if(e.key.toLowerCase()==="r")reset();else if(e.key==="F11"){e.preventDefault();$("#scene-button").click()}else if(e.key==="Escape"&&app.classList.contains("stage-mode")){document.exitFullscreen?.();app.classList.remove("stage-mode")}});
   const prefForm=$("#focus-preferences"),durationHidden=prefForm.querySelector("#id_default_duration_seconds");prefForm.addEventListener("submit",()=>{durationHidden.value=Math.round(state.total);prefForm.querySelector("#id_session_intention").value=state.intention;prefForm.querySelector("#id_mode").value=state.mode;prefForm.querySelector("#id_ambience").value=state.ambience;prefForm.querySelector("#id_focus_level").value=state.focusLevel;prefForm.querySelector("#id_warning_seconds").value=state.warning;prefForm.querySelector("#id_decor_density").value=state.decorDensity;});
-  const playlists=JSON.parse(document.querySelector("#playlist-data").textContent),player=$("#playlist-audio");let currentPlaylist=null,index=0,shuffle=false,repeat=false;function loadTrack(autoplay=false){const track=currentPlaylist?.tracks[index];if(!track){player?.removeAttribute("src");$("#player-title")&&($("#player-title").textContent="Playlist vide");$("#player-artist")&&($("#player-artist").textContent="");return;}player.src=track.url;$("#player-title").textContent=track.title;$("#player-artist").textContent=track.artist||"";if(autoplay)player.play().catch(error=>{if(error?.name!=="NotAllowedError")$("#player-artist").textContent="Lecture impossible — fichier introuvable ou illisible.";});}function move(direction){if(!currentPlaylist?.tracks.length)return;index=shuffle?Math.floor(Math.random()*currentPlaylist.tracks.length):(index+direction+currentPlaylist.tracks.length)%currentPlaylist.tracks.length;loadTrack(true)}if($("#playlist-select")){$("#playlist-select").addEventListener("change",e=>{currentPlaylist=playlists.find(p=>String(p.id)===e.target.value);index=0;loadTrack(false)});$("#player-toggle").addEventListener("click",()=>player.paused?player.play():player.pause());$("#player-prev").addEventListener("click",()=>move(-1));$("#player-next").addEventListener("click",()=>move(1));$("#player-shuffle").addEventListener("click",e=>{shuffle=!shuffle;e.currentTarget.classList.toggle("active",shuffle)});$("#player-repeat").addEventListener("click",e=>{repeat=!repeat;e.currentTarget.classList.toggle("active",repeat)});$("#player-volume").addEventListener("input",e=>player.volume=Number(e.target.value));player.addEventListener("play",()=>$("#player-toggle").textContent="Ⅱ");player.addEventListener("pause",()=>$("#player-toggle").textContent="▶");player.addEventListener("ended",()=>repeat?player.play():move(1));player.volume=.65;}
+
+  const playlists=JSON.parse(document.querySelector("#playlist-data").textContent),player=$("#playlist-audio");let currentPlaylist=null,index=0,shuffle=false,repeat=false;
+  function loadTrack(autoplay=false){const track=currentPlaylist?.tracks[index];if(!track){player.removeAttribute("src");$("#player-title").textContent="Playlist vide";$("#player-artist").textContent="";return;}player.src=track.url;$("#player-title").textContent=track.title;$("#player-artist").textContent=track.artist||"";if(autoplay)player.play().catch(error=>{if(error?.name!=="NotAllowedError")$("#player-artist").textContent="Lecture impossible — fichier introuvable ou illisible.";});}
+  function move(direction){if(!currentPlaylist?.tracks.length)return;index=shuffle?Math.floor(Math.random()*currentPlaylist.tracks.length):(index+direction+currentPlaylist.tracks.length)%currentPlaylist.tracks.length;loadTrack(true)}
+  // Sans playlist, le lecteur n'est pas rendu : le minuteur doit continuer de
+  // fonctionner sans lui, d'où la sortie anticipée plutôt qu'une erreur en cascade.
+  if($("#playlist-select")){
+    $("#playlist-select").addEventListener("change",e=>{currentPlaylist=playlists.find(p=>String(p.id)===e.target.value);index=0;loadTrack(false)});$("#player-toggle").addEventListener("click",()=>player.paused?player.play():player.pause());$("#player-prev").addEventListener("click",()=>move(-1));$("#player-next").addEventListener("click",()=>move(1));$("#player-shuffle").addEventListener("click",e=>{shuffle=!shuffle;e.currentTarget.classList.toggle("active",shuffle)});$("#player-repeat").addEventListener("click",e=>{repeat=!repeat;e.currentTarget.classList.toggle("active",repeat)});$("#player-volume").addEventListener("input",e=>player.volume=Number(e.target.value));player.addEventListener("play",()=>$("#player-toggle").textContent="Ⅱ");player.addEventListener("pause",()=>$("#player-toggle").textContent="▶");player.addEventListener("ended",()=>repeat?player.play():move(1));player.addEventListener("error",()=>{const causes={1:"lecture interrompue",2:"erreur réseau",3:"décodage impossible — fichier corrompu ou format non pris en charge",4:"source refusée — bloquée par la politique de sécurité, ou introuvable"};const code=player.error?.code;$("#player-artist").textContent=`Lecture impossible — ${causes[code]||"cause inconnue"} (code ${code??"?"}).`;});player.volume=.65;
+  }
   render(true);cancelAnimationFrame(frame);loop();
 });
