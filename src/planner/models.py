@@ -105,6 +105,46 @@ class Task(TimeStampedModel):
         _validate_academic_links(self)
 
 
+class TaskFocus(TimeStampedModel):
+    """La tâche que l'utilisateur choisit comme cap d'une période.
+
+    Ce choix est volontairement séparé de ``Task.priority``. « Haute » exprime
+    l'importance intrinsèque d'une tâche ; « ma priorité aujourd'hui » est une décision
+    de pilotage qui change avec le calendrier. Conserver les sélections par période
+    permet aussi de ne pas réécrire l'histoire quand le jour, la semaine ou le mois
+    change.
+    """
+
+    class Scope(models.TextChoices):
+        DAY = "day", "Aujourd’hui"
+        WEEK = "week", "Cette semaine"
+        MONTH = "month", "Ce mois"
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="task_focuses")
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="focus_selections")
+    scope = models.CharField("horizon", max_length=8, choices=Scope.choices)
+    period_start = models.DateField("début de période", db_index=True)
+    objects = OwnedQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "priorité temporelle"
+        verbose_name_plural = "priorités temporelles"
+        ordering = ["-period_start", "scope"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "scope", "period_start"],
+                name="task_focus_one_per_owner_scope_period",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.get_scope_display()} · {self.task}"
+
+    def clean(self):
+        if self.task_id and self.owner_id and self.task.owner_id != self.owner_id:
+            raise ValidationError({"task": "Cette tâche appartient à un autre utilisateur."})
+
+
 class CalendarEvent(TimeStampedModel):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="calendar_events")
     title = models.CharField("intitulé", max_length=180)
