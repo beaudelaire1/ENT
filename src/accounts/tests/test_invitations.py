@@ -62,7 +62,7 @@ class InvitationTests(TestCase):
 
     def test_admin_page_separates_delivery_and_acceptance_states(self):
         self.client.force_login(self.staff)
-        delivery = EmailDelivery.objects.create(
+        EmailDelivery.objects.create(
             owner=self.staff,
             dedupe_key=f"invitation:{self.invitation.pk}",
             recipient=self.invitation.email,
@@ -78,4 +78,3 @@ class InvitationTests(TestCase):
         response = self.client.get(reverse("accounts:invitations"))
         self.assertContains(response, "Invitation : acceptée")
         self.assertContains(response, "Email : envoyé le")
-        self.assertEqual(delivery.recipient, "invitee@example.com")
