@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CalendarEvent, Reminder, Task
+from .models import CalendarEvent, Reminder, Task, TaskFocus
 
 
 @admin.register(Task)
@@ -9,6 +9,14 @@ class TaskAdmin(admin.ModelAdmin):
     list_filter = ("status", "priority", "owner")
     search_fields = ("title", "description")
     date_hierarchy = "due_at"
+
+
+@admin.register(TaskFocus)
+class TaskFocusAdmin(admin.ModelAdmin):
+    list_display = ("task", "owner", "scope", "period_start", "updated_at")
+    list_filter = ("scope", "period_start", "owner")
+    search_fields = ("task__title", "owner__username", "owner__email")
+    date_hierarchy = "period_start"
 
 
 @admin.register(CalendarEvent)
