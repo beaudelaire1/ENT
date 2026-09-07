@@ -25,6 +25,7 @@ def home(request):
     from library.models import LibraryItem
     from notifications.models import Notification
     from planner.calendar import day_bounds, events_in_window
+    from planner.focus import current_focus_rows
     from planner.models import CalendarEvent, Task
 
     widgets = ensure_default_widgets(request.user)
@@ -84,6 +85,7 @@ def home(request):
         "tasks": Task.objects.filter(owner=request.user)
         .exclude(status=Task.Status.DONE)
         .order_by("priority", "due_at")[:8],
+        "task_focuses": current_focus_rows(request.user, today),
         "notifications": Notification.objects.filter(owner=request.user, read_at__isnull=True)[:6],
         "recent_items": LibraryItem.objects.filter(owner=request.user).order_by("-updated_at")[:6],
         "formations": formations[:6],
