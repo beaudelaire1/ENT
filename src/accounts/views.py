@@ -89,10 +89,24 @@ def invitations(request):
         enqueue(send_invitation_email, invitation.pk)
         messages.success(request, "Invitation créée et mise en file d’envoi.")
         return redirect("accounts:invitations")
+
+    invitations = list(Invitation.objects.select_related("invited_by")[:100])
+    if invitations:
+        from notifications.models import EmailDelivery
+
+        delivery_by_key = {
+            delivery.dedupe_key: delivery
+            for delivery in EmailDelivery.objects.filter(
+                dedupe_key__in=[f"invitation:{invitation.pk}" for invitation in invitations]
+            )
+        }
+        for invitation in invitations:
+            invitation.email_delivery = delivery_by_key.get(f"invitation:{invitation.pk}")
+
     return render(
         request,
         "accounts/invitations.html",
-        {"form": form, "invitations": Invitation.objects.select_related("invited_by")[:100]},
+        {"form": form, "invitations": invitations},
     )
 
 
