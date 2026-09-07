@@ -7,6 +7,28 @@ from django.utils import timezone
 from .models import EmailDelivery
 
 
+def _send_delivery(delivery: EmailDelivery, body: str) -> str:
+    """Envoie un email suivi en base et conserve la dernière erreur exploitable.
+
+    Le statut de livraison est affiché dans l'administration des invitations et sert
+    aussi au diagnostic des notifications. Une exception ne doit donc pas disparaître
+    uniquement dans les journaux Celery : elle est enregistrée avant d'être relancée,
+    afin que l'autoretry continue de fonctionner normalement.
+    """
+    if delivery.sent_at:
+        return "already-sent"
+    try:
+        send_mail(delivery.subject, body, settings.DEFAULT_FROM_EMAIL, [delivery.recipient], fail_silently=False)
+    except Exception as exc:
+        delivery.last_error = f"{type(exc).__name__}: {exc}"[:2000]
+        delivery.save(update_fields=["last_error"])
+        raise
+    delivery.sent_at = timezone.now()
+    delivery.last_error = ""
+    delivery.save(update_fields=["sent_at", "last_error"])
+    return "sent"
+
+
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 4})
 def send_event_email(self, owner_id: int, dedupe_key: str, subject: str, body: str):
     """Double par email une notification déjà créée dans l'application.
@@ -22,13 +44,7 @@ def send_event_email(self, owner_id: int, dedupe_key: str, subject: str, body: s
         dedupe_key=dedupe_key,
         defaults={"recipient": owner.email, "subject": subject[:180]},
     )
-    if delivery.sent_at:
-        return "already-sent"
-    send_mail(delivery.subject, body, settings.DEFAULT_FROM_EMAIL, [delivery.recipient], fail_silently=False)
-    delivery.sent_at = timezone.now()
-    delivery.last_error = ""
-    delivery.save(update_fields=["sent_at", "last_error"])
-    return "sent"
+    return _send_delivery(delivery, body)
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 4})
@@ -47,19 +63,10 @@ def send_invitation_email(self, invitation_id: int):
             "subject": "Invitation à rejoindre MyENT",
         },
     )
-    if delivery.sent_at:
-        return "already-sent"
-    send_mail(
-        delivery.subject,
+    return _send_delivery(
+        delivery,
         f"Vous êtes invité à créer votre espace MyENT : {url}\n\nCe lien expire dans 7 jours.",
-        settings.DEFAULT_FROM_EMAIL,
-        [delivery.recipient],
-        fail_silently=False,
     )
-    delivery.sent_at = timezone.now()
-    delivery.last_error = ""
-    delivery.save(update_fields=["sent_at", "last_error"])
-    return "sent"
 
 
 @shared_task(name="notifications.scan_for_events")
