@@ -78,3 +78,8 @@ class InvitationTests(TestCase):
         response = self.client.get(reverse("accounts:invitations"))
         self.assertContains(response, "Invitation : acceptée")
         self.assertContains(response, "Email : envoyé le")
+
+    def test_admin_page_shows_queued_invitation_without_delivery_row(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("accounts:invitations"))
+        self.assertContains(response, "Email : en file d’envoi")
