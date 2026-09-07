@@ -20,6 +20,21 @@ document.addEventListener("DOMContentLoaded", () => {
       state[key] = value;
     }
   } catch (_) {}
+  // `crypto.randomUUID` n'existe qu'en contexte sécurisé. Servi en clair — ce que
+  // `DJANGO_FORCE_HTTPS=false` autorise explicitement, le temps d'obtenir un certificat —
+  // il est absent, et l'appel jetait une exception au premier clic : le bouton DÉMARRER
+  // ne faisait alors plus rien, sans le moindre signe visible. Cet identifiant ne sert
+  // qu'à dédoublonner l'envoi d'une session, jamais de secret : `getRandomValues` suffit,
+  // et `Math.random` reste le dernier repli.
+  function sessionUuid(){
+    if(typeof crypto?.randomUUID==="function")return crypto.randomUUID();
+    const bytes=new Uint8Array(16);
+    if(typeof crypto?.getRandomValues==="function")crypto.getRandomValues(bytes);
+    else for(let i=0;i<16;i++)bytes[i]=Math.floor(Math.random()*256);
+    bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
+    const hex=[...bytes].map(b=>b.toString(16).padStart(2,"0")).join("");
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  }
   const sessionClock = window.SablierSessionClock;
   const sessionSync = window.SablierSessionSync.create({
     owner: app.dataset.user, url: app.dataset.logUrl,
@@ -32,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Reprise d'un ancien état sans horodatage : seule cette transition utilise l'estimation historique.
   if (!state.sessionId && (state.running || (!state.finished && state.remaining < state.total))) {
     const started = state.running ? state.endsAt - state.total * 1000 : Date.now() - (state.total - state.remaining) * 1000;
-    sessionClock.begin(state, started, crypto.randomUUID(), $("#session-competency")?.value);
+    sessionClock.begin(state, started, sessionUuid(), $("#session-competency")?.value);
     if (!state.running) state.activeSeconds = state.total - state.remaining;
   }
   // Une session achevée pendant la fermeture de l'onglet part dans la file avant tout nouveau lancement.
@@ -83,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function startPause(){
     if(state.finished){reset();}
     if(state.running){sessionClock.accrue(state,Date.now());state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining===0){finish();return;}state.running=false;}
-    else{sessionClock.begin(state,Date.now(),crypto.randomUUID(),$("#session-competency")?.value);state.endsAt=Date.now()+state.remaining*1000;state.running=true;}
+    else{sessionClock.begin(state,Date.now(),sessionUuid(),$("#session-competency")?.value);state.endsAt=Date.now()+state.remaining*1000;state.running=true;}
     save();render(true);
   }
   function reset(){sessionClock.clear(state);state.running=false;state.finished=false;state.remaining=state.total;state.endsAt=0;warningCue=false;save();render(true);}
