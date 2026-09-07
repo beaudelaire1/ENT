@@ -9,6 +9,7 @@ un problème de visuel alors que c'est le script qui est mort.
 
 C'est arrivé : une fusion a emporté `flash`, `finish`, `logSession` et
 `ambienceLabel`, quatre fonctions voisines, et plus aucun bouton ne répondait.
+`logSession` a depuis cédé la place à la file différée de `session-sync.js`.
 """
 
 from __future__ import annotations
@@ -133,7 +134,17 @@ class TimerScriptResolutionTests(SimpleTestCase):
         self.assertEqual(unresolved, [], f"appels non résolus dans sablier.js : {unresolved}")
 
     def test_the_functions_a_session_depends_on_are_present(self):
-        """Les quatre fonctions perdues en fusion, nommées pour qu'on les revoie partir."""
-        for name in ("flash", "finish", "logSession", "ambienceLabel", "render", "startPause"):
+        """Les fonctions perdues en fusion, nommées pour qu'on les revoie partir.
+
+        `logSession` a été remplacée par la file différée de `session-sync.js` : c'est
+        elle qui porte désormais l'envoi d'une session, et c'est donc elle que ce test
+        surveille. `sessionUuid` la rejoint, parce que sans elle le premier clic sur
+        DÉMARRER lève une exception dès que la page n'est pas servie en contexte
+        sécurisé — et le bouton cesse alors de répondre.
+        """
+        for name in ("flash", "finish", "ambienceLabel", "render", "startPause", "sessionUuid"):
             with self.subTest(name=name):
                 self.assertIn(f"function {name}(", self.code)
+        for call in ("sessionSync.enqueue(", "sessionSync.flush("):
+            with self.subTest(call=call):
+                self.assertIn(call, self.code)

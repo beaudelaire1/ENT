@@ -6,7 +6,6 @@ from django.utils import timezone
 
 from .models import TaskFocus
 
-
 ORDERED_SCOPES = (TaskFocus.Scope.DAY, TaskFocus.Scope.WEEK, TaskFocus.Scope.MONTH)
 
 
