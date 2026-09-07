@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import focus_views, views
 
 app_name = "planner"
 urlpatterns = [
@@ -15,4 +15,6 @@ urlpatterns = [
     path("tasks/<int:pk>/delete/", views.task_delete, name="task_delete"),
     path("tasks/<int:pk>/series/delete/", views.task_series_delete, name="task_series_delete"),
     path("tasks/<int:pk>/toggle/", views.task_toggle, name="task_toggle"),
+    path("tasks/<int:pk>/focus/<str:scope>/", focus_views.set_task_focus, name="task_focus"),
+    path("tasks/focus/<str:scope>/clear/", focus_views.clear_task_focus, name="task_focus_clear"),
 ]
