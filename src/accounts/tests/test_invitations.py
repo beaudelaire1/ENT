@@ -2,7 +2,6 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
