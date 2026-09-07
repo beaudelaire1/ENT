@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.conf import settings
 from django.test import SimpleTestCase
@@ -39,35 +40,22 @@ class SceneRegistryTests(SimpleTestCase):
         self.assertEqual(len(signatures), len(set(signatures)))
         self.assertEqual(len(renderers), len(set(renderers)))
 
-    def test_catalog_keeps_only_universes_built_as_distinct_places(self):
-        """Chaque univers doit être un lieu, pas une teinte.
+    def test_catalog_offers_every_place_the_decor_can_actually_build(self):
+        """Un univers vaut par son lieu, pas par sa teinte.
 
-        Le catalogue promettait vingt-quatre univers alors que le décor n'en
-        construisait que huit : les seize autres étaient la même scène recolorée. Ce
-        test fixe la contrepartie de la réduction — aucun univers ne peut revenir sans
-        que son décor existe réellement.
+        Le catalogue avait été ramené à neuf au motif que les quinze autres étaient la
+        même scène recolorée. `premium3d/worlds.js` prouve le contraire : chacun y a sa
+        propre recette — ciel, heure, relief, eau, végétation, particules. Ce test fixe
+        la contrepartie de leur retour : un univers ne peut figurer au catalogue que si
+        son décor existe vraiment, et aucun décor construit ne doit rester inaccessible.
         """
-        expected = {
-            "arbre_etoiles",
-            "refuge_pluie",
-            "foret",
-            "ocean",
-            "sahara",
-            "aurores",
-            "galaxie",
-            "fleuve_temps",
-            "abysses",
-        }
-        self.assertEqual({scene.key for scene in scenes.SCENES}, expected)
-        self.assertEqual(len(scenes.SCENES), 9)
-
-    def test_every_retired_universe_redirects_to_the_place_it_came_from(self):
-        """Une préférence enregistrée ne doit jamais pointer dans le vide."""
-        for retired, replacement in scenes.LEGACY_REPLACED.items():
-            with self.subTest(retired=retired):
-                self.assertNotIn(retired, scenes.BY_KEY)
-                self.assertIn(replacement, scenes.BY_KEY)
-        self.assertEqual(scenes.LEGACY_REPLACED["concentration"], "arbre_etoiles")
+        recipes = (settings.BASE_DIR / "static" / "sablier" / "premium3d" / "worlds.js").read_text(encoding="utf-8")
+        built = set(re.findall(r"^  ([a-z_]+): \{$", recipes, re.MULTILINE))
+        self.assertEqual({scene.decor for scene in scenes.SCENES}, built)
+        self.assertEqual(len(scenes.SCENES), 24)
+        for saison in ("printemps", "ete", "automne", "hiver"):
+            with self.subTest(saison=saison):
+                self.assertIn(saison, scenes.BY_KEY)
 
     def test_browser_storage_also_converges_to_the_curated_catalog(self):
         engine = (settings.BASE_DIR / "static" / "sablier" / "sablier.js").read_text(encoding="utf-8")

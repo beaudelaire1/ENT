@@ -46,30 +46,9 @@ BY_KEY = {scene.key: scene for scene in SCENES}
 CHOICES = [(scene.key, scene.label) for scene in SCENES]
 DEFAULT = "arbre_etoiles"
 
-# Univers retirés du catalogue et le lieu vers lequel chacun redirige.
-#
-# Ils partageaient tous leur construction avec un univers conservé : seule la teinte
-# du ciel changeait. Plutôt que de les supprimer sèchement — ce qui laisserait une
-# préférence enregistrée pointer vers un univers inexistant — chacun renvoie vers le
-# lieu dont il était la variante colorée.
-LEGACY_REPLACED = {
-    "concentration": "arbre_etoiles",
-    "nuit": "arbre_etoiles",
-    "eden": "foret",
-    "printemps": "foret",
-    "ete": "foret",
-    "automne": "foret",
-    "hiver": "aurores",
-    "heaven": "aurores",
-    "aurore": "aurores",
-    "orage": "ocean",
-    "pluie": "refuge_pluie",
-    "braises": "refuge_pluie",
-    "souvenirs": "refuge_pluie",
-    "oasis": "sahara",
-    "interstellaire": "galaxie",
-    "fontaine": "fleuve_temps",
-}
+# Le seul identifiant historique sans lieu : « concentration » nommait un réglage,
+# pas un univers. Une préférence enregistrée ne doit jamais pointer dans le vide.
+LEGACY_REPLACED = {"concentration": "arbre_etoiles"}
 
 
 def palette_css() -> str:

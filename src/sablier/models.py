@@ -51,25 +51,42 @@ class FocusPreference(models.Model):
         DENSE = 3, "Cinématique"
 
     class Ambience(models.TextChoices):
-        """Neuf lieux, neuf atmosphères.
+        """Vingt-quatre lieux, vingt-quatre atmosphères.
 
-        Le catalogue en comptait vingt-quatre, mais quinze d'entre eux n'étaient que la
-        même scène reteintée : la même forêt en vert puis en orange, le même refuge en
-        gris puis en rouge. Un univers qui ne se distingue que par sa couleur n'ajoute
-        rien au choix de l'utilisateur, et disperse le travail de décor sur des scènes
-        qu'aucune ne peut alors être menée à son terme. Les univers retirés sont
-        redirigés vers le lieu dont ils étaient issus (voir ``scenes.LEGACY_REPLACED``).
+        Le catalogue avait été ramené à neuf : les quinze autres passaient pour la même
+        scène reteintée. Ils ne l'étaient pas — `premium3d/worlds.js` porte pour chacun
+        une recette entière : un ciel et son heure, un relief, une eau, une végétation,
+        des particules. L'été n'y est pas « la forêt en jaune », c'est une autre terrasse.
+        Les retirer privait donc l'utilisateur de lieux qui existaient bel et bien.
+
+        `sablier.tests.test_scenes` tient la contrepartie : aucun univers ne figure ici
+        sans que sa recette existe réellement dans le décor.
         """
 
         ARBRE_ETOILES = "arbre_etoiles", "Arbre des étoiles"
+        FONTAINE = "fontaine", "Fontaine de l’Éternité"
+        EDEN = "eden", "Éden"
+        FLEUVE_TEMPS = "fleuve_temps", "Fleuve du Temps"
+        SOUVENIRS = "souvenirs", "Souvenirs"
+        INTERSTELLAIRE = "interstellaire", "Interstellaire"
+        GALAXIE = "galaxie", "Odyssée stellaire"
+        HEAVEN = "heaven", "Heaven — Hauts Cieux"
+        OASIS = "oasis", "Oasis des confins"
+        ABYSSES = "abysses", "Sanctuaire abyssal"
         REFUGE_PLUIE = "refuge_pluie", "Refuge sous la pluie"
-        FORET = "foret", "Forêt des origines"
+        AURORES = "aurores", "Vallée des aurores"
+        PRINTEMPS = "printemps", "Printemps"
+        ETE = "ete", "Été"
+        AUTOMNE = "automne", "Automne"
+        HIVER = "hiver", "Hiver"
+        PLUIE = "pluie", "Pluie"
         OCEAN = "ocean", "Falaises de l'infini"
         SAHARA = "sahara", "Observatoire des sables"
-        AURORES = "aurores", "Vallée des aurores"
-        GALAXIE = "galaxie", "Odyssée stellaire"
-        FLEUVE_TEMPS = "fleuve_temps", "Fleuve du Temps"
-        ABYSSES = "abysses", "Sanctuaire abyssal"
+        FORET = "foret", "Forêt des origines"
+        ORAGE = "orage", "Orage"
+        BRAISES = "braises", "Braises"
+        AURORE = "aurore", "Aurore"
+        NUIT = "nuit", "Nuit"
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="focus_preference")
     default_duration_seconds = models.PositiveIntegerField(

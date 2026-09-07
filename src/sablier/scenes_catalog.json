@@ -19,6 +19,177 @@
     "description": "Un arbre solitaire porte ses lanternes au-dessus d'un lac immobile, sous la Voie lactée."
   },
   {
+    "key": "fontaine",
+    "label": "Fontaine de l’Éternité",
+    "accent": "#57e3df",
+    "tint": "#176c78",
+    "decor": "eternity_fountain",
+    "sky": "#061724",
+    "horizon": "#1f7180",
+    "ground": "#07141a",
+    "light": "#dffff7",
+    "composition": "cliff-city-canal-waterfalls",
+    "motion": [
+      "waterfall-mist",
+      "canal-shimmer",
+      "distant-birds"
+    ],
+    "progression": "water-light-slowly-brightens",
+    "description": "Une cité verticale oubliée, traversée par des bassins turquoise et de longues cascades."
+  },
+  {
+    "key": "eden",
+    "label": "Éden",
+    "accent": "#91e7a8",
+    "tint": "#1f6b4a",
+    "decor": "eden",
+    "sky": "#061714",
+    "horizon": "#285b42",
+    "ground": "#08130e",
+    "light": "#fff0a6",
+    "composition": "garden-terraces-great-tree-stream",
+    "motion": [
+      "leaf-breath",
+      "fireflies",
+      "stream-glints"
+    ],
+    "progression": "sunbeams-cross-the-canopy",
+    "description": "Un jardin primordial organisé autour d'un arbre immense, de terrasses et d'une eau claire."
+  },
+  {
+    "key": "fleuve_temps",
+    "label": "Fleuve du Temps",
+    "accent": "#b9c8ff",
+    "tint": "#2b3556",
+    "decor": "time_river",
+    "sky": "#050a1c",
+    "horizon": "#2e4478",
+    "ground": "#070a16",
+    "light": "#f0d6ff",
+    "composition": "fleuve-ruines-arches-eclats-temporels",
+    "motion": [
+      "courant-du-fleuve",
+      "eclats-en-suspension",
+      "brume-de-berge"
+    ],
+    "progression": "les-eclats-s-intensifient-a-mesure-que-le-temps-passe",
+    "description": "Un fleuve lent entre des colonnes écroulées, où flottent des éclats de lumière."
+  },
+  {
+    "key": "souvenirs",
+    "label": "Souvenirs",
+    "accent": "#d2b6ff",
+    "tint": "#5c4772",
+    "decor": "memories",
+    "sky": "#15111d",
+    "horizon": "#55445f",
+    "ground": "#100d14",
+    "light": "#f0cba2",
+    "composition": "fog-room-frames-distant-platform",
+    "motion": [
+      "dust-float",
+      "curtain-breath",
+      "memory-flicker"
+    ],
+    "progression": "distant-frames-appear-then-fade",
+    "description": "Un lieu impossible composé de fragments familiers qui émergent doucement dans la brume."
+  },
+  {
+    "key": "interstellaire",
+    "label": "Interstellaire",
+    "accent": "#8eb8ff",
+    "tint": "#283966",
+    "decor": "interstellar",
+    "sky": "#01040d",
+    "horizon": "#111d3c",
+    "ground": "#03050a",
+    "light": "#c8dbff",
+    "composition": "observation-deck-planet-rings-deep-space",
+    "motion": [
+      "star-parallax",
+      "planet-drift",
+      "navigation-lights"
+    ],
+    "progression": "planet-limb-slides-across-horizon",
+    "description": "Une plateforme d'observation dérive près d'une planète géante et de ses anneaux."
+  },
+  {
+    "key": "galaxie",
+    "label": "Odyssée stellaire",
+    "accent": "#c9a4ff",
+    "tint": "#1c0c30",
+    "decor": "galaxy",
+    "sky": "#040110",
+    "horizon": "#160b2a",
+    "ground": "#010206",
+    "light": "#ecd0ff",
+    "composition": "pont-d-observation-planete-annelee-nebuleuse",
+    "motion": [
+      "rotation-de-la-galaxie",
+      "voiles-de-gaz",
+      "feux-de-position"
+    ],
+    "progression": "les-gaz-s-illuminent-et-le-vide-s-approfondit",
+    "description": "Un pont d'observation ouvert sur une planète annelée et les voiles d'une nébuleuse."
+  },
+  {
+    "key": "heaven",
+    "label": "Heaven — Hauts Cieux",
+    "accent": "#bce7ff",
+    "tint": "#72abc5",
+    "decor": "heaven",
+    "sky": "#5d91ad",
+    "horizon": "#b9ddeb",
+    "ground": "#30495a",
+    "light": "#fff8d8",
+    "composition": "floating-islands-temple-cloud-sea",
+    "motion": [
+      "cloud-drift",
+      "waterfall-veils",
+      "light-rays"
+    ],
+    "progression": "clouds-open-toward-the-light",
+    "description": "Des îles et architectures suspendues dominent une mer de nuages sans horizon terrestre."
+  },
+  {
+    "key": "oasis",
+    "label": "Oasis des confins",
+    "accent": "#ffd17b",
+    "tint": "#91562c",
+    "decor": "oasis",
+    "sky": "#171426",
+    "horizon": "#8a573f",
+    "ground": "#25130d",
+    "light": "#ffd89b",
+    "composition": "dunes-oasis-ruins-palms-distant-mesa",
+    "motion": [
+      "heat-haze",
+      "palm-breeze",
+      "sand-veils"
+    ],
+    "progression": "sunset-turns-to-starlight",
+    "description": "Une oasis isolée entre dunes, ruines anciennes et ciel de fin du monde."
+  },
+  {
+    "key": "abysses",
+    "label": "Sanctuaire abyssal",
+    "accent": "#7df5e5",
+    "tint": "#0a3a44",
+    "decor": "abyss",
+    "sky": "#0d5560",
+    "horizon": "#083038",
+    "ground": "#02171c",
+    "light": "#b4fff2",
+    "composition": "sanctuaire-englouti-colonnes-colonnes-de-lumiere",
+    "motion": [
+      "colonnes-de-lumiere",
+      "neige-marine",
+      "courant-lent"
+    ],
+    "progression": "la-lumiere-de-surface-faiblit-et-les-eclats-prennent-le-relais",
+    "description": "Un sanctuaire englouti où la lumière de la surface descend en colonnes dans le bleu."
+  },
+  {
     "key": "refuge_pluie",
     "label": "Refuge sous la pluie",
     "accent": "#ffb265",
@@ -38,23 +209,118 @@
     "description": "Un bureau de bois, une lampe chaude et la pluie qui coule sur la vitre devant la ville."
   },
   {
-    "key": "foret",
-    "label": "Forêt des origines",
-    "accent": "#d8e9a8",
-    "tint": "#3d5a3a",
-    "decor": "ancient_forest",
-    "sky": "#3f7ba8",
-    "horizon": "#c4cfae",
-    "ground": "#1b2a18",
-    "light": "#fff2cc",
-    "composition": "futaie-ancienne-troncs-colossaux-rais-de-lumiere",
+    "key": "aurores",
+    "label": "Vallée des aurores",
+    "accent": "#7effd8",
+    "tint": "#14313d",
+    "decor": "aurora_valley",
+    "sky": "#020a14",
+    "horizon": "#0d3243",
+    "ground": "#061218",
+    "light": "#bfe8ff",
+    "composition": "toundra-lac-gele-rideaux-polaires",
     "motion": [
-      "rais-de-lumiere",
-      "spores-en-suspension",
-      "sous-bois-immobile"
+      "plis-de-l-aurore",
+      "neige-qui-derive",
+      "lac-miroir"
     ],
-    "progression": "le-soleil-descend-et-les-rais-s-allongent",
-    "description": "Une futaie ancienne où la lumière tombe entre des troncs plus larges qu'un homme."
+    "progression": "les-rideaux-s-intensifient-avec-la-session",
+    "description": "Une toundra gelée sous des rideaux polaires qui se plissent au-dessus des sommets."
+  },
+  {
+    "key": "printemps",
+    "label": "Printemps",
+    "accent": "#f0b9ce",
+    "tint": "#6f9b72",
+    "decor": "spring_meadow",
+    "sky": "#8dc9d8",
+    "horizon": "#d5e6cd",
+    "ground": "#39533a",
+    "light": "#fff3c3",
+    "composition": "orchard-meadow-stream-blossom-gate",
+    "motion": [
+      "petal-drift",
+      "stream-shimmer",
+      "branch-breeze"
+    ],
+    "progression": "blossom-light-softens-toward-evening",
+    "description": "Une vallée de vergers en fleurs, traversée par un ruisseau et cadrée par deux arbres en pleine floraison."
+  },
+  {
+    "key": "ete",
+    "label": "Été",
+    "accent": "#ffd47e",
+    "tint": "#9b744c",
+    "decor": "summer_terrace",
+    "sky": "#4e94c0",
+    "horizon": "#f3c982",
+    "ground": "#72523a",
+    "light": "#fff0ae",
+    "composition": "sunlit-stone-terrace-pergola-valley-pool",
+    "motion": [
+      "heat-shimmer",
+      "vine-breeze",
+      "pool-glints"
+    ],
+    "progression": "afternoon-sun-turns-amber",
+    "description": "Une terrasse minérale suspendue au-dessus d'une vallée, sous une pergola végétale et un soleil d'été franc."
+  },
+  {
+    "key": "automne",
+    "label": "Automne",
+    "accent": "#dc8a39",
+    "tint": "#7a4632",
+    "decor": "autumn_lake",
+    "sky": "#6b7280",
+    "horizon": "#d49963",
+    "ground": "#3b2b25",
+    "light": "#ffd39d",
+    "composition": "amber-forest-lake-boardwalk-low-sun",
+    "motion": [
+      "leaf-fall",
+      "lake-ripples",
+      "low-mist"
+    ],
+    "progression": "foliage-deepens-and-sun-lowers",
+    "description": "Un lac sombre bordé d'une forêt ambrée et d'un chemin de bois, dans une lumière basse de fin de saison."
+  },
+  {
+    "key": "hiver",
+    "label": "Hiver",
+    "accent": "#d9f3ff",
+    "tint": "#6a8597",
+    "decor": "winter_lodge",
+    "sky": "#4c627a",
+    "horizon": "#b4cad8",
+    "ground": "#60747d",
+    "light": "#eef8ff",
+    "composition": "alpine-peaks-snowfield-lodge-window",
+    "motion": [
+      "snow-fall",
+      "chimney-drift",
+      "window-glow"
+    ],
+    "progression": "snow-light-cools-while-lodge-warms",
+    "description": "Un refuge alpin minuscule face à de hauts sommets, posé dans un champ de neige presque silencieux."
+  },
+  {
+    "key": "pluie",
+    "label": "Pluie",
+    "accent": "#78b8e8",
+    "tint": "#344b61",
+    "decor": "rain_city",
+    "sky": "#101923",
+    "horizon": "#263748",
+    "ground": "#10151a",
+    "light": "#b7d5ea",
+    "composition": "rainy-city-street-neon-reflections",
+    "motion": [
+      "street-rain",
+      "reflection-pulse",
+      "distant-traffic-bokeh"
+    ],
+    "progression": "street-reflections-grow-as-sky-darkens",
+    "description": "Une rue urbaine nocturne sous une pluie dense, où les rares lumières se prolongent dans l'asphalte mouillé."
   },
   {
     "key": "ocean",
@@ -95,79 +361,98 @@
     "description": "Des dunes ridées par le vent, et la coupole d'un observatoire à demi ensevelie."
   },
   {
-    "key": "aurores",
-    "label": "Vallée des aurores",
-    "accent": "#7effd8",
-    "tint": "#14313d",
-    "decor": "aurora_valley",
-    "sky": "#020a14",
-    "horizon": "#0d3243",
-    "ground": "#061218",
-    "light": "#bfe8ff",
-    "composition": "toundra-lac-gele-rideaux-polaires",
+    "key": "foret",
+    "label": "Forêt des origines",
+    "accent": "#d8e9a8",
+    "tint": "#3d5a3a",
+    "decor": "ancient_forest",
+    "sky": "#3f7ba8",
+    "horizon": "#c4cfae",
+    "ground": "#1b2a18",
+    "light": "#fff2cc",
+    "composition": "futaie-ancienne-troncs-colossaux-rais-de-lumiere",
     "motion": [
-      "plis-de-l-aurore",
-      "neige-qui-derive",
-      "lac-miroir"
+      "rais-de-lumiere",
+      "spores-en-suspension",
+      "sous-bois-immobile"
     ],
-    "progression": "les-rideaux-s-intensifient-avec-la-session",
-    "description": "Une toundra gelée sous des rideaux polaires qui se plissent au-dessus des sommets."
+    "progression": "le-soleil-descend-et-les-rais-s-allongent",
+    "description": "Une futaie ancienne où la lumière tombe entre des troncs plus larges qu'un homme."
   },
   {
-    "key": "galaxie",
-    "label": "Odyssée stellaire",
-    "accent": "#c9a4ff",
-    "tint": "#1c0c30",
-    "decor": "galaxy",
-    "sky": "#040110",
-    "horizon": "#160b2a",
-    "ground": "#010206",
-    "light": "#ecd0ff",
-    "composition": "pont-d-observation-planete-annelee-nebuleuse",
+    "key": "orage",
+    "label": "Orage",
+    "accent": "#a8b9db",
+    "tint": "#3c4353",
+    "decor": "storm_cliffs",
+    "sky": "#11131b",
+    "horizon": "#333846",
+    "ground": "#15191d",
+    "light": "#dce8ff",
+    "composition": "storm-sea-cliffs-shelf-cloud-lightning",
     "motion": [
-      "rotation-de-la-galaxie",
-      "voiles-de-gaz",
-      "feux-de-position"
+      "wave-chop",
+      "cloud-race",
+      "rare-lightning"
     ],
-    "progression": "les-gaz-s-illuminent-et-le-vide-s-approfondit",
-    "description": "Un pont d'observation ouvert sur une planète annelée et les voiles d'une nébuleuse."
+    "progression": "storm-front-moves-across-the-horizon",
+    "description": "Un front d'orage traverse des falaises battues par la mer, avec des éclairs rares qui éclairent toute la masse nuageuse."
   },
   {
-    "key": "fleuve_temps",
-    "label": "Fleuve du Temps",
-    "accent": "#b9c8ff",
-    "tint": "#2b3556",
-    "decor": "time_river",
-    "sky": "#050a1c",
-    "horizon": "#2e4478",
-    "ground": "#070a16",
-    "light": "#f0d6ff",
-    "composition": "fleuve-ruines-arches-eclats-temporels",
+    "key": "braises",
+    "label": "Braises",
+    "accent": "#ff9b4b",
+    "tint": "#6f3927",
+    "decor": "ember_hearth",
+    "sky": "#120d0b",
+    "horizon": "#271713",
+    "ground": "#090706",
+    "light": "#ffd083",
+    "composition": "stone-hearth-dark-room-ember-bed",
     "motion": [
-      "courant-du-fleuve",
-      "eclats-en-suspension",
-      "brume-de-berge"
+      "ember-rise",
+      "coal-pulse",
+      "warm-light-breath"
     ],
-    "progression": "les-eclats-s-intensifient-a-mesure-que-le-temps-passe",
-    "description": "Un fleuve lent entre des colonnes écroulées, où flottent des éclats de lumière."
+    "progression": "embers-cool-from-gold-to-deep-red",
+    "description": "Un foyer de pierre presque éteint dans une pièce sombre, où les braises et leur lumière deviennent le seul paysage."
   },
   {
-    "key": "abysses",
-    "label": "Sanctuaire abyssal",
-    "accent": "#7df5e5",
-    "tint": "#0a3a44",
-    "decor": "abyss",
-    "sky": "#0d5560",
-    "horizon": "#083038",
-    "ground": "#02171c",
-    "light": "#b4fff2",
-    "composition": "sanctuaire-englouti-colonnes-colonnes-de-lumiere",
+    "key": "aurore",
+    "label": "Aurore",
+    "accent": "#77f0b0",
+    "tint": "#23556a",
+    "decor": "polar_sky",
+    "sky": "#02111d",
+    "horizon": "#0d3448",
+    "ground": "#10222a",
+    "light": "#d9fff0",
+    "composition": "open-tundra-vast-polar-sky",
     "motion": [
-      "colonnes-de-lumiere",
-      "neige-marine",
-      "courant-lent"
+      "aurora-curtains",
+      "star-twinkle",
+      "snow-dust"
     ],
-    "progression": "la-lumiere-de-surface-faiblit-et-les-eclats-prennent-le-relais",
-    "description": "Un sanctuaire englouti où la lumière de la surface descend en colonnes dans le bleu."
+    "progression": "aurora-curtains-expand-over-the-tundra",
+    "description": "Une plaine polaire presque vide laisse tout l'écran au ciel et à de grands rideaux d'aurore, sans vallée ni lac."
+  },
+  {
+    "key": "nuit",
+    "label": "Nuit",
+    "accent": "#9cb9f1",
+    "tint": "#27354f",
+    "decor": "midnight_rooftop",
+    "sky": "#030710",
+    "horizon": "#10192a",
+    "ground": "#080a0d",
+    "light": "#e8edff",
+    "composition": "quiet-rooftop-city-moon-stars",
+    "motion": [
+      "window-flicker",
+      "star-twinkle",
+      "distant-haze"
+    ],
+    "progression": "city-lights-thin-as-night-deepens",
+    "description": "Un toit silencieux domine une ville assoupie sous la lune, avec quelques fenêtres encore allumées et un ciel profond."
   }
 ]
