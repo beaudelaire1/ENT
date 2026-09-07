@@ -20,6 +20,11 @@ ENVIRONMENT = {
     "AWS_STORAGE_BUCKET_NAME": "myent-media",
 }
 
+# Un mercredi quelconque. La commande ne monte les paliers hebdomadaire et mensuel que
+# le dimanche et le premier du mois : les tests ne doivent jamais dépendre du jour réel
+# où ils sont exécutés.
+WEEKDAY = datetime(2026, 8, 12, 4, 30, tzinfo=timezone.utc)
+
 
 class FakeS3:
     """Un bucket en mémoire : on vérifie ce qui monte et ce qui est purgé."""
@@ -42,20 +47,8 @@ class FakeS3:
         self.deleted.extend(item["Key"] for item in Delete["Objects"])
 
 
-<<<<<<< HEAD
-def run(client, *, options=None, now=None, **environment):
-    """Exécute la commande avec un pg_dump simulé et un S3 en mémoire.
-=======
-# Un mercredi quelconque. La commande ne monte les paliers hebdomadaire et mensuel que
-# le dimanche et le premier du mois : laisser l'horloge réelle décider faisait dépendre
-# les clés produites du jour où la suite tournait, et les tests écrits pour le seul
-# palier quotidien tombaient chaque dimanche. Les paliers eux-mêmes restent couverts par
-# `RetentionTests`, avec leurs dates explicites.
-WEEKDAY = datetime(2026, 8, 12, 4, 30, tzinfo=timezone.utc)
-
-
 def frozen_clock(instant):
-    """Horloge figée : la commande lit l'heure elle-même, au moment du transfert."""
+    """Horloge figée : la commande lit l'heure elle-même au moment du transfert."""
 
     class Clock(datetime):
         @classmethod
@@ -65,13 +58,20 @@ def frozen_clock(instant):
     return Clock
 
 
-def run(client, *, options=None, when=WEEKDAY, **environment):
+def run(client, *, options=None, now=None, when=None, **environment):
     """Exécute la commande avec un pg_dump simulé, un S3 en mémoire et une horloge figée.
->>>>>>> 4068fa34cd11473dbb43000a41d78cdd95858ede
+
+    ``now`` reste accepté pour les tests de rétention historiques ; ``when`` rend
+    explicite le cas où le jour d'exécution fait partie du scénario. Les deux désignent
+    la même horloge et ne doivent pas être fournis simultanément avec des valeurs
+    différentes.
 
     Une variable passée à ``None`` est vidée plutôt que supprimée : la commande teste la
     valeur, et une chaîne vide est le cas réel d'un secret déclaré mais laissé vide.
     """
+    if now is not None and when is not None and now != when:
+        raise ValueError("now et when désignent deux instants différents")
+    instant = when or now or WEEKDAY
     values = {key: value or "" for key, value in {**ENVIRONMENT, **environment}.items()}
 
     def dump(_self, _url, destination):
@@ -81,13 +81,8 @@ def run(client, *, options=None, when=WEEKDAY, **environment):
         mock.patch.dict("os.environ", values, clear=False),
         mock.patch.object(Command, "client", staticmethod(lambda: client)),
         mock.patch.object(Command, "dump_database", dump),
-<<<<<<< HEAD
-        mock.patch("core.management.commands.backup_database.datetime") as clock,
-=======
-        mock.patch("core.management.commands.backup_database.datetime", frozen_clock(when)),
->>>>>>> 4068fa34cd11473dbb43000a41d78cdd95858ede
+        mock.patch("core.management.commands.backup_database.datetime", frozen_clock(instant)),
     ):
-        clock.now.return_value = now or datetime(2026, 8, 12, tzinfo=timezone.utc)
         call_command("backup_database", **(options or {}))
 
 
@@ -207,12 +202,7 @@ class FullRunTests(SimpleTestCase):
         self.assertTrue(all(key.startswith("database/daily/myent-") for _bucket, key in client.uploaded))
 
     def test_a_sunday_run_also_writes_the_weekly_copy(self):
-        """Le dimanche, la même sauvegarde part aussi sous le palier hebdomadaire.
-
-        Ce jour-là, la commande produit deux clés pour un seul transfert : c'est ce
-        que l'ancien contrôle de préfixe, écrit pour le seul palier quotidien,
-        n'avait pas prévu — la suite tombait donc tous les dimanches.
-        """
+        """Le dimanche, la même sauvegarde part aussi sous le palier hebdomadaire."""
         client = FakeS3()
         with tempfile.TemporaryDirectory() as media:
             with override_settings(MEDIA_ROOT=Path(media), USE_S3=False):
