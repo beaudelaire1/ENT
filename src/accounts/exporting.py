@@ -1,4 +1,4 @@
-"""Export personnel lisible, sans secret d'authentification ni binaire volumineux."""
+"""Export personnel lisible et structurellement fidèle, sans secret ni binaire volumineux."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ def export_account(user):
     from formations.models import Assessment, AssessmentResult, LearningPath, ProgressEvent, ProgressRecord
     from library.models import Folder, LibraryItem, Tag
     from notifications.models import Notification
-    from planner.models import CalendarEvent, Task
-    from sablier.models import FocusPreference, FocusSession, Playlist
+    from planner.models import CalendarEvent, Task, TaskFocus, TaskSeries
+    from sablier.models import AudioTrack, FocusPreference, FocusSession, Playlist, PlaylistTrack
 
     profile = getattr(user, "profile", None)
     formation_rows = []
@@ -39,9 +39,6 @@ def export_account(user):
                     "assessed_at",
                     "level_origin",
                 ),
-                # Le journal part avec le reste : un export qui ne rendrait que l'état
-                # courant perdrait le chemin, qui est précisément ce qui ne se reconstitue
-                # pas de mémoire.
                 "level_history": _rows(
                     ProgressEvent.objects.filter(record__owner=user, record__competency__path=path),
                     "record__competency_id",
@@ -53,13 +50,21 @@ def export_account(user):
                 ),
             }
         )
+
     assessments = Assessment.objects.filter(owner=user)
     items = LibraryItem.objects.filter(owner=user).prefetch_related("tags")
+    audio_tracks = AudioTrack.objects.filter(owner=user)
+    playlists = Playlist.objects.filter(owner=user)
+
     return {
         "schema": "myent.account-export",
-        "version": 1,
+        "version": 2,
         "exported_at": timezone.now(),
-        "notice": "Les fichiers et pistes audio ne sont pas inclus en binaire ; leur nom et leurs métadonnées le sont.",
+        "notice": (
+            "Les fichiers de bibliothèque, images de fond et pistes audio ne sont pas inclus en binaire. "
+            "Leur nom, leur clé de stockage et leurs métadonnées sont exportés afin que l'archive décrive "
+            "fidèlement les relations du compte."
+        ),
         "account": {
             "username": user.get_username(),
             "email": user.email,
@@ -126,19 +131,33 @@ def export_account(user):
             ],
         },
         "planner": {
+            "task_series": _rows(
+                TaskSeries.objects.filter(owner=user),
+                "id",
+                "recurrence",
+                "repeat_until",
+            ),
             "tasks": _rows(
                 Task.objects.filter(owner=user),
                 "id",
                 "series_id",
+                "series_position",
                 "title",
                 "description",
                 "status",
                 "priority",
                 "due_at",
                 "reminder_at",
+                "email_reminder",
                 "unit_id",
                 "competency_id",
                 "assessment_id",
+            ),
+            "task_focuses": _rows(
+                TaskFocus.objects.filter(owner=user),
+                "task_id",
+                "scope",
+                "period_start",
             ),
             "events": _rows(
                 CalendarEvent.objects.filter(owner=user),
@@ -151,6 +170,7 @@ def export_account(user):
                 "all_day",
                 "location",
                 "reminder_at",
+                "email_reminder",
                 "unit_id",
                 "competency_id",
                 "assessment_id",
@@ -166,17 +186,43 @@ def export_account(user):
                 "focus_level",
                 "warning_seconds",
                 "decor_density",
+                "end_sound_enabled",
+                "accent_color",
+                "custom_accent",
+                "background_image",
             ),
             "sessions": _rows(
                 FocusSession.objects.filter(owner=user),
+                "client_id",
                 "competency_id",
                 "intention",
                 "started_at",
+                "ended_at",
                 "seconds",
                 "counted_at",
                 "excluded_at",
             ),
-            "playlists": _rows(Playlist.objects.filter(owner=user), "id", "title", "description"),
+            "audio_tracks": _rows(
+                audio_tracks,
+                "id",
+                "title",
+                "artist",
+                "file",
+                "mime_type",
+                "file_size",
+                "duration_seconds",
+                "status",
+                "rejection_reason",
+                "created_at",
+                "updated_at",
+            ),
+            "playlists": _rows(playlists, "id", "title", "description", "created_at", "updated_at"),
+            "playlist_tracks": _rows(
+                PlaylistTrack.objects.filter(playlist__owner=user),
+                "playlist_id",
+                "track_id",
+                "position",
+            ),
         },
         "notifications": _rows(
             Notification.objects.filter(owner=user), "kind", "title", "message", "url", "read_at", "created_at"
