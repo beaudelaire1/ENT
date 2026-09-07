@@ -10,6 +10,15 @@
     {% if widget.kind == 'today' %}
       {% for event in events_today %}<div class="list-row"><a href="{% url 'planner:event_edit' event.pk %}?next={% url 'dashboard:home' %}">{{ event.title }}</a><time>{{ event.starts_at|time:"H:i" }}–{{ event.ends_at|time:"H:i" }}</time></div>{% empty %}<div class="empty-state"><p class="empty">Rien de prévu aujourd’hui.</p><a class="button small" href="{% url 'planner:event_new' %}">Ajouter un événement</a></div>{% endfor %}
     {% elif widget.kind == 'tasks' %}
+      <div class="stack-form" aria-label="Priorités temporelles">
+        {% for focus in task_focuses %}
+          <div class="list-row">
+            <div><strong>{{ focus.label }}</strong>{% if focus.task %}<span class="muted"> · </span><a href="{% url 'planner:task_edit' focus.task.pk %}?next={% url 'dashboard:home' %}">{{ focus.task.title }}</a>{% else %}<span class="muted"> · Non définie</span>{% endif %}</div>
+            {% if focus.task %}<form method="post" action="{% url 'planner:task_focus_clear' focus.scope %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:home' %}"><button class="button small quiet" type="submit">Retirer</button></form>{% endif %}
+          </div>
+        {% endfor %}
+        <div class="actions"><a class="button small quiet" href="{% url 'planner:tasks' %}">Choisir les priorités</a></div>
+      </div>
       {% for task in tasks %}<div class="list-row"><div><a href="{% url 'planner:task_edit' task.pk %}?next={% url 'dashboard:home' %}">{{ task.title }}</a><span class="muted"> · {{ task.get_priority_display }}{% if task.due_at %} · {{ task.due_at|date:"d/m H:i" }}{% endif %}</span></div><form method="post" action="{% url 'planner:task_toggle' task.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:home' %}"><button class="button small" type="submit">Terminer</button></form></div>{% empty %}<div class="empty-state"><p class="empty">Tout est à jour.</p><a class="button small" href="{% url 'planner:task_new' %}">Ajouter une tâche</a></div>{% endfor %}
     {% elif widget.kind == 'reminders' %}
       {% for note in notifications %}<div class="list-row"><div><strong>{{ note.title }}</strong>{% if note.message %}<span class="muted"> · {{ note.message|truncatechars:80 }}</span>{% endif %}</div><form method="post" action="{% url 'notifications:read' note.pk %}">{% csrf_token %}<button class="button small" type="submit">Ouvrir</button></form></div>{% empty %}<p class="empty">Aucun rappel.</p>{% endfor %}
