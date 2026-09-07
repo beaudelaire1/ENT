@@ -36,9 +36,12 @@ test('session hors connexion conservée et envoyée une seule fois', async ({pag
   await page.locator('#main-control').click();
   await context.setOffline(true);
   await expect(page.locator('#session-sync-status')).toContainText('attente');
-  await context.setOffline(false);
+  // Depuis que `session-sync.js` renvoie la file sur l'évènement `online`, revenir en
+  // ligne suffit : le bouton de réessai disparaît alors de lui-même, la file étant vide.
+  // Attendre le reçu plutôt que le clic, c'est vérifier ce qui compte — la session part
+  // une fois et une seule — sans exiger le chemin par lequel elle est partie.
   const receipt = page.waitForResponse(r => r.url().includes('/sessions/log/') && r.status() === 200);
-  await page.locator('#session-sync-retry').click();
+  await context.setOffline(false);
   const response = await receipt;
   const payload = response.request().postDataJSON();
   const token = await page.locator('#focus-app').getAttribute('data-csrf');
