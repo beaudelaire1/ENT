@@ -153,6 +153,9 @@
                 {% if entry.saved %}<span class="resource-saved">Ajoutée</span>{% endif %}
               </div>
               <p>{{ entry.resource.description }}</p>
+              {% if entry.resource.caution %}
+                <p class="resource-caution"><strong>À vérifier :</strong> {{ entry.resource.caution }}</p>
+              {% endif %}
               <div class="resource-meta">
                 <span>{{ entry.resource.provider }}</span>
                 <span>{{ entry.resource.format_label }}</span>

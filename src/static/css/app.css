@@ -173,6 +173,11 @@ h2 { font-size:18px; }
 .recommended-resource.is-saved { border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
 .recommended-resource-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; font-weight:750; }
 .recommended-resource p { margin:7px 0 9px; color:var(--muted); font-size:13px; line-height:1.45; }
+/* Une réserve sur une ressource se lit avant de cliquer, pas après avoir perdu
+   une heure dessus : elle est donc signalée, sans crier plus fort que le titre. */
+.resource-caution { margin:6px 0 0; padding:6px 9px; border-left:3px solid var(--accent);
+  background:var(--panel); color:var(--muted); font-size:12px; line-height:1.45; border-radius:0 6px 6px 0; }
+.resource-caution strong { color:var(--text); }
 .resource-meta { display:flex; flex-wrap:wrap; gap:6px; }
 .resource-meta span,.resource-saved { padding:3px 7px; border-radius:999px; background:var(--panel); color:var(--muted); font-size:10px; font-weight:750; letter-spacing:.02em; }
 .resource-saved { flex:0 0 auto; background:color-mix(in srgb,var(--accent) 16%,var(--panel)); color:var(--accent); }

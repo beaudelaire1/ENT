@@ -37,6 +37,10 @@ class CuratedResource:
     language: str
     format_label: str
     description: str
+    # Ce qui n'est pas garanti sur cette ressource : hébergement non institutionnel,
+    # périmètre partiel, année figée. Vide quand la ressource est sans réserve.
+    # Une réserve se dit à l'étudiant plutôt que de se deviner à l'usage.
+    caution: str = ""
 
     @property
     def role_label(self) -> str:
@@ -64,24 +68,46 @@ def _resource(
     language: str,
     format_label: str,
     description: str,
+    caution: str = "",
 ) -> CuratedResource:
-    return CuratedResource(key, title, url, provider, purpose, role, language, format_label, description)
+    return CuratedResource(key, title, url, provider, purpose, role, language, format_label, description, caution)
 
 
 RESOURCES = {
     item.key: item
     for item in (
         # ------------------------------------------------------------- topologie
+        # Le polycopié de Lille qui occupait cette place était un manuscrit scanné :
+        # 165 pages sans une ligne de texte sélectionnable, donc ni recherchable, ni
+        # lisible par une synthèse vocale, ni agrandissable sans bouillie. Un cours de
+        # référence se relit vingt fois dans l'année : il doit être composé.
         _resource(
-            "topology_course_lille",
-            "Cours de topologie",
-            "https://pro.univ-lille.fr/fileadmin/user_upload/pages_pros/emmanuel_fricain/Cours-Topologie.pdf",
-            "Université de Lille · E. Fricain",
+            "topology_course_toulouse",
+            "Topologie et analyse hilbertienne — polycopié L3 MAF",
+            "https://www.math.univ-toulouse.fr/~bauval/Topo/Topo2015Poly.pdf",
+            "Université Paul Sabatier · A. Bauval, d'après A. Cumenge",
             "course",
             "understand",
             "fr",
-            "PDF de cours",
-            "Un polycopié L3 structuré pour fixer définitions, caractérisations et preuves avant les exercices.",
+            "PDF de cours, exercices et annales",
+            "Le cours de référence composé en LaTeX : topologie générale, espaces métriques, "
+            "compacité et connexité, puis espaces normés. Les annales et les feuilles d'exercices "
+            "sont dans le même fichier, ce qui évite de chercher ailleurs de quoi s'entraîner.",
+        ),
+        _resource(
+            "topology_course_bordeaux",
+            "Cours de Licence 3 : topologie",
+            "https://www.math.u-bordeaux.fr/~obrinon/MA/cours_L3/L3%20-%20Topologie.pdf",
+            "Université de Bordeaux · cours de P. Autissier, rédigé par H. Clouet",
+            "course",
+            "understand",
+            "fr",
+            "PDF de cours (31 pages)",
+            "Le même socle en trente pages : métriques et topologies, adhérence et intérieur, "
+            "limites, continuité, produit, connexité, compacité, complétude. À lire pour réviser "
+            "vite une notion déjà travaillée, pas pour la découvrir.",
+            "Rédaction étudiante d'un cours enseigné, hébergée sur la page d'un autre "
+            "enseignant : à confronter au polycopié de Toulouse en cas de doute.",
         ),
         _resource(
             "topology_exercises_lille",
@@ -162,16 +188,27 @@ RESOURCES = {
             "Cours, TD et annales",
             "Un parcours complet par feuilles : repères, applications affines, barycentres, euclidien, isométries et coniques.",
         ),
+        # Ce document se présentait ici comme une synthèse du cours. Il n'en est pas une :
+        # ce sont les trois programmes de contrôle continu de 2013, mis bout à bout, et ils
+        # écartent nommément deux notions au programme — « Les barycentres ne figurent pas
+        # au programme de ce CC1 », « les angles orientés [...] ne figurent pas au programme
+        # du CC3 ». Le vendre comme une révision complète envoyait l'étudiant réviser dans un
+        # document dont les deux chapitres qui lui coûtent le plus sont absents.
         _resource(
             "geometry_affine_summary_lyon",
-            "Résumé de géométrie élémentaire",
+            "Géométrie élémentaire — programmes des contrôles 2013",
             "https://math.univ-lyon1.fr/~germoni/L3/geom_elem_2013.pdf",
-            "Université Claude Bernard Lyon 1 · S. Parmentier",
+            "Université Claude Bernard Lyon 1 · cours de S. Parmentier, résumé diffusé par J. Germoni",
             "sheet",
             "deepen",
             "fr",
-            "Synthèse PDF L3",
-            "Une synthèse compacte pour réviser définitions, résultats et méthodes sans relire tout le polycopié.",
+            "Relevé de notions (21 pages)",
+            "La liste ordonnée des énoncés exigibles : espaces affines, repères, sous-espaces, "
+            "applications affines, isométries, volumes et coniques. Utile pour vérifier qu'aucun "
+            "énoncé du cours ne manque à l'appel avant un contrôle.",
+            "Ce n'est pas un résumé du cours mais le périmètre de trois contrôles de 2013 : "
+            "les barycentres et les angles orientés en sont explicitement exclus. Les réviser "
+            "avec le cours d'Aubrun et la leçon sur l'angle inscrit.",
         ),
         _resource(
             "geometry_affine_transformations_lyon",
@@ -181,8 +218,10 @@ RESOURCES = {
             "course",
             "deepen",
             "fr",
-            "Complément PDF",
+            "Complément PDF (6 pages)",
             "Un complément ciblé sur la partie linéaire, les invariants, points fixes, projections et coordonnées barycentriques.",
+            "Document de préparation à l'agrégation (2006-2007) : à ouvrir une fois le cours de "
+            "L3 acquis, pour les caractérisations et le groupe affine, pas pour découvrir la notion.",
         ),
         _resource(
             "geometry_affine_td_coordinates_lyon",
@@ -227,6 +266,66 @@ RESOURCES = {
             "fr",
             "Collection de 9 vidéos",
             "Des exercices filmés et corrigés pour visualiser les calculs de droites, plans, distances et premières coniques.",
+        ),
+        # Les angles algébriques n'avaient aucune ressource propre : le cours d'Aubrun leur
+        # consacre une section (3.3), les deux TD euclidiens n'emploient que l'angle
+        # géométrique de [0,π], et le « résumé » de 2013 les exclut. L'étudiant avait donc
+        # la définition, et rien pour s'en servir.
+        _resource(
+            "geometry_angles_inscribed_lecon",
+            "Théorème de l'angle inscrit. Cocyclicité. Applications.",
+            "https://www.capes-de-maths.com/lecons/lecon31.pdf",
+            "Leçon d'oral de CAPES nº 31",
+            "course",
+            "understand",
+            "fr",
+            "Leçon rédigée (6 pages)",
+            "Le seul document du parcours qui traite les angles orientés pour eux-mêmes : angle "
+            "inscrit et angle au centre, passage de modulo 2π à modulo π, cocyclicité, angle "
+            "tangentiel, le tout démontré. Le plan d'une leçon d'oral, donc directement réutilisable.",
+            "Site de préparation privé, hors hébergement universitaire : les énoncés sont à "
+            "recouper avec la section 3.3 du cours d'Aubrun avant d'en faire une référence.",
+        ),
+        _resource(
+            "geometry_affine_td_applications_lyon",
+            "TD 2 — applications affines",
+            "https://math.univ-lyon1.fr/~germoni/L3/TD_02.pdf",
+            "Université Claude Bernard Lyon 1 · J. Germoni",
+            "exercise",
+            "practice",
+            "fr",
+            "PDF d'exercices",
+            "La feuille qui manquait entre les repères et les barycentres : reconnaître une "
+            "application affine, écrire sa partie linéaire, chercher ses points fixes.",
+        ),
+        # Dix feuilles de TD sans corrigé et aucune annale corrigée : l'étudiant ne pouvait
+        # pas vérifier seul une rédaction. Les contrôles archivés de Lyon 1 viennent avec
+        # leur corrigé, et le module s'intitule « Mathématiques pour l'enseignement » —
+        # c'est le niveau d'exigence du CAPES, sur les notions du programme.
+        _resource(
+            "geometry_exam_2015_final_lyon",
+            "Contrôle final 2015 et son corrigé — géométrie élémentaire",
+            "https://math.univ-lyon1.fr/~germoni/L3/CC_archives/2015_CC4.pdf",
+            "Université Claude Bernard Lyon 1 · J. Germoni",
+            "past_paper",
+            "practice",
+            "fr",
+            "Sujet corrigé (3 h)",
+            "Trois heures sur les points fixes d'une application affine, les coordonnées "
+            "barycentriques, les mesures algébriques et le théorème de Ceva. Le corrigé est "
+            "publié à côté du sujet, sur la même page d'archives.",
+        ),
+        _resource(
+            "geometry_exam_2016_final_lyon",
+            "Contrôle final 2016 et son corrigé — isométries et angles",
+            "https://math.univ-lyon1.fr/~germoni/L3/CC_archives/2016_CC4.pdf",
+            "Université Claude Bernard Lyon 1 · J. Germoni",
+            "past_paper",
+            "deepen",
+            "fr",
+            "Sujet corrigé (3 h)",
+            "Rotations de l'espace et droites stables, angle et plans bissecteurs de deux plans "
+            "sécants : l'épreuve où les angles orientés servent enfin à démontrer quelque chose.",
         ),
         _resource(
             "geometry_euclidean_td_lyon",
@@ -874,12 +973,15 @@ RESOURCES = {
 
 # Trois ressources de fond par matière : elles se complètent par le rôle, pas par le titre.
 UNIT_BUNDLES = {
-    "Topologie": ("topology_course_lille", "topology_exercises_lille", "topology_exercises_advanced_lille"),
+    # Le second fascicule de Lille porte les énoncés les plus exigeants : il quitte le
+    # tronc commun pour n'être proposé que sur les notions qui le demandent (voir
+    # TOPIC_RULES). Sans quoi la même pile de trois documents répondait à tout.
+    "Topologie": ("topology_course_toulouse", "topology_course_bordeaux", "topology_exercises_lille"),
     "Mesure et intégration": ("measure_course_lille", "measure_exercises_lille", "measure_td_exams_lyon"),
     "Géométrie": (
         "geometry_affine_course_lyon",
         "geometry_affine_practice_lyon",
-        "geometry_affine_summary_lyon",
+        "geometry_exam_2015_final_lyon",
     ),
     "Oraux de mathématiques": ("oral_presentation_mit", "oral_writing_oxford", "oral_checklist_mit"),
     "Calcul scientifique 5": ("numerical_course_lille", "scipy_lectures_pdf", "numpy_operations"),
@@ -910,6 +1012,25 @@ UNIT_BUNDLES = {
 
 
 TOPIC_RULES = (
+    # La topologie n'avait aucune règle : ses trente-quatre compétences recevaient toutes
+    # le même trio de fond, si bien qu'une question sur Baire et une question sur les
+    # boules ouvertes renvoyaient au même endroit. Le second fascicule de Lille porte les
+    # énoncés les plus exigeants ; c'est lui qu'on adresse aux notions terminales.
+    TopicRule(
+        ("Topologie",),
+        ("complet", "cauchy", "point fixe", "banach", "baire", "completer", "densite"),
+        ("topology_exercises_advanced_lille",),
+    ),
+    TopicRule(
+        ("Topologie",),
+        ("compacite", "borel-lebesgue", "bolzano", "heine", "extrema"),
+        ("topology_exercises_advanced_lille",),
+    ),
+    TopicRule(
+        ("Topologie",),
+        ("norme", "normes", "lineaire", "convergence uniforme", "approximation"),
+        ("topology_exercises_advanced_lille",),
+    ),
     TopicRule(
         ("Géométrie",),
         (
@@ -926,7 +1047,7 @@ TOPIC_RULES = (
             "symetrie affine",
             "invariants affines",
         ),
-        ("geometry_affine_transformations_lyon",),
+        ("geometry_affine_td_applications_lyon", "geometry_affine_transformations_lyon"),
     ),
     TopicRule(
         ("Géométrie",),
@@ -957,6 +1078,22 @@ TOPIC_RULES = (
         ("Géométrie",),
         ("isometrie", "isometries", "matrice orthogonale", "reflexions", "rotations", "groupe des isometries"),
         ("geometry_euclidean_isometries_td_lyon",),
+    ),
+    TopicRule(
+        ("Géométrie",),
+        (
+            "angle oriente",
+            "angles orientes",
+            "angle de droites",
+            "angles de droites",
+            "angle inscrit",
+            "cocyclicite",
+            "cocycliques",
+            "chasles pour les angles",
+            "modulo 2",
+            "orientation du plan",
+        ),
+        ("geometry_angles_inscribed_lecon", "geometry_exam_2016_final_lyon"),
     ),
     TopicRule(
         ("Géométrie",),

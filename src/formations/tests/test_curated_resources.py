@@ -52,6 +52,58 @@ class CuratedCatalogTests(TestCase):
         self.assertIn("scipy_interpolation", [resource.key for resource in interpolation])
         self.assertIn("statistics_regression_lyon", [resource.key for resource in regression])
 
+    def test_no_course_resource_is_a_handwritten_scan(self):
+        """Un cours de référence se relit vingt fois : il doit être composé.
+
+        Le polycopié de topologie qui occupait cette place était un manuscrit scanné de
+        165 pages : aucun texte sélectionnable, donc rien à rechercher, rien à lire à voix
+        haute, rien à agrandir sans bouillie. Le test ne peut pas ouvrir les PDF ; il fixe
+        la seule trace vérifiable hors ligne — l'URL écartée ne doit pas revenir.
+        """
+        urls = {resource.url for resource in RESOURCES.values()}
+        self.assertNotIn(
+            "https://pro.univ-lille.fr/fileadmin/user_upload/pages_pros/emmanuel_fricain/Cours-Topologie.pdf",
+            urls,
+        )
+        self.assertIn("topology_course_toulouse", RESOURCES)
+
+    def test_topology_competencies_receive_more_than_the_same_three_resources(self):
+        """Trente-quatre savoir-faire ne peuvent pas partager un seul parcours.
+
+        Faute de règle par sujet, Baire et « qu'est-ce qu'une boule ouverte » renvoyaient
+        au même trio. Deux compétences éloignées doivent maintenant différer.
+        """
+        base = recommendations_for("Manipuler boules ouvertes, boules fermées et voisinages", ["Topologie"])
+        banach = recommendations_for("Appliquer le théorème du point fixe de Banach", ["Topologie"])
+        self.assertNotEqual({r.key for r in base}, {r.key for r in banach})
+        self.assertIn("topology_exercises_advanced_lille", [r.key for r in banach])
+
+    def test_algebraic_angles_have_their_own_resources(self):
+        """Les angles orientés avaient la définition, et rien pour s'en servir.
+
+        Le cours leur consacre une section, les deux feuilles euclidiennes n'emploient que
+        l'angle géométrique de [0, π], et le relevé de 2013 les exclut nommément. Une
+        compétence sur l'angle inscrit ou la cocyclicité doit atteindre un document qui les
+        démontre.
+        """
+        for title in (
+            "Appliquer le théorème de l’angle inscrit et le relier à l’angle au centre",
+            "Caractériser la cocyclicité par une égalité d’angles de droites modulo π",
+            "Orienter le plan et distinguer angle géométrique, angle de vecteurs et angle de droites",
+        ):
+            with self.subTest(competency=title):
+                keys = [resource.key for resource in recommendations_for(title, ["Géométrie"])]
+                self.assertIn("geometry_angles_inscribed_lecon", keys)
+
+    def test_a_resource_with_a_reservation_states_it(self):
+        """Une réserve se dit à l'étudiant, elle ne se découvre pas à l'usage."""
+        summary = RESOURCES["geometry_affine_summary_lyon"]
+        self.assertTrue(summary.caution)
+        self.assertIn("angles orientés", summary.caution)
+        for key in ("topology_course_bordeaux", "geometry_angles_inscribed_lecon"):
+            with self.subTest(resource=key):
+                self.assertTrue(RESOURCES[key].caution)
+
     def test_geometry_uses_affine_euclidean_and_topic_specific_resources(self):
         barycentre = recommendations_for(
             "Utiliser l’associativité des barycentres et les barycentres partiels",
@@ -99,23 +151,27 @@ class CuratedResourceImportTests(TestCase):
         self.competency = competency_in(self.unit, title="Établir la compacité", order=1)
         self.detail_url = reverse("formations:competency", args=[self.competency.pk])
         self.import_url = reverse("formations:competency_import_recommendations", args=[self.competency.pk])
+        # Le parcours d'une compétence s'enrichit avec le catalogue. Le compter ici plutôt
+        # que d'écrire un nombre en dur évite qu'ajouter une ressource casse quatre tests
+        # qui ne parlent pourtant que de l'import.
+        self.expected = recommendations_for(self.competency.title, [self.unit.title])
 
     def test_the_competency_page_explains_and_displays_the_path(self):
         response = self.client.get(self.detail_url)
 
         self.assertContains(response, "Parcours recommandé")
-        self.assertContains(response, "Cours de topologie")
-        self.assertContains(response, "PDF de cours")
+        self.assertContains(response, "Topologie et analyse hilbertienne")
         self.assertContains(response, "Français")
-        self.assertEqual(response.context["curated_count"], 3)
+        self.assertEqual(response.context["curated_count"], len(self.expected))
 
     def test_import_adds_every_recommendation_to_the_library_and_competency(self):
         response = self.client.post(self.import_url, follow=True)
 
-        self.assertEqual(LibraryItem.objects.filter(owner=self.user).count(), 3)
-        self.assertEqual(self.competency.resources.count(), 3)
-        self.assertContains(response, "3 ressource(s) du parcours ajoutée(s)")
-        item = LibraryItem.objects.get(legacy_id="topology_course_lille")
+        count = len(self.expected)
+        self.assertEqual(LibraryItem.objects.filter(owner=self.user).count(), count)
+        self.assertEqual(self.competency.resources.count(), count)
+        self.assertContains(response, f"{count} ressource(s) du parcours ajoutée(s)")
+        item = LibraryItem.objects.get(legacy_id="topology_course_toulouse")
         self.assertEqual(item.kind, LibraryItem.Kind.LINK)
         self.assertEqual(item.purpose, LibraryItem.Purpose.COURSE)
         self.assertIn("Comprendre", item.source_category)
@@ -124,8 +180,8 @@ class CuratedResourceImportTests(TestCase):
         self.client.post(self.import_url)
         self.client.post(self.import_url)
 
-        self.assertEqual(LibraryItem.objects.filter(owner=self.user).count(), 3)
-        self.assertEqual(self.competency.resources.count(), 3)
+        self.assertEqual(LibraryItem.objects.filter(owner=self.user).count(), len(self.expected))
+        self.assertEqual(self.competency.resources.count(), len(self.expected))
 
     def test_page_reports_when_every_resource_is_already_in_the_library(self):
         self.client.post(self.import_url)
@@ -147,7 +203,7 @@ class CuratedResourceImportTests(TestCase):
 
         self.client.post(self.import_url)
 
-        self.assertEqual(LibraryItem.objects.filter(owner=self.user).count(), 3)
+        self.assertEqual(LibraryItem.objects.filter(owner=self.user).count(), len(self.expected))
         existing.refresh_from_db()
         self.assertEqual(existing.title, "Mon intitulé")
         self.assertIn(existing, self.competency.resources.all())

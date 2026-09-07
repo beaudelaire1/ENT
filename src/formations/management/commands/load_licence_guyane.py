@@ -149,6 +149,17 @@ GEOMETRY_COMPETENCIES = [
     "Classifier les similitudes directes et indirectes du plan à l’aide des complexes",
     "Résoudre un problème de géométrie plane par les nombres complexes",
     "Établir des relations métriques et trigonométriques dans le triangle et le cercle",
+    # Angles algébriques. Le programme n'en portait qu'une trace — « angle » cité au
+    # détour du produit scalaire, et l'orientation au détour des déterminants. Or c'est
+    # ici que se joue la différence entre l'angle géométrique de [0, π], seul objet des
+    # deux feuilles euclidiennes, et l'angle orienté qui, lui, s'ajoute, se retranche et
+    # change de signe. Le CAPES interroge sur l'angle inscrit et la cocyclicité : sans
+    # ces cinq savoir-faire, la formation les laissait hors du parcours.
+    "Orienter le plan et distinguer angle géométrique, angle de vecteurs et angle de droites",
+    "Mesurer un angle orienté par le produit scalaire, le déterminant et l’argument complexe",
+    "Démontrer la relation de Chasles pour les angles et suivre leur signe sous une isométrie",
+    "Appliquer le théorème de l’angle inscrit et le relier à l’angle au centre",
+    "Caractériser la cocyclicité par une égalité d’angles de droites modulo π",
     # Coniques et quadriques
     "Caractériser une conique par foyer, directrice et excentricité",
     "Réduire l’équation d’une conique et la classifier dans un repère adapté",
