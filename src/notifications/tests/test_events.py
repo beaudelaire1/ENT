@@ -198,3 +198,29 @@ class PreferencePageTests(TestCase):
         self.assertFalse(NotificationPreference.objects.filter(owner=self.user).exists())
         notify(self.user, "task.created", dedupe_key="x:1", title="Nouvelle tâche")
         self.assertTrue(Notification.objects.filter(owner=self.user).exists())
+
+
+class DiagnosticCommandTests(TestCase):
+    """La commande qui répond à « je ne reçois rien » doit elle-même fonctionner."""
+
+    def test_it_reports_the_schedule_the_email_backend_and_the_account(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        get_user_model().objects.create_user("bob", email="bob@example.test", password="x")
+        out = StringIO()
+        call_command("check_notifications", user="bob", stdout=out)
+        report = out.getvalue()
+        self.assertIn("notifications.scan_for_events", report)
+        self.assertIn("EMAIL_HOST", report)
+        self.assertIn("bob@example.test", report)
+
+    def test_it_says_so_when_the_account_does_not_exist(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command("check_notifications", user="fantome", stdout=out)
+        self.assertIn("introuvable", out.getvalue())
