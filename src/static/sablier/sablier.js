@@ -195,6 +195,62 @@ document.addEventListener("DOMContentLoaded", () => {
     if(progress>.001){const end=-Math.PI/2+Math.PI*2*progress,active=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);active.addColorStop(0,rgba(accent,.7));active.addColorStop(.55,accent);active.addColorStop(1,rgba(text,.98));ctx.strokeStyle=active;ctx.shadowColor=accent;ctx.shadowBlur=18;ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,end);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=text;ctx.beginPath();ctx.arc(cx+Math.cos(end)*r,cy+Math.sin(end)*r,line*.14,0,Math.PI*2);ctx.fill();}
     ctx.lineWidth=1;ctx.strokeStyle=rgba(text,.13);ctx.beginPath();ctx.arc(cx,cy,r-line*.7,0,Math.PI*2);ctx.stroke();
   }
+  // Le sable est une matière, pas une hauteur. Poser sa surface à la fraction de temps
+  // restante — la moitié du temps, la moitié de la hauteur — ne dit juste que dans un
+  // tube droit ; une ampoule s'évase, et sa moitié basse tient bien moins de sable que
+  // sa moitié haute. Le haut se vidait donc très en avance sur le chronomètre : à trente
+  // minutes d'une heure il n'en restait qu'un tiers, à quinze minutes un dixième.
+  //
+  // On raisonne donc en volume. `bulbFill` cumule ∫f²dt le long du demi-profil — le
+  // volume du solide de révolution, à π près qui se simplifie dans le rapport — puis
+  // inverse cette table : `height(fraction)` rend la hauteur, comptée depuis le col, à
+  // laquelle le sable occupe exactement cette part du volume de l'ampoule.
+  function bulbFill(at,steps=200){
+    const cumulative=[0];
+    for(let i=1;i<=steps;i++){
+      const a=at((i-1)/steps),b=at(i/steps);
+      cumulative.push(cumulative[i-1]+(a*a+a*b+b*b)/3/steps);
+    }
+    const total=cumulative[steps];
+    return {
+      total,
+      height(fraction){
+        const target=clamp(fraction,0,1)*total;
+        for(let i=1;i<=steps;i++){
+          if(cumulative[i]<target)continue;
+          const span=cumulative[i]-cumulative[i-1];
+          return (i-1+(span>1e-9?(target-cumulative[i-1])/span:0))/steps;
+        }
+        return 1;
+      },
+    };
+  }
+  // Un demi-profil donné par des couples (hauteur depuis le col, demi-largeur).
+  function profileReader(points){
+    return (value)=>{
+      const t=clamp(value,0,1);
+      for(let i=1;i<points.length;i++){
+        const [t0,f0]=points[i-1],[t1,f1]=points[i];
+        if(t<=t1)return f0+(f1-f0)*(t-t0)/Math.max(1e-6,t1-t0);
+      }
+      return points[points.length-1][1];
+    };
+  }
+  // Demi-profil de `bottlePath`, relevé sur sa propre courbe de Bézier : la paroi est la
+  // même, décrite cette fois en fonction de la hauteur pour qu'on puisse en tirer un volume.
+  const BOTTLE_PROFILE=(()=>{
+    const points=[];
+    for(let i=32;i>=0;i--){
+      const s=i/32,u=1-s;
+      points.push([u*u*u+3*.46*s*u*u+3*.19*s*s*u, u*u*u+3*.94*s*u*u+3*.23*s*s*u+.1*s*s*s]);
+    }
+    return points;
+  })();
+  const bottleFill=bulbFill(profileReader(BOTTLE_PROFILE));
+  // Profil réel des ampoules de la photographie, mesuré dessus : t=0 au col, t=1 à
+  // l'extrémité. Le tracé épouse le verre au lieu de le dépasser.
+  const HOURGLASS_PROFILE=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];
+  const hourglassFill=bulbFill(profileReader(HOURGLASS_PROFILE));
   function bottlePath(cx,cy,hw,hh){const neck=hw*.1;ctx.beginPath();ctx.moveTo(cx-hw,cy-hh);ctx.bezierCurveTo(cx-hw*.94,cy-hh*.46,cx-hw*.23,cy-hh*.19,cx-neck,cy);ctx.bezierCurveTo(cx-hw*.23,cy+hh*.19,cx-hw*.94,cy+hh*.46,cx-hw,cy+hh);ctx.lineTo(cx+hw,cy+hh);ctx.bezierCurveTo(cx+hw*.94,cy+hh*.46,cx+hw*.23,cy+hh*.19,cx+neck,cy);ctx.bezierCurveTo(cx+hw*.23,cy-hh*.19,cx+hw*.94,cy-hh*.46,cx+hw,cy-hh);ctx.closePath();}
   function drawHourglass(progress){const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,cy=h*.41,hh=h*.31,hw=Math.min(w*.22,h*.23);ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,Math.max(hw,hh)*1.18,accent,.09);
     // Montants en bois/métal : trois valeurs plutôt qu'un aplat donnent du volume.
@@ -210,13 +266,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // Le dessiner comme un trapèze à bords droits laissait des vides contre la courbe.
     const topY=cy-hh,floorY=cy+hh,received=1-progress;
     if(progress>.001){
-      const surface=cy-(cy-topY)*progress;               // la surface descend vers le col
+      const surface=cy-hh*bottleFill.height(progress);   // la surface descend vers le col
       ctx.fillRect(cx-hw,surface,hw*2,cy-surface+1);
     }
     let peak=floorY;
     if(received>.001){
-      const level=floorY-(floorY-cy)*received;           // le niveau monte du fond vers le col
-      const mound=(floorY-cy)*.16*(1-received)*Math.min(1,received*6);
+      // Le tas n'est pas un décor posé sur le niveau : il contient du sable, et ce sable
+      // est déjà tombé. Le niveau se règle donc sur le volume reçu, tas déduit — sinon les
+      // deux ampoules ensemble portent plus de sable que le sablier n'en contient.
+      const shapeT=.16*(1-received)*Math.min(1,received*6);
+      const moundT=Math.min(shapeT,received*bottleFill.total*3);
+      const level=cy+hh*bottleFill.height(progress+moundT/3/bottleFill.total);
+      const mound=hh*moundT;                             // le niveau monte du fond vers le col
       peak=level-mound;
       ctx.fillRect(cx-hw,level,hw*2,floorY-level+1);
       ctx.beginPath();ctx.moveTo(cx-hw,level+1);ctx.lineTo(cx,peak);ctx.lineTo(cx+hw,level+1);ctx.closePath();ctx.fill();
@@ -691,14 +752,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const shapeWidth=1.34,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04;
     const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;
     glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);
-    // Profil réel des ampoules, mesuré sur la photo : t=0 au col, t=1 à
-    // l'extrémité. Le tracé épouse le verre au lieu de le dépasser.
-    const profile=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];
     const bulbPath=(yNeck,yEnd)=>{
       const H=yEnd-yNeck;
       ctx.beginPath();
-      profile.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
-      for(let i=profile.length-1;i>=0;i--){const [t,f]=profile[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}
+      HOURGLASS_PROFILE.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+      for(let i=HOURGLASS_PROFILE.length-1;i>=0;i--){const [t,f]=HOURGLASS_PROFILE[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}
       ctx.closePath();
     };
     // Sable doré : dégradé horizontal, éclairé au centre comme la photo.
@@ -712,7 +770,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const received=1-progress;
     if(progress>.001){
       ctx.save();bulbPath(neckY,topY);ctx.clip();
-      const surface=neckY-(neckY-topY)*progress;
+      const surface=neckY-(neckY-topY)*hourglassFill.height(progress);
       fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,surface,hw*2,neckY-surface+1);});
       // Surface irrégulière et petit creux que le filet creuse dans les grains.
       ctx.strokeStyle="rgba(255,231,165,.72)";ctx.lineWidth=Math.max(.8,iw*.0024);ctx.beginPath();
@@ -723,8 +781,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let peak=floorY;
     if(received>.001){
       ctx.save();bulbPath(neckY,floorY);ctx.clip();
-      const level=floorY-(floorY-neckY)*received;
-      const mound=Math.min(hw*.5,(floorY-neckY)*.32*Math.min(1,received*3.5));
+      // Le tas contient du sable déjà tombé : le niveau se règle sur le volume reçu, tas
+      // déduit, faute de quoi les deux ampoules en portent ensemble plus que le sablier.
+      const unit=floorY-neckY,cone=.84*.84/3;   // le tas s'appuie sur ±hw*.84
+      const shapeT=Math.min(hw*.5/unit,.32*Math.min(1,received*3.5));
+      const moundT=Math.min(shapeT,received*hourglassFill.total/cone);
+      const level=neckY+unit*hourglassFill.height(progress+moundT*cone/hourglassFill.total);
+      const mound=unit*moundT;
       peak=level-mound;
       fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,level,hw*2,floorY-level+1);ctx.moveTo(cx-hw*.84,level+2);ctx.bezierCurveTo(cx-hw*.48,level-mound*.12,cx-hw*.2,peak+mound*.16,cx,peak);ctx.bezierCurveTo(cx+hw*.22,peak+mound*.14,cx+hw*.52,level-mound*.1,cx+hw*.84,level+2);ctx.closePath();});
       ctx.strokeStyle="rgba(255,229,160,.52)";ctx.lineWidth=Math.max(.8,iw*.002);ctx.beginPath();ctx.moveTo(cx-hw*.78,level);ctx.quadraticCurveTo(cx-hw*.18,peak+mound*.08,cx,peak);ctx.quadraticCurveTo(cx+hw*.2,peak+mound*.08,cx+hw*.78,level);ctx.stroke();

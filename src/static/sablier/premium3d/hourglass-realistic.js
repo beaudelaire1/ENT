@@ -30,22 +30,58 @@ function innerRadius(y) {
   return table[table.length - 1][0] * 0.94;
 }
 
-const TOP = 1.78, NECK = 0.055;
+const TOP = 1.78, NECK = 0.055, SPAN = TOP - NECK;
+
+// Le sable est une matière, pas une hauteur. Placer sa surface à la fraction de temps
+// restante ne dit juste que dans un tube droit : une ampoule s'évase, et sa moitié basse
+// tient bien moins de sable que sa moitié haute. Le haut se vidait donc très en avance
+// sur le chronomètre. On cumule plutôt ∫r²dy — le volume intérieur, à π près qui se
+// simplifie dans le rapport — et on inverse cette table : `height(fraction)` rend la
+// hauteur à laquelle le sable occupe exactement cette part du volume de l'ampoule.
+const FILL = (() => {
+  const steps = 200, cumulative = [0];
+  for (let i = 1; i <= steps; i += 1) {
+    const a = innerRadius(NECK + SPAN * (i - 1) / steps);
+    const b = innerRadius(NECK + SPAN * i / steps);
+    cumulative.push(cumulative[i - 1] + (a * a + a * b + b * b) / 3 * SPAN / steps);
+  }
+  const total = cumulative[steps];
+  return {
+    total,
+    height(fraction) {
+      const target = Math.max(0, Math.min(1, fraction)) * total;
+      for (let i = 1; i <= steps; i += 1) {
+        if (cumulative[i] < target) continue;
+        const span = cumulative[i] - cumulative[i - 1];
+        return NECK + SPAN * (i - 1 + (span > 1e-9 ? (target - cumulative[i - 1]) / span : 0)) / steps;
+      }
+      return TOP;
+    },
+  };
+})();
 
 // Contour de la masse supérieure : paroi jusqu'au niveau, puis entonnoir vers le col.
 function upperOutline(THREE, fill, running) {
   const points = [];
   if (fill <= 0.002) return points;
-  const level = NECK + (TOP - NECK) * fill;
+  // L'entonnoir reprend du volume au sable, et sa profondeur dépend du niveau, qui dépend
+  // d'elle : trois passes suffisent à faire converger les deux. Son creux n'est pas un
+  // cône — il tombe en t^1,7 — et il emporte 0,2·r²·h, non le tiers d'un cône droit.
+  let level = FILL.height(fill);
+  let mouth = innerRadius(level);
+  // L'entonnoir se creuse d'autant plus que le sable est haut et que l'écoulement dure.
+  let depth = Math.min((level - NECK) * 0.55, mouth * (running ? 0.46 : 0.22));
+  for (let pass = 0; pass < 3; pass += 1) {
+    level = FILL.height(fill + mouth * mouth * depth * 0.2 / FILL.total);
+    mouth = innerRadius(level);
+    depth = Math.min((level - NECK) * 0.55, mouth * (running ? 0.46 : 0.22));
+  }
   points.push(new THREE.Vector2(0.0008, NECK * 0.4));
   points.push(new THREE.Vector2(innerRadius(NECK), NECK));
   for (let i = 1; i <= 14; i += 1) {
     const y = NECK + (level - NECK) * (i / 14);
     points.push(new THREE.Vector2(innerRadius(y), y));
   }
-  // L'entonnoir se creuse d'autant plus que le sable est haut et que l'écoulement dure.
-  const mouth = innerRadius(level);
-  const depth = Math.min((level - NECK) * 0.55, mouth * (running ? 0.46 : 0.22));
   for (let i = 1; i <= 10; i += 1) {
     const t = i / 10;
     const radius = mouth * (1 - t);
@@ -55,13 +91,30 @@ function upperOutline(THREE, fill, running) {
   return points;
 }
 
+// Le tas du bas : hauteur de sa surface sous le col, et hauteur de son talus. Le talus
+// n'est pas un chapeau posé sur le niveau — il porte du sable lui aussi, et c'est ce
+// sable-là qui manquait au compte quand le niveau ignorait son existence.
+function lowerShape(fill) {
+  let level = FILL.height(1 - fill), mound = 0;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const edge = innerRadius(level);
+    // Angle de talus d'un sable sec : autour de trente-quatre degrés.
+    const shape = Math.min(edge * 0.68, SPAN * (1 - fill) * 0.9 + edge * 0.18);
+    // Un tas ne peut pas contenir plus de sable qu'il n'en est tombé.
+    mound = Math.min(shape, fill * FILL.total * 3 / Math.max(1e-6, edge * edge));
+    level = FILL.height(1 - fill + edge * edge * mound / 3 / FILL.total);
+  }
+  return { level, mound };
+}
+
 // Contour du tas inférieur : fond plat, paroi jusqu'au niveau, puis talus jusqu'au
 // sommet. Le sommet reste sous le filet, là où les grains retombent.
 function lowerOutline(THREE, fill) {
   const points = [];
   if (fill <= 0.002) return points;
   const floor = -TOP;
-  const level = floor + (TOP - NECK) * fill * 0.86;
+  const shape = lowerShape(fill);
+  const level = -shape.level;
   points.push(new THREE.Vector2(0.0008, floor));
   points.push(new THREE.Vector2(innerRadius(floor), floor + 0.01));
   for (let i = 1; i <= 12; i += 1) {
@@ -69,11 +122,9 @@ function lowerOutline(THREE, fill) {
     points.push(new THREE.Vector2(innerRadius(y), y));
   }
   const edge = innerRadius(level);
-  // Angle de talus d'un sable sec : autour de trente-quatre degrés.
-  const mound = Math.min(edge * 0.68, (TOP - NECK) * (1 - fill) * 0.9 + edge * 0.18);
   for (let i = 1; i <= 10; i += 1) {
     const t = i / 10;
-    points.push(new THREE.Vector2(Math.max(0.0008, edge * (1 - t)), level + mound * t));
+    points.push(new THREE.Vector2(Math.max(0.0008, edge * (1 - t)), level + shape.mound * t));
   }
   return points;
 }
@@ -218,7 +269,8 @@ export function makeHourglassRuntime(THREE, helpers) {
     if (Math.abs(progress - builtAt) > 0.004 || running !== builtRunning) rebuild(progress, running);
 
     const flowing = progress > 0.004 && progress < 0.999;
-    const heapTop = -TOP + (TOP - NECK) * (1 - progress) * 0.86;
+    const heap = lowerShape(1 - progress);
+    const heapTop = -heap.level + heap.mound;
     const streamTop = NECK * 0.6;
     const streamBottom = Math.min(streamTop - 0.05, heapTop + 0.08);
     const length = Math.max(0.05, streamTop - streamBottom);
