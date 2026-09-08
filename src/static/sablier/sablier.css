@@ -189,3 +189,72 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 .focus-app.stage-mode .stage-immersion { top:18px;right:18px; }
 .bare .stage-immersion { opacity:.22; }
 
+/* Une musique qui accompagne la session ne mérite pas un bandeau : un disque qui tourne
+   au coin de la scène suffit à dire qu'elle est là. Il n'apparaît que pendant la lecture,
+   et il s'immobilise avec elle. */
+.stage-disc {
+  position:absolute;
+  right:16px;
+  bottom:14px;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  max-width:min(48%,240px);
+  padding:5px 13px 5px 5px;
+  border:1px solid color-mix(in srgb,var(--focus-border) 70%,transparent);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--focus-surface) 66%,transparent);
+  backdrop-filter:blur(7px);
+  color:var(--focus-muted);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+/* `display:flex` l'emporterait sur le `display:none` que le navigateur attache à
+   `hidden` : sans cette règle, le disque resterait affiché sans musique. */
+.stage-disc[hidden] { display:none; }
+.stage-disc span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+/* Sillons, étiquette, trou central — et un reflet en secteur, sans quoi la rotation d'un
+   disque concentrique ne se verrait pas : tout y est invariant par rotation. */
+.stage-disc-vinyl {
+  flex:none;
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle,var(--focus-bg) 0 9%,transparent 9%),
+    conic-gradient(from 0deg,color-mix(in srgb,var(--focus-text) 22%,transparent) 0 14deg,transparent 14deg 176deg,color-mix(in srgb,var(--focus-text) 14%,transparent) 176deg 188deg,transparent 188deg),
+    radial-gradient(circle,var(--focus-accent) 9% 31%,transparent 31%),
+    repeating-radial-gradient(circle,color-mix(in srgb,var(--focus-text) 6%,#15151a) 0 1.5px,color-mix(in srgb,var(--focus-text) 14%,#15151a) 1.5px 3px);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--focus-text) 18%,transparent),0 3px 10px rgba(0,0,0,.38);
+  animation:disc-spin 3.6s linear infinite;
+  padding:0;
+  cursor:pointer;
+}
+@keyframes disc-spin { to { transform:rotate(1turn); } }
+/* Le disque ne tourne que pendant la lecture : à la pause il s'immobilise, et c'est ce
+   qui distingue « une musique joue » de « une musique attend ». */
+.stage-disc[data-playing="false"] .stage-disc-vinyl { animation-play-state:paused; }
+.stage-disc[data-playing="false"] { opacity:.62; }
+@media(prefers-reduced-motion:reduce){ .stage-disc-vinyl { animation:none; } }
+/* En immersion l'en-tête et le lecteur disparaissent : sans ces deux boutons, plus aucun
+   moyen de changer de morceau sans quitter le plein écran. */
+.stage-disc-step {
+  flex:none;
+  border:0;
+  padding:0 2px;
+  background:none;
+  color:var(--focus-muted);
+  font-size:12px;
+  line-height:1;
+  cursor:pointer;
+  opacity:.7;
+  transition:opacity .16s,color .16s;
+}
+.stage-disc-step:hover,.stage-disc-step:focus-visible { opacity:1;color:var(--focus-accent); }
+.stage-disc-vinyl:focus-visible,.stage-disc-step:focus-visible { outline:2px solid var(--focus-accent);outline-offset:2px; }
+.bare .stage-disc { opacity:.42; }
+@media(max-width:700px){ .stage-disc span { display:none; } .stage-disc { padding:5px 8px 5px 5px;right:12px;bottom:12px; } }
+

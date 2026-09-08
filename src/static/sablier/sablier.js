@@ -1061,6 +1061,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const playlists=JSON.parse(document.querySelector("#playlist-data").textContent),player=$("#playlist-audio");let currentPlaylist=null,index=0,shuffle=false,repeat=false;
   function loadTrack(autoplay=false){const track=currentPlaylist?.tracks[index];if(!track){player.removeAttribute("src");$("#player-title").textContent="Playlist vide";$("#player-artist").textContent="";return;}player.src=track.url;$("#player-title").textContent=track.title;$("#player-artist").textContent=track.artist||"";if(autoplay)player.play().catch(error=>{if(error?.name!=="NotAllowedError")$("#player-artist").textContent="Lecture impossible — fichier introuvable ou illisible.";});}
   function move(direction){if(!currentPlaylist?.tracks.length)return;index=shuffle?Math.floor(Math.random()*currentPlaylist.tracks.length):(index+direction+currentPlaylist.tracks.length)%currentPlaylist.tracks.length;loadTrack(true)}
+  // Le disque du coin de la scène ne suit pas les boutons du lecteur mais l'élément audio
+  // lui-même : c'est la seule source qui dise vraiment si une musique joue, qu'elle ait
+  // été lancée à la main, enchaînée par la playlist ou interrompue par une erreur.
+  const disc=$("#stage-disc"),discTitle=$("#stage-disc-title"),discToggle=$("#stage-disc-toggle");
+  function showDisc(){
+    if(!disc)return;
+    // La pastille paraît dès qu'un morceau est chargé, pas seulement pendant la lecture :
+    // une pastille qui disparaît à la pause emporterait avec elle le seul bouton capable
+    // de reprendre. C'est la rotation du disque, et non sa présence, qui dit que ça joue.
+    const loaded=Boolean(player.currentSrc);
+    disc.hidden=!loaded;
+    const playing=loaded&&!player.paused&&!player.ended;
+    disc.dataset.playing=String(playing);
+    discToggle.setAttribute("aria-label",playing?"Mettre la musique en pause":"Reprendre la musique");
+    if(loaded)discTitle.textContent=$("#player-title")?.textContent||"Musique en cours";
+  }
+  for(const event of ["play","pause","ended","emptied","error","loadstart","loadedmetadata"])player.addEventListener(event,showDisc);
+  discToggle?.addEventListener("click",()=>{if(player.paused)player.play().catch(()=>{});else player.pause();});
+  $("#stage-disc-prev")?.addEventListener("click",()=>move(-1));
+  $("#stage-disc-next")?.addEventListener("click",()=>move(1));
+  showDisc();
   // Sans playlist, le lecteur n'est pas rendu : le minuteur doit continuer de
   // fonctionner sans lui, d'où la sortie anticipée plutôt qu'une erreur en cascade.
   if($("#playlist-select")){

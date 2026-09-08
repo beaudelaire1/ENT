@@ -56,6 +56,8 @@
       <div class="stage-message" id="stage-message">ESPACE POUR DÉMARRER</div>
       <p id="session-sync-status" role="status" aria-live="polite"></p>
       <button type="button" class="focus-button" id="session-sync-retry" hidden>Réessayer l’enregistrement</button>
+      {# Le seul signe qu'une musique accompagne la session : un disque qui tourne dans le coin de la scène, et qui s'arrête avec elle. #}
+      <div class="stage-disc" id="stage-disc" role="group" aria-label="Musique" data-playing="false" hidden><button type="button" class="stage-disc-vinyl" id="stage-disc-toggle" aria-label="Reprendre la musique"></button><span id="stage-disc-title">Musique en cours</span><button type="button" class="stage-disc-step" id="stage-disc-prev" aria-label="Morceau précédent">⏮</button><button type="button" class="stage-disc-step" id="stage-disc-next" aria-label="Morceau suivant">⏭</button></div>
       <div class="flash-layer" id="flash-layer"></div>
     </section>
   </div>
