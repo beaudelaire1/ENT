@@ -167,3 +167,25 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 .decor-levels button:hover { border-color:color-mix(in srgb,var(--focus-accent) 60%,var(--focus-border)); }
 .decor-levels button:focus-visible { outline:2px solid var(--focus-accent); outline-offset:2px; }
 .decor-levels button:active { transform:translateY(1px); }
+
+/* Le bouton d'immersion vit sur la scène, à la façon d'un lecteur vidéo : discret tant
+   qu'on ne le cherche pas, franc dès qu'on le survole. Il était dans l'en-tête, à l'autre
+   bout de la page — et l'en-tête disparaît justement en immersion. */
+.stage-immersion {
+  position:absolute;
+  top:0;
+  right:0;
+  z-index:3;
+  flex:none;
+  padding:7px 12px;
+  font-size:11px;
+  letter-spacing:.06em;
+  opacity:.5;
+  background:color-mix(in srgb,var(--focus-surface) 74%,transparent);
+  backdrop-filter:blur(6px);
+  transition:opacity .18s,border-color .18s;
+}
+.stage-immersion:hover,.stage-immersion:focus-visible { opacity:1;border-color:color-mix(in srgb,var(--focus-accent) 60%,var(--focus-border)); }
+.focus-app.stage-mode .stage-immersion { top:18px;right:18px; }
+.bare .stage-immersion { opacity:.22; }
+

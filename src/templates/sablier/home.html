@@ -11,7 +11,7 @@
      data-log-url="{% url 'sablier:log_session' %}" data-csrf="{{ csrf_token }}"
      data-contextual="{{ contextual_launch|yesno:'true,false' }}" data-return-url="{{ return_to }}"
      style="{% if preference.custom_accent %}--focus-user-accent:{{ preference.accent_color }};{% endif %}{% if preference.background_image %}--focus-image:url('{{ preference.background_image.url }}');{% endif %}">
-  <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre univers.</p></div><div class="focus-header-actions"><a class="focus-button" href="{% url 'sablier:sessions' %}">Historique</a><a class="focus-button" id="return-after-session" href="{{ return_to }}" hidden>Revenir à la compétence</a><span class="live-chip" id="live-chip">● PRÊT</span><button class="focus-button" type="button" id="scene-button">Immersion ⛶</button></div></header>
+  <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre univers.</p></div><div class="focus-header-actions"><a class="focus-button" href="{% url 'sablier:sessions' %}">Historique</a><a class="focus-button" id="return-after-session" href="{{ return_to }}" hidden>Revenir à la compétence</a><span class="live-chip" id="live-chip">● PRÊT</span></div></header>
   <div class="focus-layout">
     <aside class="focus-sidebar" id="focus-sidebar">
       <p class="focus-eyebrow">CONFIGURATION</p><h1>Votre session</h1>
@@ -45,6 +45,8 @@
       <div class="stage-status"><span id="session-status">● PRÊT</span><span id="ambience-status">ARBRE DES ÉTOILES · FOCUS 2</span></div>
       <p class="stage-intention" id="stage-intention">SESSION DE CONCENTRATION</p>
       <div class="visual-wrap" id="visual-wrap" data-mode="{{ preference.mode }}">
+        {# Le plein écran est une commande de la scène, pas de la page : posé sur le visuel, il reste sous la main pendant la session, et il survit au mode immersion qui masque l'en-tête. #}
+        <button class="focus-button stage-immersion" type="button" id="scene-button" aria-pressed="false">Immersion ⛶</button>
         <canvas id="timer-canvas" aria-hidden="true"></canvas>
         <div class="digital-visual"><strong id="digital-time">05:00</strong><span>COMPTE À REBOURS</span><i id="digital-progress"></i></div>
         {# L'arc porte le temps restant. `<i>` et non `<div>` : `.zen-rings>div` désigne le disque central. #}

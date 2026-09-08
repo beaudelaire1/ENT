@@ -250,6 +250,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Profil réel des ampoules de la photographie, mesuré dessus : t=0 au col, t=1 à
   // l'extrémité. Le tracé épouse le verre au lieu de le dépasser.
   const HOURGLASS_PROFILE=[[0,.07],[.08,.22],[.18,.45],[.3,.68],[.42,.86],[.55,.97],[.68,1],[.8,.99],[.9,.94],[1,.86]];
+  // Et le contour extérieur du verre, relevé de la même façon : c'est jusque-là que va la
+  // matière que le sable doit teinter. Entre les deux profils il y a la paroi — épaisse,
+  // et d'autant plus large qu'on descend vers le col, où elle finit par occuper presque
+  // toute la largeur de l'objet.
+  const HOURGLASS_GLASS=[[0,.216],[.1,.24],[.2,.415],[.3,.608],[.35,.72],[.4,.854],[.5,.918],[.6,1],[.9,1],[.95,.915],[1,.877]];
   const hourglassFill=bulbFill(profileReader(HOURGLASS_PROFILE));
   function bottlePath(cx,cy,hw,hh){const neck=hw*.1;ctx.beginPath();ctx.moveTo(cx-hw,cy-hh);ctx.bezierCurveTo(cx-hw*.94,cy-hh*.46,cx-hw*.23,cy-hh*.19,cx-neck,cy);ctx.bezierCurveTo(cx-hw*.23,cy+hh*.19,cx-hw*.94,cy+hh*.46,cx-hw,cy+hh);ctx.lineTo(cx+hw,cy+hh);ctx.bezierCurveTo(cx+hw*.94,cy+hh*.46,cx+hw*.23,cy+hh*.19,cx+neck,cy);ctx.bezierCurveTo(cx+hw*.23,cy-hh*.19,cx+hw*.94,cy-hh*.46,cx+hw,cy-hh);ctx.closePath();}
   function drawHourglass(progress){const {w,h}=resize(),{accent,border,text,surface}=palette(),cx=w/2,cy=h*.41,hh=h*.31,hw=Math.min(w*.22,h*.23);ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,Math.max(hw,hh)*1.18,accent,.09);
@@ -747,18 +752,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!ready("hourglass")){drawHourglass(progress);return;}
     const img=assets.hourglass,{w,h}=resize(),{accent}=palette();
     ctx.clearRect(0,0,w,h);
-    // Le fichier source est cadré très verticalement. Une correction horizontale
-    // restitue les épaules du verre et l'assise métallique sans rogner l'objet.
-    const shapeWidth=1.34,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04;
-    const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208;
+    // Le fichier source est cadré très verticalement. À un tiers d'élargissement l'objet
+    // devenait squat — plateaux et socle enflés, cavité pincée entre eux ; sans rien il
+    // devenait grêle dans un cadre carré. Un sixième tient les deux bouts. La hauteur, elle,
+    // ne bouge pas : le compte à rebours est posé en bas du cadre, et un objet plus haut
+    // viendrait passer dessous.
+    const shapeWidth=1.16,ih=h*.86,iw=ih*img.naturalWidth/img.naturalHeight*shapeWidth,ix=w/2-iw/2,iy=h*.04;
+    // `hw` : la cavité que la photographie laisse voir. `gw` : le verre jusqu'à son bord.
+    const cx=w/2,neckY=iy+ih*.479,topY=iy+ih*.108,floorY=iy+ih*.821,hw=iw*.208,gw=iw*.329;
     glow(ctx,cx,neckY,Math.max(iw,ih)*.5,accent,.07);
-    const bulbPath=(yNeck,yEnd)=>{
+    const shapePath=(profile,half,yNeck,yEnd)=>{
       const H=yEnd-yNeck;
       ctx.beginPath();
-      HOURGLASS_PROFILE.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-hw*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
-      for(let i=HOURGLASS_PROFILE.length-1;i>=0;i--){const [t,f]=HOURGLASS_PROFILE[i];ctx.lineTo(cx+hw*f,yNeck+H*t);}
+      profile.forEach(([t,f],i)=>{const y=yNeck+H*t,x=cx-half*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+      for(let i=profile.length-1;i>=0;i--){const [t,f]=profile[i];ctx.lineTo(cx+half*f,yNeck+H*t);}
       ctx.closePath();
     };
+    const bulbPath=(yNeck,yEnd)=>shapePath(HOURGLASS_PROFILE,hw,yNeck,yEnd);
+    const glassPath=(yNeck,yEnd)=>shapePath(HOURGLASS_GLASS,gw,yNeck,yEnd);
     // Sable doré : dégradé horizontal, éclairé au centre comme la photo.
     const sand=ctx.createLinearGradient(cx-hw,0,cx+hw,0);
     sand.addColorStop(0,"#9a6826");sand.addColorStop(.28,"#dfae55");sand.addColorStop(.5,"#f6d891");sand.addColorStop(.74,"#d9a04a");sand.addColorStop(1,"#8d5f22");
@@ -768,9 +779,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if(grain){ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=grain;path();ctx.fill();ctx.restore();}
     };
     const received=1-progress;
+    const surface=neckY-(neckY-topY)*hourglassFill.height(progress);
     if(progress>.001){
       ctx.save();bulbPath(neckY,topY);ctx.clip();
-      const surface=neckY-(neckY-topY)*hourglassFill.height(progress);
       fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,surface,hw*2,neckY-surface+1);});
       // Surface irrégulière et petit creux que le filet creuse dans les grains.
       ctx.strokeStyle="rgba(255,231,165,.72)";ctx.lineWidth=Math.max(.8,iw*.0024);ctx.beginPath();
@@ -778,7 +789,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fillStyle="rgba(92,53,17,.32)";ctx.beginPath();ctx.ellipse(cx,surface+1,hw*.14,Math.max(1.5,hw*.025),0,0,Math.PI*2);ctx.fill();
       ctx.restore();
     }
-    let peak=floorY;
+    let peak=floorY,level=floorY,mound=0;
     if(received>.001){
       ctx.save();bulbPath(neckY,floorY);ctx.clip();
       // Le tas contient du sable déjà tombé : le niveau se règle sur le volume reçu, tas
@@ -786,8 +797,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const unit=floorY-neckY,cone=.84*.84/3;   // le tas s'appuie sur ±hw*.84
       const shapeT=Math.min(hw*.5/unit,.32*Math.min(1,received*3.5));
       const moundT=Math.min(shapeT,received*hourglassFill.total/cone);
-      const level=neckY+unit*hourglassFill.height(progress+moundT*cone/hourglassFill.total);
-      const mound=unit*moundT;
+      level=neckY+unit*hourglassFill.height(progress+moundT*cone/hourglassFill.total);
+      mound=unit*moundT;
       peak=level-mound;
       fillSand(()=>{ctx.beginPath();ctx.rect(cx-hw,level,hw*2,floorY-level+1);ctx.moveTo(cx-hw*.84,level+2);ctx.bezierCurveTo(cx-hw*.48,level-mound*.12,cx-hw*.2,peak+mound*.16,cx,peak);ctx.bezierCurveTo(cx+hw*.22,peak+mound*.14,cx+hw*.52,level-mound*.1,cx+hw*.84,level+2);ctx.closePath();});
       ctx.strokeStyle="rgba(255,229,160,.52)";ctx.lineWidth=Math.max(.8,iw*.002);ctx.beginPath();ctx.moveTo(cx-hw*.78,level);ctx.quadraticCurveTo(cx-hw*.18,peak+mound*.08,cx,peak);ctx.quadraticCurveTo(cx+hw*.2,peak+mound*.08,cx+hw*.78,level);ctx.stroke();
@@ -806,6 +817,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
     ctx.drawImage(img,ix,iy,iw,ih);
+    // La photographie est celle d'un verre vide : ses parois réfléchissent un fond clair et
+    // sont donc opaques, elles recouvrent le sable peint derrière. Le sable remplissait
+    // pourtant déjà toute la cavité que la photo laisse voir — mais cette cavité se pince
+    // très vite en descendant vers le col, si bien que le sable y dessinait sa propre
+    // silhouette : une forme posée à l'intérieur du sablier, séparée du corps par une
+    // paroi. Un sablier réellement plein n'a pas de verre clair au-dessus de son sable :
+    // le verre prend la couleur de ce qu'il contient. On repasse donc les deux masses
+    // par-dessus la photographie, cette fois jusqu'au bord extérieur du verre.
+    // `source-atop` ne peint que sur ce qui est déjà là : le fond derrière l'objet reste
+    // intact, et les reflets subsistent — colorés au lieu d'être effacés.
+    const wash=ctx.createLinearGradient(cx-gw,0,cx+gw,0);
+    wash.addColorStop(0,"#84591f");wash.addColorStop(.26,"#dfae55");wash.addColorStop(.5,"#f4d489");wash.addColorStop(.76,"#d59c46");wash.addColorStop(1,"#7d5420");
+    ctx.save();
+    ctx.globalCompositeOperation="source-atop";
+    ctx.globalAlpha=.72;
+    ctx.fillStyle=wash;
+    if(progress>.001){
+      ctx.save();glassPath(neckY,topY);ctx.clip();
+      ctx.fillRect(cx-gw,surface,gw*2,neckY-surface+1);
+      ctx.restore();
+    }
+    if(received>.001){
+      ctx.save();glassPath(neckY,floorY);ctx.clip();
+      ctx.fillRect(cx-gw,level,gw*2,floorY-level+1);
+      ctx.beginPath();ctx.moveTo(cx-gw*.84,level+2);
+      ctx.bezierCurveTo(cx-gw*.48,level-mound*.12,cx-gw*.2,peak+mound*.16,cx,peak);
+      ctx.bezierCurveTo(cx+gw*.22,peak+mound*.14,cx+gw*.52,level-mound*.1,cx+gw*.84,level+2);
+      ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
   }
   // Bougie de référence : la cire photographique reste mince et le bougeoir reste
   // fixe. Seuls la hauteur, la flamme et la fumée évoluent avec le temps.
@@ -1004,8 +1046,16 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#ambience-select").addEventListener("change",e=>{state.ambience=e.target.value;save();render(true)});
   $("#warning-slider").addEventListener("input",e=>{state.warning=Number(e.target.value);$("#warning-output").textContent=`${state.warning} s`;warningCue=false;save()});
   $("#main-control").addEventListener("click",startPause);$("#reset-control").addEventListener("click",reset);$("#minus-minute").addEventListener("click",()=>adjust(-60));$("#plus-minute").addEventListener("click",()=>adjust(60));
-  $("#scene-button").addEventListener("click",async()=>{app.classList.add("stage-mode");try{await app.requestFullscreen()}catch(_){}});document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)app.classList.remove("stage-mode")});
-  document.addEventListener("keydown",e=>{if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;if(e.code==="Space"){e.preventDefault();startPause()}else if(e.key.toLowerCase()==="r")reset();else if(e.key==="F11"){e.preventDefault();$("#scene-button").click()}else if(e.key==="Escape"&&app.classList.contains("stage-mode")){document.exitFullscreen?.();app.classList.remove("stage-mode")}});
+  // Le bouton reste visible une fois la scène en plein écran — il doit donc aussi savoir
+  // en sortir, sinon il n'y aurait plus qu’Échap pour revenir, sans rien qui le dise.
+  const sceneButton=$("#scene-button");
+  function setStage(on){app.classList.toggle("stage-mode",on);sceneButton.textContent=on?"Quitter ⤡":"Immersion ⛶";sceneButton.setAttribute("aria-pressed",String(on));}
+  sceneButton.addEventListener("click",async()=>{
+    if(app.classList.contains("stage-mode")){setStage(false);try{await document.exitFullscreen?.()}catch(_){}return;}
+    setStage(true);try{await app.requestFullscreen()}catch(_){}
+  });
+  document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)setStage(false)});
+  document.addEventListener("keydown",e=>{if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;if(e.code==="Space"){e.preventDefault();startPause()}else if(e.key.toLowerCase()==="r")reset();else if(e.key==="F11"){e.preventDefault();$("#scene-button").click()}else if(e.key==="Escape"&&app.classList.contains("stage-mode")){document.exitFullscreen?.();setStage(false)}});
   const prefForm=$("#focus-preferences"),durationHidden=prefForm.querySelector("#id_default_duration_seconds");prefForm.addEventListener("submit",()=>{durationHidden.value=Math.round(state.total);prefForm.querySelector("#id_session_intention").value=state.intention;prefForm.querySelector("#id_mode").value=state.mode;prefForm.querySelector("#id_ambience").value=state.ambience;prefForm.querySelector("#id_focus_level").value=state.focusLevel;prefForm.querySelector("#id_warning_seconds").value=state.warning;prefForm.querySelector("#id_decor_density").value=state.decorDensity;});
 
   const playlists=JSON.parse(document.querySelector("#playlist-data").textContent),player=$("#playlist-audio");let currentPlaylist=null,index=0,shuffle=false,repeat=false;
