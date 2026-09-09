@@ -1,7 +1,7 @@
 import { makeChrome, makeGlass, makeSteel, seeded } from "./material-kit.js";
 
 export function makeBarsRuntime(THREE, helpers) {
-  const { mobile, reducedMotion, mesh } = helpers;
+  const { mobile, mesh } = helpers;
   const group = new THREE.Group();
   const count = mobile ? 10 : 14;
   const chrome = makeChrome(THREE);
@@ -10,7 +10,7 @@ export function makeBarsRuntime(THREE, helpers) {
   const amber = new THREE.MeshPhysicalMaterial({
     color: 0xe9a957,
     emissive: 0x5c2606,
-    emissiveIntensity: 0.82,
+    emissiveIntensity: 0.06,
     metalness: 0.03,
     roughness: 0.12,
     transmission: 0.18,
@@ -158,7 +158,7 @@ export function makeBarsRuntime(THREE, helpers) {
       menisci[i].position.y = -1.48 + height;
       menisci[i].visible = amount > 0.001;
       barLights[i].position.y = Math.min(-1.08 + height, 1.45);
-      barLights[i].intensity = amount > 0.001 ? (mobile ? 0.7 : 1.05) * (0.45 + amount * 0.55) : 0;
+      barLights[i].intensity = amount > 0.001 ? 0.08 * (0.45 + amount * 0.55) : 0;
       if (amount > 0.001 && amount < 0.999 && firstPartial < 0) firstPartial = i;
     }
 
@@ -168,16 +168,10 @@ export function makeBarsRuntime(THREE, helpers) {
     const y = -1.05 + heights[focusIndex] * amount;
     indicator.position.set(x, y, 1.7);
     indicatorLens.position.set(x, y, 0.52);
-    indicator.intensity = (mobile ? 5.5 : 9) * (0.86 + (reducedMotion ? 0 : Math.sin(time * 0.0024) * 0.08));
+    indicator.intensity = 0.3;
 
-    if (!reducedMotion) {
-      const pulse = 0.78 + Math.sin(time * 0.0018) * 0.08;
-      amber.emissiveIntensity = pulse;
-      group.rotation.y = Math.sin(time * 0.00013) * 0.052;
-    } else {
-      group.rotation.y = 0;
-    }
-    group.rotation.x = -0.045;
+    amber.emissiveIntensity = .06;
+    group.rotation.set(0,0,0);
   }
 
   return { object: group, update };

@@ -57,6 +57,32 @@ class SceneRegistryTests(SimpleTestCase):
             with self.subTest(saison=saison):
                 self.assertIn(saison, scenes.BY_KEY)
 
+    def test_every_universe_is_reachable_through_the_gallery_filter(self):
+        """Vingt-quatre univers ne se parcourent pas sans les regrouper, mais un filtre
+        qui n'atteint pas tout le catalogue cache des univers au lieu de les trier.
+
+        Le groupe est une donnée du catalogue, comme la composition ou la teinte : le
+        classer dans le code laisserait un décor nouveau tomber sans bruit dans le
+        premier groupe venu. On vérifie donc les deux bouts — aucun groupe inconnu du
+        filtre, et aucune option du filtre laissée vide.
+        """
+        template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")
+        markup = re.search(r'<select id="world-filter">(.*?)</select>', template, re.DOTALL).group(1)
+        offered = set(re.findall(r'<option value="([a-z]+)"', markup)) - {"all", "favorites"}
+        self.assertEqual({scene.group for scene in scenes.SCENES}, offered)
+
+    def test_every_universe_has_its_fixed_views_for_a_machine_without_webgl(self):
+        """Le repli ne vaut que s'il montre le lieu choisi.
+
+        Une vue manquante ne casse rien de visible au développement — le rendu 3D prend
+        la main — et laisse un écran vide au poste qui, précisément, n'a que le repli.
+        """
+        views = settings.BASE_DIR / "static" / "sablier" / "thumbnails"
+        for scene in scenes.SCENES:
+            for suffix in ("", "-wide", "-mobile"):
+                with self.subTest(scene=scene.key, suffix=suffix):
+                    self.assertTrue((views / f"{scene.decor}{suffix}.webp").is_file())
+
     def test_browser_storage_also_converges_to_the_curated_catalog(self):
         engine = (settings.BASE_DIR / "static" / "sablier" / "sablier.js").read_text(encoding="utf-8")
         template = (settings.BASE_DIR / "templates" / "sablier" / "home.html").read_text(encoding="utf-8")

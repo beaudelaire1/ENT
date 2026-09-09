@@ -13,7 +13,8 @@ import { Sky } from "../../vendor/three-addons/objects/Sky.js";
 const DEGREES = Math.PI / 180;
 
 function color(THREE, hex) {
-  return new THREE.Color(hex).convertSRGBToLinear();
+  // Three convertit déjà une couleur CSS sRGB en linéaire à la construction.
+  return new THREE.Color(hex);
 }
 
 // Direction cartésienne d'un couple (élévation, azimut) exprimé en degrés.
@@ -153,14 +154,16 @@ export function buildEnvironment(THREE, renderer, config) {
 
   let background;
   if (config.kind === "day") {
-    background = buildSky(THREE, config);
+    const sky = buildSky(THREE, config);
+    background = sky;
     disposals.push(() => {
-      background.geometry.dispose();
-      background.material.dispose();
+      sky.geometry.dispose();
+      sky.material.dispose();
     });
   } else {
     background = equirect;
   }
+  if (config.backgroundColor) background = new THREE.Color(config.backgroundColor);
 
   pmrem.dispose();
 

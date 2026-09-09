@@ -1,9 +1,7 @@
 // Post-traitement de la scène immersive.
 //
-// Deux effets seulement, mais ce sont ceux qu'un œil attend d'une image prise plutôt que
-// calculée : la diffusion des hautes lumières autour d'une flamme ou d'un soleil, et une
-// profondeur de champ qui détache l'objet de son paysage. Sans eux, tout le champ est
-// net partout et la scène retrouve l'aspect « rendu de synthèse » qu'on cherche à fuir.
+// Halo discret réservé aux sources lumineuses. Le flou de profondeur reste disponible
+// mais désactivé par défaut : il masquait les repères qui distinguent les lieux.
 import { EffectComposer } from "../../vendor/three-addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "../../vendor/three-addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "../../vendor/three-addons/postprocessing/ShaderPass.js";
@@ -42,7 +40,7 @@ const CEILING = {
     }`,
 };
 
-export function createPostFX(THREE, { renderer, scene, camera, width, height, mobile, depthOfField = true, ceiling = true }) {
+export function createPostFX(THREE, { renderer, scene, camera, width, height, mobile, depthOfField = false, ceiling = true }) {
   let composer;
   try {
     composer = new EffectComposer(renderer);
@@ -69,7 +67,7 @@ export function createPostFX(THREE, { renderer, scene, camera, width, height, mo
     // sans noirs ni contraste.
     const bloom = new UnrealBloomPass(
       new THREE.Vector2(width, height),
-      mobile ? 0.22 : 0.3,    // intensité
+      mobile ? 0.055 : 0.08, // Seules les sources lumineuses diffusent ; le métal reste lisible.
       0.62,                   // rayon
       1,                      // seuil, réglé ensuite selon l'exposition de l'univers
     );
@@ -81,7 +79,7 @@ export function createPostFX(THREE, { renderer, scene, camera, width, height, mo
     // fixe ferait donc diffuser un sable de plein midi comme une flamme.
     const setExposure = (exposure) => {
       const white = 1 / Math.max(0.05, exposure);
-      bloom.threshold = white * (mobile ? 0.92 : 0.86);
+      bloom.threshold = white * 2.5;
       if (ceilingPass) ceilingPass.uniforms.ceiling.value = white * 6;
     };
     setExposure(renderer.toneMappingExposure || 1);
@@ -97,12 +95,14 @@ export function createPostFX(THREE, { renderer, scene, camera, width, height, mo
         if (bokeh) bokeh.uniforms.focus.value = distance;
       },
       dispose() {
+        for (const pass of composer.passes) pass.dispose?.();
         composer.dispose();
       },
     };
   } catch (_) {
     // Le rendu direct reste parfaitement valable : on perd le halo et le flou, pas la
     // scène. Mieux vaut une image sans post-traitement qu'un écran noir.
+    for (const pass of composer?.passes || []) pass.dispose?.();
     composer?.dispose?.();
     return null;
   }

@@ -11,7 +11,7 @@
      data-log-url="{% url 'sablier:log_session' %}" data-csrf="{{ csrf_token }}"
      data-contextual="{{ contextual_launch|yesno:'true,false' }}" data-return-url="{{ return_to }}"
      style="{% if preference.custom_accent %}--focus-user-accent:{{ preference.accent_color }};{% endif %}{% if preference.background_image %}--focus-image:url('{{ preference.background_image.url }}');{% endif %}">
-  <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre univers.</p></div><div class="focus-header-actions"><a class="focus-button" href="{% url 'sablier:sessions' %}">Historique</a><a class="focus-button" id="return-after-session" href="{{ return_to }}" hidden>Revenir à la compétence</a><span class="live-chip" id="live-chip">● PRÊT</span></div></header>
+  <header class="focus-header"><div><p class="focus-brand">SABLIER <span>/ MYENT</span></p><p class="focus-tagline">Votre temps. Votre univers.</p></div><div class="focus-header-actions"><a class="focus-button" href="{% url 'sablier:sessions' %}">Historique</a><a class="focus-button" id="return-after-session" href="{{ return_to }}" hidden>Revenir à mon activité</a><span class="live-chip" id="live-chip">● PRÊT</span></div></header>
   <div class="focus-layout">
     <aside class="focus-sidebar" id="focus-sidebar">
       <p class="focus-eyebrow">CONFIGURATION</p><h1>Votre session</h1>
@@ -20,8 +20,14 @@
       <div class="preset-row"><button data-preset="1">1m</button><button data-preset="3">3m</button><button data-preset="5">5m</button><button data-preset="10">10m</button></div>
       <label>VISUALISATION</label><div class="mode-grid"><button data-mode="ring">◉<span>Anneau</span></button><button data-mode="hourglass">⌛<span>Sablier</span></button><button data-mode="wave">≈<span>Marée</span></button><button data-mode="candle">▯<span>Bougie</span></button><button data-mode="beads">⁘<span>Perles</span></button><button data-mode="moon">☾<span>Lune</span></button><button data-mode="bars">▮<span>Colonnes</span></button><button data-mode="spiral">◠<span>Spirale</span></button><button data-mode="sun">☀<span>Soleil</span></button><button data-mode="digital">01<span>Digital</span></button><button data-mode="zen">◎<span>Zen</span></button></div>
       <label>UNIVERS<select id="ambience-select">{% for value,label in ambience_choices %}<option value="{{ value }}" {% if preference.ambience == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-      <label>IMMERSION</label><div class="decor-levels" role="group" aria-label="Niveau d’immersion"><button type="button" data-decor="0" aria-pressed="false">Statique</button><button type="button" data-decor="1" aria-pressed="false">Léger</button><button type="button" data-decor="2" aria-pressed="false">Immersif</button><button type="button" data-decor="3" aria-pressed="false">Cinématique</button></div><label>DÉPOUILLEMENT</label><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div>
+      <details class="world-picker"><summary>Explorer les 24 univers</summary>
+      <label>Ambiances<select id="world-filter"><option value="all">Toutes les ambiances</option><option value="favorites">Mes favoris</option><option value="nature">Nature et saisons</option><option value="shelter">Lieux habités</option><option value="imaginary">Mondes imaginaires</option><option value="sky">Ciel et espace</option></select></label>
+      <div class="world-gallery" id="world-gallery" data-thumbnail-base="{% static 'sablier/thumbnails/' %}" data-thumbnail-version="{{ asset_version }}" role="group" aria-label="Galerie des univers">
+      {% for scene in scenes %}<div class="world-card" data-world-card="{{ scene.key }}" data-group="{{ scene.group }}"><button type="button" data-world-choice="{{ scene.key }}" aria-pressed="false"><img src="{% static 'sablier/thumbnails/' %}{{ scene.decor }}.webp?v={{ asset_version }}" alt="" loading="lazy" width="320" height="200"><span>{{ scene.label }}</span></button><button type="button" data-favorite="{{ scene.key }}" aria-label="Favori : {{ scene.label }}" aria-pressed="false">☆</button></div>{% endfor %}
+      </div><p id="world-empty" hidden>Aucun favori pour le moment. Utilisez l’étoile d’un univers.</p></details>
+      <label>MOUVEMENT</label><div class="decor-levels" role="group" aria-label="Niveau de mouvement"><button type="button" data-decor="0" aria-pressed="false">Statique</button><button type="button" data-decor="1" aria-pressed="false">Léger</button><button type="button" data-decor="2" aria-pressed="false">Immersif</button><button type="button" data-decor="3" aria-pressed="false">Cinématique</button></div><label class="lightning-setting"><input id="lightning-enabled" type="checkbox"> Éclairs occasionnels dans Orage</label><details class="session-secondary"><summary>Réglages secondaires</summary><label>DÉPOUILLEMENT</label><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div>
       <label>ALERTE FINALE <output id="warning-output">{{ preference.warning_seconds }} s</output><input id="warning-slider" type="range" min="10" max="180" step="10" value="{{ preference.warning_seconds }}"></label>
+      </details>
       {% if competencies %}
         <label>COMPÉTENCE TRAVAILLÉE
           <select id="session-competency">
@@ -37,10 +43,11 @@
           {% for session in recent_sessions %}<li><strong>{{ session.minutes }} min{% if session.excluded_at %} · exclue{% endif %}</strong><span>{{ session.started_at|date:"d/m H:i" }}{% if session.competency %} · {{ session.competency.title }}{% endif %} · <a href="{% url 'sablier:session_edit' session.pk %}">corriger</a></span></li>{% endfor %}
         </ul>
       {% endif %}
-      <details class="preference-panel"><summary>Apparence et sauvegarde</summary><form method="post" enctype="multipart/form-data" class="stack-form" id="focus-preferences">{% csrf_token %}{{ form.as_p }}<button class="focus-button primary">Enregistrer mes préférences</button></form></details>
+      <details class="preference-panel"{% if form.errors %} open{% endif %}><summary>Apparence et sauvegarde</summary>{% if form.errors %}<p role="alert">Préférences non enregistrées. Corrigez les champs signalés ci-dessous.</p>{% endif %}<form method="post" enctype="multipart/form-data" class="stack-form" id="focus-preferences">{% csrf_token %}{{ form.as_p }}<button class="focus-button primary">Enregistrer mes préférences</button></form></details>
       <p class="shortcut-help">ESPACE · lecture / pause<br>R · reprise à zéro &nbsp; F11 · plein écran</p>
     </aside>
     <section class="focus-stage" id="focus-stage">
+      <img id="world-fallback" class="world-fallback" alt="" aria-hidden="true"><span id="renderer-status" role="status" hidden></span>
       <canvas class="decor-canvas" id="decor-canvas" aria-hidden="true"></canvas>
       <div class="stage-status"><span id="session-status">● PRÊT</span><span id="ambience-status">ARBRE DES ÉTOILES · FOCUS 2</span></div>
       <p class="stage-intention" id="stage-intention">SESSION DE CONCENTRATION</p>
@@ -58,6 +65,7 @@
       <button type="button" class="focus-button" id="session-sync-retry" hidden>Réessayer l’enregistrement</button>
       {# Le seul signe qu'une musique accompagne la session : un disque qui tourne dans le coin de la scène, et qui s'arrête avec elle. #}
       <div class="stage-disc" id="stage-disc" role="group" aria-label="Musique" data-playing="false" hidden><button type="button" class="stage-disc-vinyl" id="stage-disc-toggle" aria-label="Reprendre la musique"></button><span id="stage-disc-title">Musique en cours</span><button type="button" class="stage-disc-step" id="stage-disc-prev" aria-label="Morceau précédent">⏮</button><button type="button" class="stage-disc-step" id="stage-disc-next" aria-label="Morceau suivant">⏭</button></div>
+      <button type="button" class="focus-button immersion-pause" id="immersion-pause">Démarrer</button>
       <div class="flash-layer" id="flash-layer"></div>
     </section>
   </div>
@@ -84,4 +92,4 @@
 {# Les six objets validés par l'utilisateur sont des photographies à fond transparent : elles se posent sur l'univers rendu en 3D, qui reste le lieu. #}
 {% get_static_prefix as static_prefix %}<script id="asset-data" type="application/json">{"hourglass":"{{ static_prefix }}sablier/img/7073fefb68961c89a09d87989e50a20a64b697b8f1ca397ecd6ea1d3670d344c.1.jpg?v={{ asset_version }}","candle":"{{ static_prefix }}sablier/img/9d0bd2716e3bd800f15353e2b00aed37b2cd03d5dd4ef81913afb47456967b8c.1%20(1).jpg?v={{ asset_version }}","wave":"{{ static_prefix }}sablier/img/dbb9148a127c0a000f35fab10bee0708a19b10718f75ba46d40e1329470576ed.1%20(1).jpg?v={{ asset_version }}","moon":"{{ static_prefix }}sablier/img/1b9b150c21cfe676c5c22ae03c2c6812faeb55069813ad1d233f89dff0be3a5a.1%20(1).jpg?v={{ asset_version }}","sun":"{{ static_prefix }}sablier/img/52c57cf0b318fd747772864a89e8883277027013bf8c636477d04cb1983173cf.1%20(1).jpg?v={{ asset_version }}","ring":"{{ static_prefix }}sablier/img/7cfca4f43e394b74fa0d52f2fa660795f1fbcf39e58c3ed03a156dbc220968b7.1.jpg?v={{ asset_version }}"}</script>
 {% endblock %}
-{% block scripts %}<script src="{% static 'sablier/decor.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-clock.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-sync.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/sablier.js' %}?v={{ asset_version }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'sablier/gallery.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/decor.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-clock.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-sync.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/sablier.js' %}?v={{ asset_version }}" defer></script>{% endblock %}

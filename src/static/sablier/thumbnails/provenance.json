@@ -1,0 +1,1154 @@
+[
+  {
+    "world": "abyss",
+    "file": "abyss.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "2eaf213a2a3a5c5d4b27fa2363044484439b44d33e1f836196b3488a5c35c7c3",
+    "bytes": 964
+  },
+  {
+    "world": "abyss",
+    "file": "abyss-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "5e90e86031ef47af9007721c390de9061edcf71d36116a041b730fe54391d723",
+    "bytes": 7210
+  },
+  {
+    "world": "abyss",
+    "file": "abyss-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "4733faeb33dca4a29db31d75e252bb101e9eea1d33b6789159646c6e02c5e942",
+    "bytes": 6312
+  },
+  {
+    "world": "ancient_forest",
+    "file": "ancient_forest.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "25aa1da041dd594d98af8841fb391237dc7622a1a6281ec066284cd5782d282f",
+    "bytes": 8738
+  },
+  {
+    "world": "ancient_forest",
+    "file": "ancient_forest-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "b1dd4fddbbb6164a69649b3a5df221ea82836bf81249438cd041e6c37ddf26b0",
+    "bytes": 97972
+  },
+  {
+    "world": "ancient_forest",
+    "file": "ancient_forest-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "852dc2e538842b5a5cadc35fcc31eda129e4c7117ff49de9224b342e85a950cb",
+    "bytes": 74712
+  },
+  {
+    "world": "aurora_valley",
+    "file": "aurora_valley.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "db8485d86054a5aebc84180f781d1d450a474478e3b6b6a5b8037daae0d60c74",
+    "bytes": 2510
+  },
+  {
+    "world": "aurora_valley",
+    "file": "aurora_valley-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "940615c07ae3f72de5db3a205e13b779e652857f255c61646b4fe38e7175bd07",
+    "bytes": 16550
+  },
+  {
+    "world": "aurora_valley",
+    "file": "aurora_valley-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "7cc1e7d9f24e656e7f867957118e738237affac0253a971d83d53b9244ca7dde",
+    "bytes": 16194
+  },
+  {
+    "world": "autumn_lake",
+    "file": "autumn_lake.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "fa28dc04b4670b6ffcf6370d6d40e00af9f23cd4b7699162a09914116a33db65",
+    "bytes": 3398
+  },
+  {
+    "world": "autumn_lake",
+    "file": "autumn_lake-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "ca4fbcf3a7cdb85f244c6b2012171cce3aab34c2a4c8ed065fbd097fddc062a7",
+    "bytes": 23140
+  },
+  {
+    "world": "autumn_lake",
+    "file": "autumn_lake-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "6381e7d03829ba0212ef8b68d40e10631b131e95a3798deb081b5f0bbb3e091f",
+    "bytes": 15542
+  },
+  {
+    "world": "eden",
+    "file": "eden.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "5446857820f87768d9ab151591d1a682fd22c485bc84c3060525d429facfba24",
+    "bytes": 5650
+  },
+  {
+    "world": "eden",
+    "file": "eden-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "19dbecbfab316e98d2392bdd1f700df9533bc61204037971b84e8851049c780a",
+    "bytes": 40090
+  },
+  {
+    "world": "eden",
+    "file": "eden-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "5be9e1b2a22d8983acd68ea27aa2c112258e74ee03d3a6e41be9a06ca316152f",
+    "bytes": 24662
+  },
+  {
+    "world": "ember_hearth",
+    "file": "ember_hearth.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "9d9b566ea4ca5ab100dcd64fd1a70165c69f068e2b469a7435020c35cd61b427",
+    "bytes": 2984
+  },
+  {
+    "world": "ember_hearth",
+    "file": "ember_hearth-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "57c8d4d8c2e3a48e5f2d39ca7e19405d814ce63c0ecad55fa3cec597f044fd3c",
+    "bytes": 23126
+  },
+  {
+    "world": "ember_hearth",
+    "file": "ember_hearth-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "e0eddf37b98d2d776d848748e9aeecae83a34207da4c897cf740d57f7497acc4",
+    "bytes": 22404
+  },
+  {
+    "world": "eternity_fountain",
+    "file": "eternity_fountain.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "c3f34146a8b69746c26a96bcaf458f2946a367619bc12c3c8cbb43f5d36294c0",
+    "bytes": 3716
+  },
+  {
+    "world": "eternity_fountain",
+    "file": "eternity_fountain-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "108dd47d21b5ef9d5d29dc4c76e447a7755d3d766cbe1ace162e874e49e84fae",
+    "bytes": 20514
+  },
+  {
+    "world": "eternity_fountain",
+    "file": "eternity_fountain-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "917ca4501e9ef3454c085c0440138370b30b9f52fd87627ccb623e796b435ece",
+    "bytes": 14800
+  },
+  {
+    "world": "galaxy",
+    "file": "galaxy.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "ac18c86b3a397429d7a9bc6be1389ce376f88adafc3cc57a97cb1377d383f38f",
+    "bytes": 3096
+  },
+  {
+    "world": "galaxy",
+    "file": "galaxy-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "6989f8e93c251dbf99d78e547dc910a107fbc6f0b1f9cab0d3f584fef49e52d9",
+    "bytes": 41394
+  },
+  {
+    "world": "galaxy",
+    "file": "galaxy-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "15fb585e581754792ef2dff8303f1fe9ff44c5f711cdad0221ca0e4660894bc8",
+    "bytes": 46226
+  },
+  {
+    "world": "heaven",
+    "file": "heaven.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "af3e5b01293b3aa42882965a78d86a4aa822c680356e64c0f36f2a892165ef8f",
+    "bytes": 2486
+  },
+  {
+    "world": "heaven",
+    "file": "heaven-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "e7e163c3d34830776cd0cda98ece77a312a3a3eab0dd0ebdd848de07d3d87017",
+    "bytes": 16322
+  },
+  {
+    "world": "heaven",
+    "file": "heaven-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "036ad60e6e2b01c27d3d068ba6d0e39e2c22d8b6da66d69fe8627283cceb7318",
+    "bytes": 12458
+  },
+  {
+    "world": "interstellar",
+    "file": "interstellar.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "35e2956316afca281dad295a126b21a08ac6c509bc664e43bff11285fae57080",
+    "bytes": 1976
+  },
+  {
+    "world": "interstellar",
+    "file": "interstellar-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "af7b97a5a791c1b8cfa809015b7108065e5622f6009eb05f0763d7bb20be1cd6",
+    "bytes": 14250
+  },
+  {
+    "world": "interstellar",
+    "file": "interstellar-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "aae3122bb280439a88480b257091ef7c2cc7d51badcf1b7d89f137d8f2d80dba",
+    "bytes": 17220
+  },
+  {
+    "world": "memories",
+    "file": "memories.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "65b32f3542b2ee88ed6223b17b9fc48b8aa9b4b84d8bd3a8617ce23350d2db82",
+    "bytes": 1608
+  },
+  {
+    "world": "memories",
+    "file": "memories-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "f53b7f9daf0a9ecb8b4d690f1527c01db8f076a1da09c74ae5bb546569db3f16",
+    "bytes": 9766
+  },
+  {
+    "world": "memories",
+    "file": "memories-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "8c6fb0bf7064f4b6c7bfc918380e1b5037b04a5162ad9d0189fdf435bfa09e38",
+    "bytes": 7174
+  },
+  {
+    "world": "midnight_rooftop",
+    "file": "midnight_rooftop.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "fdd1991d04de31d10657a0b9bc1f13adafffafa1b934eebbe63f43a06a366d95",
+    "bytes": 2716
+  },
+  {
+    "world": "midnight_rooftop",
+    "file": "midnight_rooftop-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "a58ea972fb74636dd6c8d3a8f02e0388b1517a3961c9be27c33990155870ab46",
+    "bytes": 14006
+  },
+  {
+    "world": "midnight_rooftop",
+    "file": "midnight_rooftop-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "31e313225607df62ae2af82de41d73b751548b3b233c167bc8659c35b87c7cb3",
+    "bytes": 9146
+  },
+  {
+    "world": "oasis",
+    "file": "oasis.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "5862c4244430790672910c4ee341004c04d9fdabfbd548cc9fc08fddba089555",
+    "bytes": 4454
+  },
+  {
+    "world": "oasis",
+    "file": "oasis-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "3ba9ae5769bd86180a3f3cf13754f1374935406bf2b688689a8463c67f2a9312",
+    "bytes": 38730
+  },
+  {
+    "world": "oasis",
+    "file": "oasis-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "da04213c5a4c2ef77e6342b03f90c3b60bd92aec44a224123476dc8603814cc3",
+    "bytes": 32634
+  },
+  {
+    "world": "ocean_cliffs",
+    "file": "ocean_cliffs.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "6f49dadd4502e7b46630f6e507c941833a4f5301b58d2bbfe1af6c8be551924a",
+    "bytes": 1962
+  },
+  {
+    "world": "ocean_cliffs",
+    "file": "ocean_cliffs-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "588bebd708746c9ebca9cb738a4eb2004c3555dcec7222cb8dd95283d208c30e",
+    "bytes": 17578
+  },
+  {
+    "world": "ocean_cliffs",
+    "file": "ocean_cliffs-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "8f70cc14c2f0432929a6df607f4a5cb817d49fcc470adef30b9ecdb2cd0b421a",
+    "bytes": 14040
+  },
+  {
+    "world": "polar_sky",
+    "file": "polar_sky.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "9915379b2e665675e27e8f3b3b28d4149bc2716c2445291fa12f8e03d0207562",
+    "bytes": 1878
+  },
+  {
+    "world": "polar_sky",
+    "file": "polar_sky-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "5c47f3006497d93b9cdbcc791f06557398edd89d4dfa7adb7416bf1323272bf3",
+    "bytes": 10284
+  },
+  {
+    "world": "polar_sky",
+    "file": "polar_sky-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "f5775ffcd0b9506dbaeb9dc2da1e854911bb441125400d7cbddd3153fc407ddd",
+    "bytes": 8718
+  },
+  {
+    "world": "rain_city",
+    "file": "rain_city.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "605c4b396a01184ac1048e3a718c78ec678c4098822fe0a9d80042767aa09ed0",
+    "bytes": 3400
+  },
+  {
+    "world": "rain_city",
+    "file": "rain_city-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "4a20a3ef41edfc0b793778f355ba85d296ed0001f14a33fcaddb42f7a6829180",
+    "bytes": 20342
+  },
+  {
+    "world": "rain_city",
+    "file": "rain_city-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "421bb0389c7889c18ab1594359a9e3428244387420169da67c5706505820c57f",
+    "bytes": 16222
+  },
+  {
+    "world": "rain_refuge",
+    "file": "rain_refuge.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "f0461071c9837045e10e111899f2368ffb49f69d27aa1ee9f41028c709153723",
+    "bytes": 2364
+  },
+  {
+    "world": "rain_refuge",
+    "file": "rain_refuge-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "dea839f28239f57f52e53053a71a76d0c4a9819bc893eb5d6b38459542954c72",
+    "bytes": 11876
+  },
+  {
+    "world": "rain_refuge",
+    "file": "rain_refuge-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "7ea620bf5f854d7bdf2ef9cfed1cbce20d3e1346c51566d5bb81e42499ac44d4",
+    "bytes": 10682
+  },
+  {
+    "world": "sahara_observatory",
+    "file": "sahara_observatory.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "3e4d0769bdd86a8db8ddb57d02c3c8219d1f15a61b28e5602fbb5fa0bdd8d500",
+    "bytes": 1748
+  },
+  {
+    "world": "sahara_observatory",
+    "file": "sahara_observatory-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "6616e2ae8d2546395264b4572561199f5b39a5260d02b79f1cb3e6f65382390f",
+    "bytes": 48530
+  },
+  {
+    "world": "sahara_observatory",
+    "file": "sahara_observatory-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "91e39c7657a05705d832c92c2a8f4a13af08d18e1d352ca234f1be887dc5626a",
+    "bytes": 28884
+  },
+  {
+    "world": "spring_meadow",
+    "file": "spring_meadow.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "84e6bf4fd29f087be14d3dddc53bae196e96fa2ea9bd538b788c51772a72bda2",
+    "bytes": 6032
+  },
+  {
+    "world": "spring_meadow",
+    "file": "spring_meadow-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "9776f510227b0255504239f43b531857f602dc2723ba70a8258a25a9064c2b02",
+    "bytes": 41666
+  },
+  {
+    "world": "spring_meadow",
+    "file": "spring_meadow-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "8e4235b3b444cbd235e347f1d4955bc5994b3454a905008d8debece0ee9393e3",
+    "bytes": 28534
+  },
+  {
+    "world": "star_tree",
+    "file": "star_tree.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "edd4a66ef7e902a00082da460dc76b9bba72c3056911bfb8e2fb499c61aec51c",
+    "bytes": 2806
+  },
+  {
+    "world": "star_tree",
+    "file": "star_tree-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "0b5e9f9edcf9abbcf3a4764428a664c908ccc7f2ae5b4d82fc5ae5532008b63a",
+    "bytes": 20588
+  },
+  {
+    "world": "star_tree",
+    "file": "star_tree-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "3328ceaf33587ce67581331de78e4439b01a7c55cd3b4232d86748a4826363b9",
+    "bytes": 22102
+  },
+  {
+    "world": "storm_cliffs",
+    "file": "storm_cliffs.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "3e78c193ba92845dd85e6fadd45aab19e94c9381e6802c7bcddddaa7d229f48b",
+    "bytes": 1890
+  },
+  {
+    "world": "storm_cliffs",
+    "file": "storm_cliffs-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "c3f6104963bb71c04570d89f7ce0bbb6d513adfc18d56e4561394358ced383c3",
+    "bytes": 14670
+  },
+  {
+    "world": "storm_cliffs",
+    "file": "storm_cliffs-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "686e372ed9528550d99d9c46e588cb62da81ccfd730e2cdfed8612e7ab12049f",
+    "bytes": 11440
+  },
+  {
+    "world": "summer_terrace",
+    "file": "summer_terrace.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "7665dcc8b4e93ece4606a373c7bc016f86bd98a0928ec40079f4c9f206dc240d",
+    "bytes": 4506
+  },
+  {
+    "world": "summer_terrace",
+    "file": "summer_terrace-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "cb354bfd16670d2de1a2bb288707de31aedb6006b1cb01a0ff2d2bd0144552dc",
+    "bytes": 23488
+  },
+  {
+    "world": "summer_terrace",
+    "file": "summer_terrace-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "f5283358260ea5ee6b75078041b4e64c0cd1747b9e5fb22087eda3a626882a29",
+    "bytes": 14208
+  },
+  {
+    "world": "time_river",
+    "file": "time_river.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "2c8ef3ba4105d95aa395ce7e56fa25482f7c275f7b745e23806eedda37ececf7",
+    "bytes": 2142
+  },
+  {
+    "world": "time_river",
+    "file": "time_river-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "e7bab407772dbe626e8a98e8a1307ad31ef859bc273cb5dd5f139f9fe06d9c13",
+    "bytes": 16220
+  },
+  {
+    "world": "time_river",
+    "file": "time_river-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "2908155bd3919bc6451b6df1d3906ac432410ebeb2e252cb1fee51efee069f10",
+    "bytes": 15956
+  },
+  {
+    "world": "winter_lodge",
+    "file": "winter_lodge.webp",
+    "dimensions": [
+      320,
+      200
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 76,
+    "sha256": "c63ecee951469e5d96d1754dd5ef8afd740fcd924929965998e8f156f78508e6",
+    "bytes": 2800
+  },
+  {
+    "world": "winter_lodge",
+    "file": "winter_lodge-wide.webp",
+    "dimensions": [
+      1280,
+      800
+    ],
+    "source": "rendu local du moteur premium3d (desktop)",
+    "source_dimensions": [
+      1436,
+      896
+    ],
+    "quality": 78,
+    "sha256": "e63784f47209cf3896a54949fb73a46102c0b853d54f3f9596fac14282e3cd5a",
+    "bytes": 17702
+  },
+  {
+    "world": "winter_lodge",
+    "file": "winter_lodge-mobile.webp",
+    "dimensions": [
+      720,
+      1571
+    ],
+    "source": "rendu local du moteur premium3d (mobile)",
+    "source_dimensions": [
+      772,
+      1684
+    ],
+    "quality": 78,
+    "sha256": "73bab6b883be67462724165dcc9b49ee7ea2cc2ddf8704d564c6222d78ff9f9f",
+    "bytes": 9652
+  }
+]

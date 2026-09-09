@@ -25,7 +25,7 @@ function loop(THREE, count) {
 }
 
 export function makeBeadsRuntime(THREE, helpers) {
-  const { mobile, reducedMotion, mesh } = helpers;
+  const { mobile, mesh } = helpers;
   const group = new THREE.Group();
   const count = mobile ? COUNT_MOBILE : COUNT_DESKTOP;
   const points = loop(THREE, count);
@@ -54,6 +54,13 @@ export function makeBeadsRuntime(THREE, helpers) {
   group.add(beads);
 
   const chrome = makeChrome(THREE), steel = makeSteel(THREE);
+  const supportMaterial = new THREE.MeshStandardMaterial({color:0x34302c,roughness:.67,metalness:.12});
+  const foot = mesh(new THREE.BoxGeometry(1.9,.14,.85),supportMaterial);
+  foot.position.set(0,-2.92,-.25);group.add(foot);
+  const stem = mesh(new THREE.CylinderGeometry(.04,.055,4.8,16),steel);
+  stem.position.set(0,-.48,-.34);group.add(stem);
+  const hook = mesh(new THREE.TorusGeometry(.13,.025,10,24,Math.PI),chrome);
+  hook.rotation.y=Math.PI/2;hook.position.set(0,1.9,-.18);group.add(hook);
   // Perles de séparation tous les quarts : les repères d'un mâlâ.
   for (let i = 0; i < count; i += Math.round(count / 4)) {
     const spacer = mesh(new THREE.TorusGeometry(0.238, 0.03, 12, 32), i % 2 === 0 ? chrome : steel);
@@ -119,11 +126,7 @@ export function makeBeadsRuntime(THREE, helpers) {
       painted = remaining;
     }
 
-    if (!reducedMotion) {
-      // Le collier oscille comme un pendule très lent, sans jamais tourner sur lui-même.
-      group.rotation.z = Math.sin(time * 0.00021) * 0.03;
-      group.rotation.y = Math.sin(time * 0.00013) * 0.1;
-    }
+    // Le support porte le collier : aucun balancement de l'objet entier.
   }
 
   update(1, 0);

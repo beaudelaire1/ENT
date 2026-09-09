@@ -82,3 +82,20 @@ class TaskFocusViewTests(TestCase):
 
         self.assertTrue(TaskFocus.objects.filter(period_start=date(2026, 9, 8)).exists())
         self.assertFalse(TaskFocus.objects.filter(period_start=date(2026, 9, 9)).exists())
+
+    def test_a_task_opens_a_session_and_the_session_knows_where_to_come_back(self):
+        """Choisir une priorité puis chercher le Sablier dans le menu, c'est deux gestes
+        pour une seule intention — et rien, au retour, ne ramenait à la liste.
+
+        Le lien porte donc les deux bouts : ce qu'on va travailler, et d'où l'on vient.
+        Sans l'adresse de retour, le Sablier ouvre bien la session mais laisse l'étudiant
+        en sortir par l'accueil, c'est-à-dire nulle part près de sa tâche.
+        """
+        tasks = reverse("planner:tasks")
+        response = self.client.get(tasks)
+        self.assertContains(response, f"{reverse('sablier:home')}?intention=Alg%C3%A8bre")
+        self.assertContains(response, f"next={tasks}")
+
+        session = self.client.get(reverse("sablier:home"), {"intention": "Algèbre", "duration": "25", "next": tasks})
+        self.assertContains(session, "Algèbre")
+        self.assertContains(session, f'id="return-after-session" href="{tasks}"')

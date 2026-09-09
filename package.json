@@ -6,7 +6,9 @@
   "scripts": {
     "vendor": "node tools/vendor-three.mjs",
     "test": "node --test tests/*.test.cjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:worlds": "playwright test --config playwright.worlds.config.cjs",
+    "plates": "node tools/sablier-plates.cjs"
   },
   "dependencies": {
     "three": "0.184.0"

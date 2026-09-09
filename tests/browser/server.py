@@ -13,17 +13,24 @@ for name in ("DATABASE_URL", "REDIS_URL", "SENTRY_DSN", "EMAIL_HOST"):
 # Active les tâches synchrones et les réglages de test existants.
 sys.argv.append("test")
 
-import django
-from django.conf import settings
-from django.core.management import call_command
+import django  # noqa: E402 -- environnement isolé avant le chargement de Django
+from django.conf import settings  # noqa: E402
+from django.core.management import call_command  # noqa: E402
 
 with tempfile.TemporaryDirectory(prefix="myent-browser-") as directory:
     settings.DATABASES["default"]["NAME"] = str(Path(directory) / "db.sqlite3")
     settings.MEDIA_ROOT = Path(directory) / "media"
     settings.ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+    # La recette manuelle doit refléter les gabarits modifiés sans garder une ancienne
+    # interface en mémoire pendant que ses scripts, eux, sont déjà rechargés.
+    settings.TEMPLATES[0]['APP_DIRS'] = False
+    settings.TEMPLATES[0]['OPTIONS']['loaders'] = [
+        'django.template.loaders.filesystem.Loader', 'django.template.loaders.app_directories.Loader',
+    ]
     django.setup()
     call_command("migrate", verbosity=0)
     from django.contrib.auth import get_user_model
+
     from accounts.models import UserProfile
     from formations.models import Competency, LearningPath, Period, ProgressRecord
     from planner.models import CalendarEvent

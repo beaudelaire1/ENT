@@ -14,6 +14,7 @@
       <div><strong>{{ task.title }}</strong>{% if task.series_id %} <span class="chip static">série</span>{% endif %}<div class="muted">{{ task.get_status_display }} · {{ task.get_priority_display }}{% if task.due_at %} · {{ task.due_at|date:"d/m/Y H:i" }}{% endif %}{% if task.unit %} · {{ task.unit.title }}{% endif %}{% if task.competency %} · {{ task.competency.title }}{% endif %}</div></div>
       <div class="actions">
         {% if task.status != 'done' %}
+          <a class="button small" href="{% url 'sablier:home' %}?intention={{ task.title|urlencode }}&amp;duration=25{% if task.competency_id %}&amp;competency={{ task.competency_id }}{% endif %}&amp;next={{ request.get_full_path|urlencode }}">Se concentrer</a>
           <form method="post" action="{% url 'planner:task_focus' task.pk 'day' %}">{% csrf_token %}<button class="button small quiet" type="submit" title="Définir comme priorité d’aujourd’hui">Jour</button></form>
           <form method="post" action="{% url 'planner:task_focus' task.pk 'week' %}">{% csrf_token %}<button class="button small quiet" type="submit" title="Définir comme priorité de cette semaine">Semaine</button></form>
           <form method="post" action="{% url 'planner:task_focus' task.pk 'month' %}">{% csrf_token %}<button class="button small quiet" type="submit" title="Définir comme priorité de ce mois">Mois</button></form>

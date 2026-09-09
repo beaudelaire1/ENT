@@ -21,6 +21,7 @@ class Scene:
     accent: str
     tint: str
     decor: str
+    group: str
     sky: str
     horizon: str
     ground: str

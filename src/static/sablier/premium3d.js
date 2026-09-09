@@ -94,7 +94,9 @@ async function boot() {
 function createRuntime(THREE, nodes) {
   const { app, stage, visual, canvas, fallbackCanvas, progressNode, liveChip } = nodes;
   const mobile = matchMedia("(max-width: 700px)").matches;
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
+  let reducedMotion = motionPreference.matches;
+  motionPreference.addEventListener('change', event => { reducedMotion = event.matches; });
   const decorNames = JSON.parse(document.querySelector("#decor-data")?.textContent || "{}");
 
   let renderer;
@@ -118,6 +120,7 @@ function createRuntime(THREE, nodes) {
   renderer.toneMappingExposure = 0.9;
   renderer.shadowMap.enabled = !mobile;
   renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.info.autoReset = false;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, 1, 0.4, 9000);
@@ -185,6 +188,8 @@ function createRuntime(THREE, nodes) {
   let width = 0, height = 0;
   let frame = 0;
   let ready = false;
+  let worldTime = 0, lastTime = null, renders = 0, stopped = false;
+  let lastDraw = '', lastPaint = -Infinity;
 
   const mesh = (geometry, material, { cast = true, receive = true } = {}) => {
     const item = new THREE.Mesh(geometry, material);
@@ -281,6 +286,14 @@ function createRuntime(THREE, nodes) {
     }
 
     currentWorld = buildWorld(THREE, key, { mobile });
+    worldTime = 0;
+    camera.position.y = currentWorld.camera.height;
+    camera.rotation.set(currentWorld.camera.pitch, 0, 0);
+    camera.fov = currentWorld.camera.fov;
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld(true);
+    publishHorizon();
+    app.dataset.world = key;
     scene.add(currentWorld.object);
 
     environment = buildEnvironment(THREE, renderer, currentWorld.env);
@@ -358,7 +371,8 @@ function createRuntime(THREE, nodes) {
     // partir d'elle, si bien qu'un même cadrage HTML donne le même disque à l'écran, mais
     // derrière le paysage.
     const skyborne = SKYBORNE.has(state.mode);
-    const distance = skyborne ? 1500 : 9;
+    const distance = skyborne ? 1500 : state.world === 'rain_refuge' ? 4.5 : 9;
+    const groundLevel = state.world === 'rain_refuge' ? .9 : 0;
     const halfHeight = distance * Math.tan((camera.fov * Math.PI) / 360);
     const halfWidth = halfHeight * camera.aspect;
     const ndcX = ((wrapRect.left + wrapRect.width / 2 - stageRect.left) / stageRect.width) * 2 - 1;
@@ -386,6 +400,11 @@ function createRuntime(THREE, nodes) {
 
     objectRoot.position.set(ndcX * halfWidth, camera.position.y + ndcY * halfHeight, -distance);
     objectRoot.scale.setScalar(scale);
+    active?.object.traverse(node => {
+      if (!node.isLight) return;
+      node.userData.photometricPower ??= node.intensity;
+      node.intensity = node.userData.photometricPower * scale * scale * .35;
+    });
 
     const half = (span / 2) * scale;
     // Chaque objet déclare le point le plus bas de sa silhouette. Les supposer tous
@@ -406,13 +425,13 @@ function createRuntime(THREE, nodes) {
       // s'arrête haut restait donc suspendue au-dessus de son ombre, sans que rien ne la
       // redescende. Le cadrage HTML garde la taille et la position latérale ; c'est le sol
       // qui fixe la hauteur.
-      objectRoot.position.y += 0.02 - base;
+      objectRoot.position.y += groundLevel + 0.02 - base;
     }
 
     contact.visible = !skyborne && Boolean(active);
     if (contact.visible) {
       const spread = (active?.footprint?.radius ?? 1.6) * scale * 2;
-      contact.position.set(objectRoot.position.x, 0.03, objectRoot.position.z);
+      contact.position.set(objectRoot.position.x, groundLevel + 0.03, objectRoot.position.z);
       contact.scale.set(spread, spread, 1);
     }
 
@@ -436,6 +455,9 @@ function createRuntime(THREE, nodes) {
       objectRoot.position.y + 0.6 * scale,
       objectRoot.position.z + 3.2 * scale,
     );
+    bounce.intensity = (currentWorld?.env.kind === 'day' ? 2 : 3) * scale * scale;
+    const footingPoint = new THREE.Vector3(objectRoot.position.x,groundLevel,-distance).project(camera);
+    app.dataset.worldFoot = String((1-footingPoint.y)*height/2);
     // La mise au point suit l'objet : le paysage se défocalise autour de lui, qu'il soit à
     // portée de main ou à l'horizon.
     post?.focus(distance);
@@ -485,23 +507,35 @@ function createRuntime(THREE, nodes) {
   }
 
   function render(time) {
+    try { draw(time); }
+    catch (error) {
+      stopped = true; cancelAnimationFrame(frame); ready = false;
+      app.dataset.renderer3d = 'fallback'; app.dataset.renderer3dReason = 'world-render';
+      canvas.style.display = 'none'; syncFallback();
+      console.error('Sablier : échec du rendu', state.world, error);
+    }
+  }
+  function draw(time) {
+    if (stopped || document.hidden) { lastTime = null; return; }
     frame = requestAnimationFrame(render);
+    const delta = lastTime === null ? 0 : Math.min(100, time - lastTime);
+    lastTime = time;
     readState();
     resize();
+    worldTime += delta * state.motion;
+    const signature = [state.world,state.mode,width,height,app.classList.contains('stage-mode'),
+      active ? state.progress : '', app.dataset.lightning, app.dataset.materialRevision].join(':');
+    if (ready && lastDraw === signature && (state.motion === 0 || time-lastPaint < 33)) return;
+    lastDraw = signature; lastPaint = time;
     frameObject();
 
-    currentWorld?.update(time, state.motion, state.progress);
-    active?.update(state.progress, time);
+    currentWorld?.update(worldTime, state.motion, state.progress, app.dataset.lightning === 'true');
+    active?.update(state.progress, worldTime);
 
-    if (!reducedMotion) {
-      // Respiration de la caméra : quelques dixièmes de degré suffisent à sortir la
-      // scène de la fixité d'une image de synthèse.
-      camera.rotation.y = Math.sin(time * 0.00009) * 0.012;
-      camera.rotation.x = -0.02 + Math.sin(time * 0.00007) * 0.006;
-    }
-
+    renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
+    renders++;
 
     if (!ready) {
       // L'unique basculement. Avant lui, rien du lieu n'est montré — ni la scène, encore
@@ -520,9 +554,21 @@ function createRuntime(THREE, nodes) {
 
   const observer = new ResizeObserver(() => { width = 0; height = 0; });
   observer.observe(stage);
+  const gl=renderer.getContext(), gpuExtension=gl.getExtension('WEBGL_debug_renderer_info');
+  window.SablierWorld = { inspect: () => ({world: state.world, mode: state.mode, progress: state.progress, motion: state.motion, worldTime,
+    camera: [...camera.position.toArray(), ...camera.rotation.toArray()], renders,
+    geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures,
+    calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, hidden: document.hidden,
+    materialLoads: Number(app.dataset.materialLoads || 0), materialRevision: Number(app.dataset.materialRevision || 0),
+    gpu: gpuExtension ? gl.getParameter(gpuExtension.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)}) };
+  document.addEventListener('visibilitychange', () => {
+    cancelAnimationFrame(frame); lastTime = null;
+    if (!document.hidden && !stopped) frame = requestAnimationFrame(render);
+  });
 
   canvas.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
+    stopped = true;
     cancelAnimationFrame(frame);
     ready = false;
     app.dataset.renderer3d = "fallback";
@@ -531,8 +577,9 @@ function createRuntime(THREE, nodes) {
     syncFallback();
   }, { once: true });
 
-  window.addEventListener("pagehide", () => {
+  window.addEventListener("pagehide", (event) => {
     cancelAnimationFrame(frame);
+    if (event.persisted) { lastTime = null; return; }
     observer.disconnect();
     post?.dispose();
     if (active) dispose(active.object);
@@ -540,7 +587,10 @@ function createRuntime(THREE, nodes) {
     environment?.dispose();
     disposeTextures();
     renderer.dispose();
-  }, { once: true });
+  });
+  window.addEventListener('pageshow', event => {
+    if(event.persisted && !stopped) {lastTime=null;frame=requestAnimationFrame(render);}
+  });
 
   app.dataset.renderer3d = "three-ready";
   frame = requestAnimationFrame(render);

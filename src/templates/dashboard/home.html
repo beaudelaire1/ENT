@@ -14,7 +14,7 @@
         {% for focus in task_focuses %}
           <div class="list-row">
             <div><strong>{{ focus.label }}</strong>{% if focus.task %}<span class="muted"> · </span><a href="{% url 'planner:task_edit' focus.task.pk %}?next={% url 'dashboard:home' %}">{{ focus.task.title }}</a>{% else %}<span class="muted"> · Non définie</span>{% endif %}</div>
-            {% if focus.task %}<form method="post" action="{% url 'planner:task_focus_clear' focus.scope %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:home' %}"><button class="button small quiet" type="submit">Retirer</button></form>{% endif %}
+            {% if focus.task %}<a class="button small" href="{% url 'sablier:home' %}?intention={{ focus.task.title|urlencode }}&amp;duration=25{% if focus.task.competency_id %}&amp;competency={{ focus.task.competency_id }}{% endif %}&amp;next={{ request.path|urlencode }}">Se concentrer</a><form method="post" action="{% url 'planner:task_focus_clear' focus.scope %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:home' %}"><button class="button small quiet" type="submit">Retirer</button></form>{% endif %}
           </div>
         {% endfor %}
         <div class="actions"><a class="button small quiet" href="{% url 'planner:tasks' %}">Choisir les priorités</a></div>

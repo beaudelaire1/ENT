@@ -257,4 +257,52 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 .stage-disc-vinyl:focus-visible,.stage-disc-step:focus-visible { outline:2px solid var(--focus-accent);outline-offset:2px; }
 .bare .stage-disc { opacity:.42; }
 @media(max-width:700px){ .stage-disc span { display:none; } .stage-disc { padding:5px 8px 5px 5px;right:12px;bottom:12px; } }
-
+/* Galerie et commandes : les trois choix restent séparés. */
+.world-picker,.session-secondary { grid-column:1/-1; }
+.world-picker summary,.session-secondary summary { cursor:pointer;padding:10px 0; }
+.world-gallery { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:440px;overflow:auto;padding:4px; }
+.world-card { position:relative;min-width:0; }
+.world-card[hidden],#world-empty[hidden] { display:none; }
+.world-card [data-world-choice] { width:100%;height:100%;padding:0 0 10px;border:2px solid transparent;border-radius:12px;overflow:hidden;background:var(--focus-surface);color:var(--focus-text);cursor:pointer;text-align:left; }
+.world-card [data-world-choice][aria-pressed="true"] { border-color:var(--focus-accent); }
+.world-card img { width:100%;height:90px;object-fit:cover;display:block;background:var(--focus-bg); }
+.world-card span { display:block;padding:8px 8px 0;font-size:12px; }
+.world-card [data-favorite] { position:absolute;top:5px;right:5px;min-width:36px;min-height:36px;border:0;border-radius:50%;background:#0b1427dc;color:#ffe3a6;cursor:pointer; }
+.focus-app :focus-visible { outline:3px solid var(--focus-accent);outline-offset:3px; }
+.focus-stage .world-fallback { position:absolute!important;inset:0;width:100%;height:100%;object-fit:cover;z-index:1!important;display:none; }
+.focus-app[data-renderer3d="fallback"] .world-fallback { display:block; }
+.focus-app[data-renderer3d="fallback"] .world-fallback[data-unavailable="true"] { display:none; }
+#renderer-status { position:absolute;bottom:12px;left:16px;font-size:11px;background:#121c2bdb;padding:5px 9px;border-radius:8px; }
+.focus-stage .immersion-pause { display:none; }
+.focus-app.stage-mode .immersion-pause { display:block;position:absolute;bottom:22px;left:50%;transform:translateX(-50%);min-width:140px; }
+.focus-app.stage-mode .stage-immersion { position:fixed;top:20px;right:20px; }
+.focus-app .visual-wrap { flex:none;width:min(420px,70%);min-height:310px;height:42%;margin-top:auto;margin-bottom:56px; }
+.focus-app .visual-wrap canvas { width:100%;height:100%; }
+.focus-app .visual-wrap .canvas-time { bottom:-30px; }
+.focus-app .visual-wrap[data-mode="digital"] .digital-visual { width:100%;padding:16px 22px;border-radius:16px;background:#091321a8;box-shadow:none; }
+.focus-app .digital-visual i { margin-top:14px;height:4px; }
+.focus-stage { min-height:650px; }
+.lightning-setting { display:flex;align-items:center;gap:8px;letter-spacing:0!important; }
+.lightning-setting input { width:auto;margin:0!important; }
+.focus-app[data-decor-density="0"] .zen-rings,.focus-app[data-decor-density="0"] .zen-rings::before { animation:none; }
+@media(min-width:1100px) {
+  .focus-layout { grid-template-columns:320px minmax(0,1fr);align-items:start; }
+  .focus-sidebar { display:flex;max-height:850px;overflow:auto; }
+  .focus-stage { height:min(85vh,850px);position:sticky;top:12px; }
+}
+@media(max-width:700px) {
+  .focus-layout { display:flex;flex-direction:column; }
+  .focus-stage { order:-1;min-height:520px;height:68vh;padding:16px; }
+  .focus-app.stage-mode .focus-stage { min-height:0;height:100dvh; }
+  .focus-app .visual-wrap { min-height:210px;height:32%;width:76%;margin-bottom:75px; }
+  .stage-intention { max-width:75%;text-align:center; }
+  .focus-app .canvas-time strong,.focus-app .digital-visual strong { font-size:42px; }
+  .focus-app .zen-rings { width:180px;height:180px; }
+  .stage-status { gap:8px;letter-spacing:0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .focus-app *,.focus-app *::before,.focus-app *::after { animation:none!important;transition:none!important; }
+}
+.focus-app.stage-mode .stage-status { padding-right:110px; }
+.focus-app.stage-mode .stage-immersion { font-size:11px; }
+@media(max-width:700px) { .focus-app.stage-mode .stage-status { padding-right:0;padding-top:48px; } }

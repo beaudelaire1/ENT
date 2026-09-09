@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
   state.savedAt = app.dataset.savedAt || "";
   if (state.running) state.remaining = Math.max(0,(state.endsAt-Date.now())/1000);
   if (state.running && state.remaining <= 0) { state.running=false; state.finished=true; }
-  let lastSecond = -1, warningCue=false, frame=0;
+  let lastSecond = -1, warningCue=false, frame=0, visualTime=0, lastVisualTime=null;
   const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio"),stage=$("#focus-stage");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
   const ambienceAliases=JSON.parse(document.querySelector("#ambience-alias-data")?.textContent||"{}");
@@ -81,10 +81,10 @@ document.addEventListener("DOMContentLoaded", () => {
   try{
     const manifest=window.SABLIER_ASSETS||JSON.parse(document.querySelector("#asset-data")?.textContent||"{}");
     for(const [name,url] of Object.entries(manifest)){
-      const img=new Image();img.decoding="async";img.src=url;assets[name]=img;
+      const img=new Image();img.decoding="async";img.dataset.source=url;assets[name]=img;
     }
   }catch(_){}
-  const ready=(name)=>Boolean(assets[name]?.complete&&assets[name].naturalWidth>0);
+  const ready=(name)=>{const img=assets[name];if(!img)return false;if(!img.getAttribute("src"))img.src=img.dataset.source;return Boolean(img.complete&&img.naturalWidth>0);};
 
   function parseDuration(value){
     value=value.trim().replace(",","."); let seconds;
@@ -300,7 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const {w,h}=resize(),{accent,border,text}=palette(),cx=w/2,cy=h*.42,r=Math.min(w,h)*.34;
     ctx.clearRect(0,0,w,h);glow(ctx,cx,cy,r*1.18,accent,.08);
     ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
-    const level=cy+r-2*r*progress,phase=state.running?Date.now()/850:0,water=ctx.createLinearGradient(0,level,0,cy+r);water.addColorStop(0,rgba(text,.76));water.addColorStop(.08,accent);water.addColorStop(.65,rgba(accent,.72));water.addColorStop(1,rgba(border,.9));
+    const level=cy+r-2*r*progress,phase=state.running?visualTime/850:0,water=ctx.createLinearGradient(0,level,0,cy+r);water.addColorStop(0,rgba(text,.76));water.addColorStop(.08,accent);water.addColorStop(.65,rgba(accent,.72));water.addColorStop(1,rgba(border,.9));
     for(let layer=2;layer>=0;layer--){const offset=layer*6,amp=7+layer*3;ctx.globalAlpha=1-layer*.2;ctx.fillStyle=layer===0?water:rgba(accent,.54-layer*.08);ctx.beginPath();ctx.moveTo(cx-r,cy+r);for(let x=cx-r;x<=cx+r;x+=4){const wave=Math.sin(x/(34+layer*19)+phase*(1-layer*.12)+layer*1.7)*amp+Math.sin(x/17-phase*.55)*2;ctx.lineTo(x,level+offset+wave);}ctx.lineTo(cx+r,cy+r);ctx.closePath();ctx.fill();}
     // Écume et reflet : deux traits fins suffisent à donner une surface d'eau.
     ctx.globalAlpha=.72;ctx.strokeStyle=rgba(text,.72);ctx.lineWidth=1.4;ctx.beginPath();for(let x=cx-r;x<=cx+r;x+=4){const y=level+Math.sin(x/34+phase)*7+Math.sin(x/17-phase*.55)*2;x===cx-r?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
@@ -343,7 +343,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fillStyle="#f2c46d";ctx.beginPath();ctx.ellipse(cx,top+bodyW*.062,bodyW*.12,bodyW*.028,0,0,Math.PI*2);ctx.fill();
       // Mèche puis flamme : cœur blanc, manteau coloré, halo. Trois valeurs, sinon la
       // flamme n'est qu'une tache de la couleur d'ambiance.
-      const flicker=state.running?Math.sin(Date.now()/90)*bodyW*.02:0,flameH=bodyW*.62;
+      const flicker=state.running?Math.sin(visualTime/90)*bodyW*.02:0,flameH=bodyW*.62;
       ctx.strokeStyle="#24170c";ctx.lineWidth=Math.max(2,bodyW*.035);
       ctx.beginPath();ctx.moveTo(cx,top+2);ctx.quadraticCurveTo(cx+bodyW*.03,top-bodyW*.08,cx-bodyW*.02,top-bodyW*.17);ctx.stroke();
       ctx.beginPath();ctx.moveTo(cx,top-flameH-flicker);
@@ -376,7 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function drawBeads(progress){
     const {w,h}=resize(),{accent,border,text,surface}=palette(),unit=Math.min(w,h),total=24,
       remaining=Math.ceil(progress*total),cx=w/2,cy=h*.36,rx=unit*.28,ry=unit*.1,drop=unit*.115,
-      r=unit*.032,shimmer=state.running?Date.now()/720:0,bowlY=h*.72,bowlR=unit*.26;
+      r=unit*.032,shimmer=state.running?visualTime/720:0,bowlY=h*.72,bowlR=unit*.26;
     ctx.clearRect(0,0,w,h);
     // Pas de halo coloré derrière l'objet : il le détacherait du décor comme une
     // vignette posée dessus, alors que la nacre et le métal se suffisent.
@@ -810,7 +810,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.strokeStyle=stream;ctx.lineCap="round";
       ctx.lineWidth=Math.max(1.2,iw*.005);ctx.beginPath();ctx.moveTo(cx,neckY+1);ctx.lineTo(cx,peak);ctx.stroke();
       ctx.lineWidth=Math.max(.6,iw*.002);ctx.strokeStyle="rgba(255,240,200,.9)";ctx.beginPath();ctx.moveTo(cx-iw*.002,neckY+1);ctx.lineTo(cx-iw*.002,peak);ctx.stroke();
-      const phase=Date.now()/46;
+      const phase=visualTime/46;
       for(let i=0;i<18;i++){
         const travel=((phase+i*7.17)%18)/18,y=neckY+(peak-neckY)*travel,x=cx+Math.sin(i*12.7+phase*.15)*iw*.0045;
         ctx.fillStyle=i%3===0?"rgba(255,239,188,.95)":"rgba(205,143,54,.92)";ctx.beginPath();ctx.arc(x,y,Math.max(.55,iw*(.0014+(i%4)*.00028)),0,Math.PI*2);ctx.fill();
@@ -856,14 +856,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const img=assets.candle,{w,h}=resize(),{accent,text}=palette();
     ctx.clearRect(0,0,w,h);
     const baseY=h*.87,fullH=h*.7,iw=Math.min(w*.46,fullH*img.naturalWidth/img.naturalHeight),scale=iw/img.naturalWidth;
-    const waxTop=img.naturalHeight*.058,base=img.naturalHeight*.975;
-    const topSrc=waxTop+(1-progress)*(base-waxTop),srcH=base-topSrc,dh=srcH*scale,dx=w/2-iw/2,dy=baseY-dh,fx=w/2;
+    // Le bougeoir reste entier ; le corps de cire raccourcit sous son rebord supérieur.
+    const holderTop=638,capHeight=92,bodyHeight=(holderTop-capHeight)*scale*progress;
+    const capDrawHeight=capHeight*scale*Math.min(1,progress*12);
+    const holderY=baseY-(img.naturalHeight-holderTop)*scale,dx=w/2-iw/2;
+    const dy=holderY-bodyHeight-capDrawHeight,fx=w/2;
     if(progress>.004){glow(ctx,fx,dy-iw*.12,iw*1.1,accent,.28);glow(ctx,fx,dy-iw*.05,iw*.45,"#ffd98a",.2);}
-    ctx.drawImage(img,0,topSrc,img.naturalWidth,srcH,dx,dy,iw,dh);
+    ctx.drawImage(img,0,holderTop,img.naturalWidth,img.naturalHeight-holderTop,dx,holderY,iw,(img.naturalHeight-holderTop)*scale);
+    if(progress>0){
+      ctx.drawImage(img,0,capHeight,img.naturalWidth,holderTop-capHeight,dx,dy+capDrawHeight,iw,bodyHeight);
+      ctx.drawImage(img,0,0,img.naturalWidth,capHeight,dx,dy,iw,capDrawHeight);
+    }
     if(progress>.004){
       ctx.strokeStyle="#241a10";ctx.lineWidth=Math.max(1.5,iw*.012);ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(fx,dy+1);ctx.lineTo(fx+iw*.006,dy-iw*.028);ctx.stroke();
-      const fh=iw*.3,flick=state.running?Math.sin(Date.now()/90)*iw*.012+Math.sin(Date.now()/47)*iw*.006:0;
+      const fh=iw*.3,flick=state.running?Math.sin(visualTime/90)*iw*.012+Math.sin(visualTime/47)*iw*.006:0;
       ctx.save();ctx.translate(fx,dy-iw*.03);
       ctx.fillStyle="rgba(255,150,40,.9)";ctx.shadowColor="#ff9b30";ctx.shadowBlur=iw*.22;
       ctx.beginPath();ctx.moveTo(0,-fh-flick);
@@ -888,7 +895,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.clearRect(0,0,w,h);
     const iw=Math.min(w*.84,h*.8),ih=iw*img.naturalHeight/img.naturalWidth,
       ix=w/2-iw/2,iy=h*.44-ih/2,cx=w/2,cy=iy+ih*.52,rx=iw*.46,ry=ih*.42,
-      bottom=cy+ry*.92,top=cy-ry*.76,phase=state.running?Date.now()/620:0;
+      bottom=cy+ry*.92,top=cy-ry*.76,phase=state.running?visualTime/620:0;
     glow(ctx,cx,cy,iw*.58,accent,.08);
     // L'image du bocal contient un intérieur blanc, contrairement au verre transparent
     // du sablier. On conserve sa forme, puis on évide optiquement ce blanc avant de
@@ -994,7 +1001,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fillStyle=text;ctx.beginPath();ctx.arc(cx+Math.cos(end)*r,cy+Math.sin(end)*r,d*.012,0,Math.PI*2);ctx.fill();
     }
   }
-  function flash(){const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
+  function flash(){if(matchMedia("(prefers-reduced-motion: reduce)").matches||state.decorDensity===0)return;const layer=$("#flash-layer");layer.classList.remove("flash");void layer.offsetWidth;layer.classList.add("flash");}
   function finish(){
     const completed=sessionClock.payload(state,app.dataset.user,Date.now());
     if(completed&&!state.queued){sessionSync.enqueue(completed);state.queued=true;}
@@ -1003,14 +1010,30 @@ document.addEventListener("DOMContentLoaded", () => {
     sessionSync.flush();
     const back=$("#return-after-session");if(back&&app.dataset.returnUrl)back.hidden=false;
   }
+  function integratePhoto(mode) {
+    const h=extent.h,w=extent.w,unit=Math.min(w,h);
+    const feet={hourglass:h*.895,candle:h*.87,wave:h*.44+Math.min(w*.84,h*.8)*.889/2,ring:h*.42+unit*.36};
+    const foot=feet[mode],previous=Number(canvas.dataset.shift||0);
+    if(foot===undefined){canvas.style.transform="";canvas.dataset.shift="0";return;}
+    ctx.save();ctx.globalCompositeOperation="destination-over";
+    const radius=unit*(mode==="hourglass"?.23:mode==="candle"?.21:.34);
+    const shade=ctx.createRadialGradient(w/2,foot,1,w/2,foot,radius);shade.addColorStop(0,"rgba(0,0,0,.48)");shade.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.translate(w/2,foot);ctx.scale(1,.16);ctx.translate(-w/2,-foot);ctx.fillStyle=shade;ctx.fillRect(w/2-radius,foot-radius,radius*2,radius*2);ctx.restore();
+    const target=Number(app.dataset.worldFoot);
+    if(!Number.isFinite(target))return;
+    const baseTop=canvas.getBoundingClientRect().top-previous;
+    const shift=stage.getBoundingClientRect().top+target-baseTop-foot;
+    canvas.style.transform=`translateY(${shift}px)`;canvas.dataset.shift=String(shift);
+  }
   function ambienceLabel(){const select=$("#ambience-select"),option=[...select.options].find(item=>item.value===state.ambience);return option?.textContent||state.ambience;}
   function render(force=false){
     if(state.running){state.remaining=Math.max(0,(state.endsAt-Date.now())/1000);if(state.remaining<=0&&!state.finished)finish();}
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
-    if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
+    if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#immersion-pause").textContent=state.running?"Ⅱ Pause":"▶ Démarrer";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
     const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
     if(painters[mode])painters[mode](progress);
+    integratePhoto(mode);
     $("#canvas-label").textContent={ring:"TEMPS RESTANT",hourglass:"ÉCOULEMENT RÉEL",wave:"MARÉE DESCENDANTE",candle:"IL RESTE À BRÛLER",beads:"PERLES RESTANTES",moon:"DÉCROISSANCE",bars:"NIVEAU RESTANT",spiral:"FIL À DÉROULER",sun:"AVANT LE COUCHER"}[mode]||"TEMPS RESTANT";
     app.dataset.decorDensity=String(state.decorDensity);
     // Le décor peint en 2D est le repli, et uniquement le repli. On ne le peint donc que
@@ -1028,7 +1051,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if(painted)decor.frame(performance.now(),getComputedStyle(app).getPropertyValue("--focus-accent").trim());app.querySelectorAll(".mode-grid [data-mode]").forEach(button=>button.classList.toggle("active",button.dataset.mode===mode));app.querySelectorAll(".focus-levels [data-level]").forEach(button=>button.classList.toggle("active",Number(button.dataset.level)===state.focusLevel));
   }
-  function loop(){render();frame=requestAnimationFrame(loop)}
+  function loop(time){if(document.hidden){lastVisualTime=null;return;}const delta=lastVisualTime===null?0:Math.min(100,time-lastVisualTime);lastVisualTime=time;if(state.decorDensity>0&&!matchMedia("(prefers-reduced-motion: reduce)").matches)visualTime+=delta;render();frame=requestAnimationFrame(loop)}
   $("#apply-duration").addEventListener("click",()=>{const input=$("#duration-input"),seconds=parseDuration(input.value);input.setCustomValidity("");if(seconds)setDuration(seconds);else {input.setCustomValidity("Durée invalide (maximum 24 h).");input.reportValidity();}});
   app.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>setDuration(Number(b.dataset.preset)*60)));
   app.querySelectorAll(".mode-grid [data-mode]").forEach(b=>b.addEventListener("click",()=>{state.mode=b.dataset.mode;save();render(true)}));
@@ -1039,12 +1062,15 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#session-competency")?.addEventListener("change",e=>{state.competency=e.target.value||null;save();});
   $("#session-sync-retry").addEventListener("click",()=>sessionSync.flush());
   window.addEventListener("online",()=>sessionSync.flush());
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden){render(true);sessionSync.flush();}});
-  const retryInterval=setInterval(()=>sessionSync.flush(),30000);
-  window.addEventListener("pagehide",()=>clearInterval(retryInterval),{once:true});
+  document.addEventListener("visibilitychange",()=>{cancelAnimationFrame(frame);if(!document.hidden){render(true);sessionSync.flush();frame=requestAnimationFrame(loop);}});
+  let retryInterval=setInterval(()=>sessionSync.flush(),30000);
+  window.addEventListener("pagehide",()=>{clearInterval(retryInterval);cancelAnimationFrame(frame);lastVisualTime=null;});
+  window.addEventListener("pageshow",event=>{if(event.persisted){clearInterval(retryInterval);retryInterval=setInterval(()=>sessionSync.flush(),30000);render(true);cancelAnimationFrame(frame);frame=requestAnimationFrame(loop);}});
   sessionSync.flush();
   $("#ambience-select").addEventListener("change",e=>{state.ambience=e.target.value;save();render(true)});
   $("#warning-slider").addEventListener("input",e=>{state.warning=Number(e.target.value);$("#warning-output").textContent=`${state.warning} s`;warningCue=false;save()});
+  $("#immersion-pause").addEventListener("click",startPause);
+  $("#lightning-enabled").addEventListener("change",e=>{app.dataset.lightning=String(e.target.checked);});
   $("#main-control").addEventListener("click",startPause);$("#reset-control").addEventListener("click",reset);$("#minus-minute").addEventListener("click",()=>adjust(-60));$("#plus-minute").addEventListener("click",()=>adjust(60));
   // Le bouton reste visible une fois la scène en plein écran — il doit donc aussi savoir
   // en sortir, sinon il n'y aurait plus qu’Échap pour revenir, sans rien qui le dise.
@@ -1055,7 +1081,11 @@ document.addEventListener("DOMContentLoaded", () => {
     setStage(true);try{await app.requestFullscreen()}catch(_){}
   });
   document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)setStage(false)});
-  document.addEventListener("keydown",e=>{if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;if(e.code==="Space"){e.preventDefault();startPause()}else if(e.key.toLowerCase()==="r")reset();else if(e.key==="F11"){e.preventDefault();$("#scene-button").click()}else if(e.key==="Escape"&&app.classList.contains("stage-mode")){document.exitFullscreen?.();setStage(false)}});
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape"&&app.classList.contains("stage-mode")){if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});setStage(false);return;}
+    if(["INPUT","TEXTAREA","SELECT","BUTTON","SUMMARY","A"].includes(document.activeElement?.tagName))return;
+    if(e.code==="Space"){e.preventDefault();startPause()}else if(e.key.toLowerCase()==="r")reset();else if(e.key==="F11"){e.preventDefault();$("#scene-button").click()}
+  });
   const prefForm=$("#focus-preferences"),durationHidden=prefForm.querySelector("#id_default_duration_seconds");prefForm.addEventListener("submit",()=>{durationHidden.value=Math.round(state.total);prefForm.querySelector("#id_session_intention").value=state.intention;prefForm.querySelector("#id_mode").value=state.mode;prefForm.querySelector("#id_ambience").value=state.ambience;prefForm.querySelector("#id_focus_level").value=state.focusLevel;prefForm.querySelector("#id_warning_seconds").value=state.warning;prefForm.querySelector("#id_decor_density").value=state.decorDensity;});
 
   const playlists=JSON.parse(document.querySelector("#playlist-data").textContent),player=$("#playlist-audio");let currentPlaylist=null,index=0,shuffle=false,repeat=false;

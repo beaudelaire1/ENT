@@ -41,7 +41,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt -r requirements-dev.txt
 npm install --ignore-scripts
-npm run vendor          # copie Three.js dans src/static/vendor ; sans elle, le Sablier retombe sur son dessin 2D
+npm run vendor          # copie Three.js dans src/static/vendor ; sans elle, Sablier utilise ses vues fixes locales
 python src/manage.py migrate
 python src/manage.py generate_chime
 python src/manage.py runserver
@@ -56,6 +56,23 @@ python src/manage.py check
 python src/manage.py makemigrations --check --dry-run
 python src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests notifications.tests planner.tests sablier.tests
 coverage run src/manage.py test accounts.tests core.tests dashboard.tests formations.tests library.tests notifications.tests planner.tests sablier.tests && coverage report
+```
+
+Les vingt-quatre univers du Sablier se vérifient dans un vrai navigateur, avec un GPU logiciel :
+la recette dure plusieurs minutes et reste donc hors du passage courant.
+
+```powershell
+npm run test:browser    # parcours fonctionnels
+npm run test:worlds     # les 24 univers, la galerie et le repli sans WebGL
+```
+
+Les vues fixes servies aux postes sans WebGL sortent du moteur qu’elles remplacent. Elles sont
+versionnées ; on ne les régénère qu’après avoir changé un univers :
+
+```powershell
+.venv\Scripts\python.exe tests\browser\server.py   # dans un autre terminal
+npm run plates
+python tools/sablier-plates.py
 ```
 
 Sur un déploiement réel, la chaîne de notifications peut être diagnostiquée sans attendre le prochain passage de Celery Beat :

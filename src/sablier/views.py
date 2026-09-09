@@ -37,7 +37,11 @@ from .tasks import validate_audio_track
 def sablier_asset_version() -> str:
     """Empreinte des ressources de Sablier : la date de la plus récente."""
     folder = settings.BASE_DIR / "static" / "sablier"
-    stamps = [path.stat().st_mtime for path in folder.rglob("*") if path.is_file() and path.suffix in {".js", ".css"}]
+    # Les vues fixes des univers portent le même nom d'une génération à l'autre : sans
+    # elles dans l'empreinte, un poste sans WebGL garderait l'ancien lieu en cache.
+    stamps = [
+        path.stat().st_mtime for path in folder.rglob("*") if path.is_file() and path.suffix in {".js", ".css", ".webp"}
+    ]
     return str(int(max(stamps))) if stamps else "0"
 
 
@@ -99,6 +103,7 @@ def home(request):
             "playlist_payload": playlist_payload,
             "ambience_choices": FocusPreference.Ambience.choices,
             "ambience_aliases": scenes.LEGACY_REPLACED,
+            "scenes": scenes.SCENES,
             "palette_css": scenes.palette_css(),
             "decors": {scene.key: scene.decor for scene in scenes.SCENES},
             # Les feuilles et scripts de Sablier changent souvent : sans cette empreinte,

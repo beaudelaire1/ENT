@@ -5,18 +5,18 @@
     "accent": "#ffcf8a",
     "tint": "#12314a",
     "decor": "star_tree",
+    "group": "imaginary",
     "sky": "#01030a",
     "horizon": "#0a2033",
     "ground": "#040d14",
     "light": "#ffd9a0",
-    "composition": "lac-nocturne-ile-arbre-lanterne",
+    "composition": "Rive nocturne, arbre de trois quarts ; roche proche / île / lac et ciel ; arbre solitaire, lanternes aux branches",
     "motion": [
-      "reflets-du-lac",
-      "lanternes-du-feuillage",
-      "brume-rasante"
+      "ondulations du lac ; caméra fixe",
+      "Caméra fixe"
     ],
-    "progression": "la-nuit-se-referme-et-l-arbre-s-allume",
-    "description": "Un arbre solitaire porte ses lanternes au-dessus d'un lac immobile, sous la Voie lactée."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Arbre solitaire, lanternes aux branches. Rive nocturne, arbre de trois quarts."
   },
   {
     "key": "fontaine",
@@ -24,18 +24,18 @@
     "accent": "#57e3df",
     "tint": "#176c78",
     "decor": "eternity_fountain",
+    "group": "imaginary",
     "sky": "#061724",
     "horizon": "#1f7180",
     "ground": "#07141a",
     "light": "#dffff7",
-    "composition": "cliff-city-canal-waterfalls",
+    "composition": "Parvis au pied de la falaise ; bassin / terrasses / cité adossée au roc ; bassins en cascade et maisons superposées",
     "motion": [
-      "waterfall-mist",
-      "canal-shimmer",
-      "distant-birds"
+      "chute et circulation de l’eau",
+      "Caméra fixe"
     ],
-    "progression": "water-light-slowly-brightens",
-    "description": "Une cité verticale oubliée, traversée par des bassins turquoise et de longues cascades."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Bassins en cascade et maisons superposées. Parvis au pied de la falaise."
   },
   {
     "key": "eden",
@@ -43,18 +43,18 @@
     "accent": "#91e7a8",
     "tint": "#1f6b4a",
     "decor": "eden",
+    "group": "imaginary",
     "sky": "#061714",
     "horizon": "#285b42",
     "ground": "#08130e",
     "light": "#fff0a6",
-    "composition": "garden-terraces-great-tree-stream",
+    "composition": "Entrée ouverte du jardin ; ruisseau / terrasses / arbre monumental ; jardin à plusieurs niveaux",
     "motion": [
-      "leaf-breath",
-      "fireflies",
-      "stream-glints"
+      "courant du ruisseau",
+      "Caméra fixe"
     ],
-    "progression": "sunbeams-cross-the-canopy",
-    "description": "Un jardin primordial organisé autour d'un arbre immense, de terrasses et d'une eau claire."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Jardin à plusieurs niveaux. Entrée ouverte du jardin."
   },
   {
     "key": "fleuve_temps",
@@ -62,18 +62,18 @@
     "accent": "#b9c8ff",
     "tint": "#2b3556",
     "decor": "time_river",
+    "group": "imaginary",
     "sky": "#050a1c",
     "horizon": "#2e4478",
     "ground": "#070a16",
     "light": "#f0d6ff",
-    "composition": "fleuve-ruines-arches-eclats-temporels",
+    "composition": "Berge à hauteur humaine ; rive / méandres et arches / brume ; fleuve sinueux",
     "motion": [
-      "courant-du-fleuve",
-      "eclats-en-suspension",
-      "brume-de-berge"
+      "courant et fragments discrets",
+      "Caméra fixe"
     ],
-    "progression": "les-eclats-s-intensifient-a-mesure-que-le-temps-passe",
-    "description": "Un fleuve lent entre des colonnes écroulées, où flottent des éclats de lumière."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Fleuve sinueux. Berge à hauteur humaine."
   },
   {
     "key": "souvenirs",
@@ -81,18 +81,18 @@
     "accent": "#d2b6ff",
     "tint": "#5c4772",
     "decor": "memories",
+    "group": "shelter",
     "sky": "#15111d",
     "horizon": "#55445f",
     "ground": "#100d14",
     "light": "#f0cba2",
-    "composition": "fog-room-frames-distant-platform",
+    "composition": "Pièce intime, face au mur de souvenirs ; mobilier / cadres / rideaux ; cadres, commode, table et fauteuil",
     "motion": [
-      "dust-float",
-      "curtain-breath",
-      "memory-flicker"
+      "mouvement faible des rideaux",
+      "Caméra fixe"
     ],
-    "progression": "distant-frames-appear-then-fade",
-    "description": "Un lieu impossible composé de fragments familiers qui émergent doucement dans la brume."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Cadres, commode, table et fauteuil. Pièce intime, face au mur de souvenirs."
   },
   {
     "key": "interstellaire",
@@ -100,18 +100,18 @@
     "accent": "#8eb8ff",
     "tint": "#283966",
     "decor": "interstellar",
+    "group": "sky",
     "sky": "#01040d",
     "horizon": "#111d3c",
     "ground": "#03050a",
     "light": "#c8dbff",
-    "composition": "observation-deck-planet-rings-deep-space",
+    "composition": "Intérieur de la station ; sol et consoles / baie / planète ; grande baie structurelle",
     "motion": [
-      "star-parallax",
-      "planet-drift",
-      "navigation-lights"
+      "ciel stable ; caméra fixe",
+      "Caméra fixe"
     ],
-    "progression": "planet-limb-slides-across-horizon",
-    "description": "Une plateforme d'observation dérive près d'une planète géante et de ses anneaux."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Grande baie structurelle. Intérieur de la station."
   },
   {
     "key": "galaxie",
@@ -119,18 +119,18 @@
     "accent": "#c9a4ff",
     "tint": "#1c0c30",
     "decor": "galaxy",
+    "group": "sky",
     "sky": "#040110",
     "horizon": "#160b2a",
     "ground": "#010206",
     "light": "#ecd0ff",
-    "composition": "pont-d-observation-planete-annelee-nebuleuse",
+    "composition": "Vue cosmique sans architecture ; étoiles / bras spiraux / nébuleuses ; galaxie inclinée",
     "motion": [
-      "rotation-de-la-galaxie",
-      "voiles-de-gaz",
-      "feux-de-position"
+      "composition stable",
+      "Caméra fixe"
     ],
-    "progression": "les-gaz-s-illuminent-et-le-vide-s-approfondit",
-    "description": "Un pont d'observation ouvert sur une planète annelée et les voiles d'une nébuleuse."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Galaxie inclinée. Vue cosmique sans architecture."
   },
   {
     "key": "heaven",
@@ -138,18 +138,18 @@
     "accent": "#bce7ff",
     "tint": "#72abc5",
     "decor": "heaven",
+    "group": "imaginary",
     "sky": "#5d91ad",
     "horizon": "#b9ddeb",
     "ground": "#30495a",
     "light": "#fff8d8",
-    "composition": "floating-islands-temple-cloud-sea",
+    "composition": "Balcon sur le vide ; bord de plateforme / îles étagées / nuages ; îles suspendues avec pavillons",
     "motion": [
-      "cloud-drift",
-      "waterfall-veils",
-      "light-rays"
+      "dérive lente des nuages",
+      "Caméra fixe"
     ],
-    "progression": "clouds-open-toward-the-light",
-    "description": "Des îles et architectures suspendues dominent une mer de nuages sans horizon terrestre."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Îles suspendues avec pavillons. Balcon sur le vide."
   },
   {
     "key": "oasis",
@@ -157,18 +157,18 @@
     "accent": "#ffd17b",
     "tint": "#91562c",
     "decor": "oasis",
+    "group": "nature",
     "sky": "#171426",
     "horizon": "#8a573f",
     "ground": "#25130d",
     "light": "#ffd89b",
-    "composition": "dunes-oasis-ruins-palms-distant-mesa",
+    "composition": "Bord du bassin ; eau et plantes / palmiers / dunes ; bassin ovale entouré de palmes",
     "motion": [
-      "heat-haze",
-      "palm-breeze",
-      "sand-veils"
+      "rides de l’eau",
+      "Caméra fixe"
     ],
-    "progression": "sunset-turns-to-starlight",
-    "description": "Une oasis isolée entre dunes, ruines anciennes et ciel de fin du monde."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Bassin ovale entouré de palmes. Bord du bassin."
   },
   {
     "key": "abysses",
@@ -176,18 +176,18 @@
     "accent": "#7df5e5",
     "tint": "#0a3a44",
     "decor": "abyss",
+    "group": "imaginary",
     "sky": "#0d5560",
     "horizon": "#083038",
     "ground": "#02171c",
     "light": "#b4fff2",
-    "composition": "sanctuaire-englouti-colonnes-colonnes-de-lumiere",
+    "composition": "Fond marin, horizon noyé ; coraux / architecture engloutie / sédiments ; arche brisée sous l’eau",
     "motion": [
-      "colonnes-de-lumiere",
-      "neige-marine",
-      "courant-lent"
+      "banc de poissons et sédiments rares",
+      "Caméra fixe"
     ],
-    "progression": "la-lumiere-de-surface-faiblit-et-les-eclats-prennent-le-relais",
-    "description": "Un sanctuaire englouti où la lumière de la surface descend en colonnes dans le bleu."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Arche brisée sous l’eau. Fond marin, horizon noyé."
   },
   {
     "key": "refuge_pluie",
@@ -195,18 +195,18 @@
     "accent": "#ffb265",
     "tint": "#243447",
     "decor": "rain_refuge",
+    "group": "shelter",
     "sky": "#0d151f",
     "horizon": "#2b3a49",
     "ground": "#1a120c",
     "light": "#ffbd72",
-    "composition": "interieur-bureau-fenetre-pluie-ville",
+    "composition": "Assis devant la fenêtre ; bureau et lampe / vitre / ville ; véritable bureau intérieur",
     "motion": [
-      "gouttes-sur-la-vitre",
-      "poussiere-dans-le-faisceau",
-      "fenetres-de-la-ville"
+      "gouttes glissant sur la vitre",
+      "Caméra fixe"
     ],
-    "progression": "le-dehors-s-eteint-et-la-lampe-prend-la-piece",
-    "description": "Un bureau de bois, une lampe chaude et la pluie qui coule sur la vitre devant la ville."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Véritable bureau intérieur. Assis devant la fenêtre."
   },
   {
     "key": "aurores",
@@ -214,18 +214,18 @@
     "accent": "#7effd8",
     "tint": "#14313d",
     "decor": "aurora_valley",
+    "group": "sky",
     "sky": "#020a14",
     "horizon": "#0d3243",
     "ground": "#061218",
     "light": "#bfe8ff",
-    "composition": "toundra-lac-gele-rideaux-polaires",
+    "composition": "Bord du lac gelé ; glace fissurée / montagnes latérales / aurores ; vallée encaissée",
     "motion": [
-      "plis-de-l-aurore",
-      "neige-qui-derive",
-      "lac-miroir"
+      "ondulation des rideaux lumineux",
+      "Caméra fixe"
     ],
-    "progression": "les-rideaux-s-intensifient-avec-la-session",
-    "description": "Une toundra gelée sous des rideaux polaires qui se plissent au-dessus des sommets."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Vallée encaissée. Bord du lac gelé."
   },
   {
     "key": "printemps",
@@ -233,18 +233,18 @@
     "accent": "#f0b9ce",
     "tint": "#6f9b72",
     "decor": "spring_meadow",
+    "group": "nature",
     "sky": "#8dc9d8",
     "horizon": "#d5e6cd",
     "ground": "#39533a",
     "light": "#fff3c3",
-    "composition": "orchard-meadow-stream-blossom-gate",
+    "composition": "Au bord du ruisseau ; branche / verger / arbres lointains ; verger en fleurs",
     "motion": [
-      "petal-drift",
-      "stream-shimmer",
-      "branch-breeze"
+      "courant et quelques pétales",
+      "Caméra fixe"
     ],
-    "progression": "blossom-light-softens-toward-evening",
-    "description": "Une vallée de vergers en fleurs, traversée par un ruisseau et cadrée par deux arbres en pleine floraison."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Verger en fleurs. Au bord du ruisseau."
   },
   {
     "key": "ete",
@@ -252,18 +252,18 @@
     "accent": "#ffd47e",
     "tint": "#9b744c",
     "decor": "summer_terrace",
+    "group": "shelter",
     "sky": "#4e94c0",
     "horizon": "#f3c982",
     "ground": "#72523a",
     "light": "#fff0ae",
-    "composition": "sunlit-stone-terrace-pergola-valley-pool",
+    "composition": "Sous la pergola ; dalles et table / poutres / vallée ; terrasse habitée",
     "motion": [
-      "heat-shimmer",
-      "vine-breeze",
-      "pool-glints"
+      "composition stable",
+      "Caméra fixe"
     ],
-    "progression": "afternoon-sun-turns-amber",
-    "description": "Une terrasse minérale suspendue au-dessus d'une vallée, sous une pergola végétale et un soleil d'été franc."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Terrasse habitée. Sous la pergola."
   },
   {
     "key": "automne",
@@ -271,18 +271,18 @@
     "accent": "#dc8a39",
     "tint": "#7a4632",
     "decor": "autumn_lake",
+    "group": "nature",
     "sky": "#6b7280",
     "horizon": "#d49963",
     "ground": "#3b2b25",
     "light": "#ffd39d",
-    "composition": "amber-forest-lake-boardwalk-low-sun",
+    "composition": "Sur le ponton ; planches et feuilles / arbres / lac ; chemin de bois au bord de l’eau",
     "motion": [
-      "leaf-fall",
-      "lake-ripples",
-      "low-mist"
+      "feuilles rares et rides du lac",
+      "Caméra fixe"
     ],
-    "progression": "foliage-deepens-and-sun-lowers",
-    "description": "Un lac sombre bordé d'une forêt ambrée et d'un chemin de bois, dans une lumière basse de fin de saison."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Chemin de bois au bord de l’eau. Sur le ponton."
   },
   {
     "key": "hiver",
@@ -290,18 +290,18 @@
     "accent": "#d9f3ff",
     "tint": "#6a8597",
     "decor": "winter_lodge",
+    "group": "shelter",
     "sky": "#4c627a",
     "horizon": "#b4cad8",
     "ground": "#60747d",
     "light": "#eef8ff",
-    "composition": "alpine-peaks-snowfield-lodge-window",
+    "composition": "Devant le refuge ; neige / chalet / massif alpin ; chalet sous une toiture enneigée",
     "motion": [
-      "snow-fall",
-      "chimney-drift",
-      "window-glow"
+      "chute de neige",
+      "Caméra fixe"
     ],
-    "progression": "snow-light-cools-while-lodge-warms",
-    "description": "Un refuge alpin minuscule face à de hauts sommets, posé dans un champ de neige presque silencieux."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Chalet sous une toiture enneigée. Devant le refuge."
   },
   {
     "key": "pluie",
@@ -309,18 +309,18 @@
     "accent": "#78b8e8",
     "tint": "#344b61",
     "decor": "rain_city",
+    "group": "shelter",
     "sky": "#101923",
     "horizon": "#263748",
     "ground": "#10151a",
     "light": "#b7d5ea",
-    "composition": "rainy-city-street-neon-reflections",
+    "composition": "Piéton dans la rue ; chaussée et flaques / façades / perspective ; rue entre façades proches",
     "motion": [
-      "street-rain",
-      "reflection-pulse",
-      "distant-traffic-bokeh"
+      "pluie et rides des flaques",
+      "Caméra fixe"
     ],
-    "progression": "street-reflections-grow-as-sky-darkens",
-    "description": "Une rue urbaine nocturne sous une pluie dense, où les rares lumières se prolongent dans l'asphalte mouillé."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Rue entre façades proches. Piéton dans la rue."
   },
   {
     "key": "ocean",
@@ -328,18 +328,18 @@
     "accent": "#8fd4e8",
     "tint": "#2f5568",
     "decor": "ocean_cliffs",
+    "group": "nature",
     "sky": "#2d6ea8",
     "horizon": "#cbd8d4",
     "ground": "#2f5568",
     "light": "#ffeec9",
-    "composition": "falaise-mer-ouverte-aiguilles-marines",
+    "composition": "Promontoire élevé ; bord rocheux / aiguilles / océan ; falaise et océan ouvert",
     "motion": [
-      "houle-croisee",
-      "chemin-de-soleil",
-      "embruns"
+      "houle géométrique",
+      "Caméra fixe"
     ],
-    "progression": "le-soleil-descend-et-la-mer-passe-a-l-or",
-    "description": "Une corniche de roche au-dessus de la mer ouverte, face aux aiguilles battues par la houle."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Falaise et océan ouvert. Promontoire élevé."
   },
   {
     "key": "sahara",
@@ -347,18 +347,18 @@
     "accent": "#ffc27a",
     "tint": "#8a5433",
     "decor": "sahara_observatory",
+    "group": "nature",
     "sky": "#2f6ba0",
     "horizon": "#e8b47e",
     "ground": "#8a5433",
     "light": "#ffe3b0",
-    "composition": "dunes-monumentales-observatoire-enseveli",
+    "composition": "Au pied des dunes ; sable et strates / observatoire / grandes dunes ; observatoire partiellement enfoui",
     "motion": [
-      "sable-qui-court",
-      "voile-de-chaleur",
-      "ombres-qui-s-allongent"
+      "voile de sable discret",
+      "Caméra fixe"
     ],
-    "progression": "du-plein-jour-au-ciel-etoile-du-desert",
-    "description": "Des dunes ridées par le vent, et la coupole d'un observatoire à demi ensevelie."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Observatoire partiellement enfoui. Au pied des dunes."
   },
   {
     "key": "foret",
@@ -366,18 +366,18 @@
     "accent": "#d8e9a8",
     "tint": "#3d5a3a",
     "decor": "ancient_forest",
+    "group": "nature",
     "sky": "#3f7ba8",
     "horizon": "#c4cfae",
     "ground": "#1b2a18",
     "light": "#fff2cc",
-    "composition": "futaie-ancienne-troncs-colossaux-rais-de-lumiere",
+    "composition": "Au ras du sous-bois ; racines et fougères / troncs / canopée ; sous-bois fermé",
     "motion": [
-      "rais-de-lumiere",
-      "spores-en-suspension",
-      "sous-bois-immobile"
+      "composition stable",
+      "Caméra fixe"
     ],
-    "progression": "le-soleil-descend-et-les-rais-s-allongent",
-    "description": "Une futaie ancienne où la lumière tombe entre des troncs plus larges qu'un homme."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Sous-bois fermé. Au ras du sous-bois."
   },
   {
     "key": "orage",
@@ -385,18 +385,18 @@
     "accent": "#a8b9db",
     "tint": "#3c4353",
     "decor": "storm_cliffs",
+    "group": "nature",
     "sky": "#11131b",
     "horizon": "#333846",
     "ground": "#15191d",
     "light": "#dce8ff",
-    "composition": "storm-sea-cliffs-shelf-cloud-lightning",
+    "composition": "Face au front météorologique ; rocher / mer agitée / front nuageux ; météo dominant la mer",
     "motion": [
-      "wave-chop",
-      "cloud-race",
-      "rare-lightning"
+      "houle forte, pluie et nuages",
+      "Caméra fixe"
     ],
-    "progression": "storm-front-moves-across-the-horizon",
-    "description": "Un front d'orage traverse des falaises battues par la mer, avec des éclairs rares qui éclairent toute la masse nuageuse."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Météo dominant la mer. Face au front météorologique."
   },
   {
     "key": "braises",
@@ -404,18 +404,18 @@
     "accent": "#ff9b4b",
     "tint": "#6f3927",
     "decor": "ember_hearth",
+    "group": "shelter",
     "sky": "#120d0b",
     "horizon": "#271713",
     "ground": "#090706",
     "light": "#ffd083",
-    "composition": "stone-hearth-dark-room-ember-bed",
+    "composition": "Proche du foyer ; pierre / charbon et cendre / fond du foyer ; braises dans un foyer de pierre",
     "motion": [
-      "ember-rise",
-      "coal-pulse",
-      "warm-light-breath"
+      "variation lente de l’incandescence",
+      "Caméra fixe"
     ],
-    "progression": "embers-cool-from-gold-to-deep-red",
-    "description": "Un foyer de pierre presque éteint dans une pièce sombre, où les braises et leur lumière deviennent le seul paysage."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Braises dans un foyer de pierre. Proche du foyer."
   },
   {
     "key": "aurore",
@@ -423,18 +423,18 @@
     "accent": "#77f0b0",
     "tint": "#23556a",
     "decor": "polar_sky",
+    "group": "sky",
     "sky": "#02111d",
     "horizon": "#0d3448",
     "ground": "#10222a",
     "light": "#d9fff0",
-    "composition": "open-tundra-vast-polar-sky",
+    "composition": "Plaine à horizon bas ; neige / plaine / grand ciel ; aurores sur une plaine ouverte",
     "motion": [
-      "aurora-curtains",
-      "star-twinkle",
-      "snow-dust"
+      "ondulation des rideaux lumineux",
+      "Caméra fixe"
     ],
-    "progression": "aurora-curtains-expand-over-the-tundra",
-    "description": "Une plaine polaire presque vide laisse tout l'écran au ciel et à de grands rideaux d'aurore, sans vallée ni lac."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Aurores sur une plaine ouverte. Plaine à horizon bas."
   },
   {
     "key": "nuit",
@@ -442,17 +442,17 @@
     "accent": "#9cb9f1",
     "tint": "#27354f",
     "decor": "midnight_rooftop",
+    "group": "shelter",
     "sky": "#030710",
     "horizon": "#10192a",
     "ground": "#080a0d",
     "light": "#e8edff",
-    "composition": "quiet-rooftop-city-moon-stars",
+    "composition": "Sur un toit-terrasse ; banc et sol / parapet / ville ; terrasse au-dessus de la ville",
     "motion": [
-      "window-flicker",
-      "star-twinkle",
-      "distant-haze"
+      "composition stable",
+      "Caméra fixe"
     ],
-    "progression": "city-lights-thin-as-night-deepens",
-    "description": "Un toit silencieux domine une ville assoupie sous la lune, avec quelques fenêtres encore allumées et un ciel profond."
+    "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
+    "description": "Terrasse au-dessus de la ville. Sur un toit-terrasse."
   }
 ]
