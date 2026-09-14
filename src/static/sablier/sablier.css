@@ -306,3 +306,5 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 .focus-app.stage-mode .stage-status { padding-right:110px; }
 .focus-app.stage-mode .stage-immersion { font-size:11px; }
 @media(max-width:700px) { .focus-app.stage-mode .stage-status { padding-right:0;padding-top:48px; } }
+/* Tant que la matière n'est pas choisie, la liste des compétences attend. */
+.focus-sidebar select:disabled { opacity:.5;cursor:not-allowed; }

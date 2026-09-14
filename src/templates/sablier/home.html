@@ -28,11 +28,19 @@
       <label>MOUVEMENT</label><div class="decor-levels" role="group" aria-label="Niveau de mouvement"><button type="button" data-decor="0" aria-pressed="false">Statique</button><button type="button" data-decor="1" aria-pressed="false">Léger</button><button type="button" data-decor="2" aria-pressed="false">Immersif</button><button type="button" data-decor="3" aria-pressed="false">Cinématique</button></div><label class="lightning-setting"><input id="lightning-enabled" type="checkbox"> Éclairs occasionnels dans Orage</label><details class="session-secondary"><summary>Réglages secondaires</summary><label>DÉPOUILLEMENT</label><div class="focus-levels"><button data-level="1">1</button><button data-level="2">2</button><button data-level="3">3</button></div>
       <label>ALERTE FINALE <output id="warning-output">{{ preference.warning_seconds }} s</output><input id="warning-slider" type="range" min="10" max="180" step="10" value="{{ preference.warning_seconds }}"></label>
       </details>
-      {% if competencies %}
+      {% if competency_subjects %}
+        {# La matière filtre les compétences : `competency-picker.js` ne laisse dans la seconde liste que le groupe choisi. #}
+        {% regroup competency_subjects by period as subject_periods %}
+        <label>MATIÈRE
+          <select id="session-subject">
+            <option value="">Aucune · ne rien reporter</option>
+            {% for period in subject_periods %}<optgroup label="{{ period.grouper }}">{% for subject in period.list %}<option value="{{ subject.key }}"{% if subject.key == selected_subject %} selected{% endif %}>{{ subject.title }}</option>{% endfor %}</optgroup>{% endfor %}
+          </select>
+        </label>
         <label>COMPÉTENCE TRAVAILLÉE
           <select id="session-competency">
-            <option value="">Aucune · ne rien reporter</option>
-            {% for competency in competencies %}<option value="{{ competency.pk }}"{% if selected_competency == competency.pk %} selected{% endif %}>{% firstof competency.primary_unit.title competency.period.title "Transversale" %} · {{ competency.title }}</option>{% endfor %}
+            <option value="">Choisir une compétence</option>
+            {% for subject in competency_subjects %}<optgroup label="{{ subject.title }}" data-subject="{{ subject.key }}">{% for competency in subject.competencies %}<option value="{{ competency.pk }}"{% if subject.key == selected_subject and competency.pk == selected_competency %} selected{% endif %}>{{ competency.title }}</option>{% endfor %}</optgroup>{% endfor %}
           </select>
         </label>
         <p class="shortcut-help">Le temps de la session sera ajouté au temps réel de cette compétence.</p>
@@ -92,4 +100,4 @@
 {# Les six objets validés par l'utilisateur sont des photographies à fond transparent : elles se posent sur l'univers rendu en 3D, qui reste le lieu. #}
 {% get_static_prefix as static_prefix %}<script id="asset-data" type="application/json">{"hourglass":"{{ static_prefix }}sablier/img/7073fefb68961c89a09d87989e50a20a64b697b8f1ca397ecd6ea1d3670d344c.1.jpg?v={{ asset_version }}","candle":"{{ static_prefix }}sablier/img/9d0bd2716e3bd800f15353e2b00aed37b2cd03d5dd4ef81913afb47456967b8c.1%20(1).jpg?v={{ asset_version }}","wave":"{{ static_prefix }}sablier/img/dbb9148a127c0a000f35fab10bee0708a19b10718f75ba46d40e1329470576ed.1%20(1).jpg?v={{ asset_version }}","moon":"{{ static_prefix }}sablier/img/1b9b150c21cfe676c5c22ae03c2c6812faeb55069813ad1d233f89dff0be3a5a.1%20(1).jpg?v={{ asset_version }}","sun":"{{ static_prefix }}sablier/img/52c57cf0b318fd747772864a89e8883277027013bf8c636477d04cb1983173cf.1%20(1).jpg?v={{ asset_version }}","ring":"{{ static_prefix }}sablier/img/7cfca4f43e394b74fa0d52f2fa660795f1fbcf39e58c3ed03a156dbc220968b7.1.jpg?v={{ asset_version }}"}</script>
 {% endblock %}
-{% block scripts %}<script src="{% static 'sablier/gallery.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/decor.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-clock.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-sync.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/sablier.js' %}?v={{ asset_version }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'sablier/gallery.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/decor.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/competency-picker.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-clock.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/session-sync.js' %}?v={{ asset_version }}" defer></script><script src="{% static 'sablier/sablier.js' %}?v={{ asset_version }}" defer></script>{% endblock %}

@@ -1058,7 +1058,7 @@ document.addEventListener("DOMContentLoaded", () => {
   app.querySelectorAll(".focus-levels [data-level]").forEach(b=>b.addEventListener("click",()=>{state.focusLevel=Number(b.dataset.level);save();render(true)}));
   app.querySelectorAll(".decor-levels [data-decor]").forEach(b=>b.addEventListener("click",()=>{state.decorDensity=Number(b.dataset.decor);save();render(true)}));
   $("#session-intention").addEventListener("input",e=>{state.intention=e.target.value;save();render(true)});
-  if(state.sessionId&&state.competency)$("#session-competency").value=state.competency;
+  if(state.sessionId&&state.competency)window.SablierCompetencyPicker?.select(state.competency);
   $("#session-competency")?.addEventListener("change",e=>{state.competency=e.target.value||null;save();});
   $("#session-sync-retry").addEventListener("click",()=>sessionSync.flush());
   window.addEventListener("online",()=>sessionSync.flush());

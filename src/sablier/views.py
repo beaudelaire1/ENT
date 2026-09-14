@@ -25,7 +25,7 @@ from core.formatting import human_mb
 from core.navigation import safe_next
 from core.queue import enqueue
 from core.serving import serve_private_file
-from formations.models import Competency
+from formations.models import Competency, UnitCompetency
 
 from . import scenes
 from .forms import AddTrackForm, AudioUploadForm, FocusPreferenceForm, FocusSessionForm, PlaylistForm
@@ -43,6 +43,50 @@ def sablier_asset_version() -> str:
         path.stat().st_mtime for path in folder.rglob("*") if path.is_file() and path.suffix in {".js", ".css", ".webp"}
     ]
     return str(int(max(stamps))) if stamps else "0"
+
+
+TRANSVERSAL_SUBJECT = "transversal"
+
+
+def competency_subjects(user) -> list[dict]:
+    """Les compétences rangées par matière, pour choisir la matière avant la compétence.
+
+    Une compétence partagée entre deux matières figure sous chacune : on la cherche là
+    où on la travaille. Celles qui ne relèvent d'aucune matière forment un dernier groupe.
+    """
+    several_paths = user.learning_paths.count() > 1
+    links = (
+        UnitCompetency.objects.filter(competency__path__owner=user)
+        .select_related("unit__period__path", "competency")
+        .order_by(
+            "unit__period__path__title",
+            "unit__period__order",
+            "unit__period__title",
+            "unit__order",
+            "unit__title",
+            "order",
+            "competency__title",
+        )
+    )
+    subjects: dict[str, dict] = {}
+    for link in links:
+        unit = link.unit
+        period = f"{unit.period.path.title} · {unit.period.title}" if several_paths else unit.period.title
+        subject = subjects.setdefault(
+            str(unit.pk), {"key": str(unit.pk), "title": unit.title, "period": period, "competencies": []}
+        )
+        subject["competencies"].append(link.competency)
+    transversal = list(
+        Competency.objects.filter(path__owner=user, unit_links__isnull=True).order_by("path__title", "order", "title")
+    )
+    if transversal:
+        subjects[TRANSVERSAL_SUBJECT] = {
+            "key": TRANSVERSAL_SUBJECT,
+            "title": "Transversales",
+            "period": "Hors matière",
+            "competencies": transversal,
+        }
+    return list(subjects.values())
 
 
 @login_required
@@ -76,14 +120,14 @@ def home(request):
     ]
     # Rattacher une session à une compétence reste facultatif : Sablier fonctionne
     # entièrement sans le module Formations.
-    competencies = (
-        Competency.objects.filter(path__owner=request.user)
-        .select_related("path", "period")
-        .prefetch_related("unit_links__unit")
-    )
+    subjects = competency_subjects(request.user)
     selected = None
-    if request.GET.get("competency"):
-        selected = competencies.filter(pk=request.GET.get("competency")).first()
+    selected_subject = ""
+    if request.GET.get("competency", "").isdigit():
+        selected = Competency.objects.filter(path__owner=request.user, pk=request.GET["competency"]).first()
+    if selected:
+        unit = selected.primary_unit
+        selected_subject = str(unit.pk) if unit else TRANSVERSAL_SUBJECT
     initial_intention = (request.GET.get("intention") or preference.session_intention)[:80]
     initial_seconds = preference.default_duration_seconds
     if request.GET.get("duration"):
@@ -112,7 +156,8 @@ def home(request):
             # À la seconde près, un enregistrement survenu dans la même seconde que
             # le chargement serait indétectable côté navigateur.
             "saved_at": f"{preference.updated_at.timestamp():.6f}",
-            "competencies": competencies,
+            "competency_subjects": subjects,
+            "selected_subject": selected_subject,
             "selected_competency": selected.pk if selected else None,
             "initial_intention": initial_intention,
             "initial_seconds": initial_seconds,

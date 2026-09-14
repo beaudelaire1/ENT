@@ -6,8 +6,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from formations.models import LearningPath, LearningUnit, Period, ProgressRecord
-from formations.tests.factories import competency_in
+from formations.models import Competency, LearningPath, LearningUnit, Period, ProgressRecord
+from formations.tests.factories import competency_in, share_competency
 from sablier.models import FocusSession
 from sablier.services import record_session
 
@@ -101,6 +101,30 @@ class FocusSessionTests(TestCase):
         self.assertContains(response, 'data-total="1500"')
         self.assertContains(response, 'data-return-url="/formations/"')
         self.assertContains(response, f'value="{self.competency.pk}" selected')
+        self.assertContains(response, f'value="{self.competency.unit_links.get().unit_id}" selected')
+
+    def test_competencies_are_grouped_by_subject(self):
+        topology = self.competency.unit_links.get().unit
+        analysis = LearningUnit.objects.create(period=topology.period, title="ANALYSE")
+        continuity = competency_in(analysis, title="Continuité")
+        share_competency(self.competency, analysis)
+        transversal = Competency.objects.create(path=topology.period.path, title="Rédiger")
+
+        response = self.client.get(reverse("sablier:home"))
+
+        self.assertContains(response, '<select id="session-subject">')
+        self.assertContains(response, f'<option value="{topology.pk}">TOPOLOGIE</option>')
+        self.assertContains(response, 'data-subject="transversal"')
+        subjects = {subject["key"]: subject for subject in response.context["competency_subjects"]}
+        self.assertEqual(subjects[str(topology.pk)]["competencies"], [self.competency])
+        # Une compétence partagée se retrouve sous chacune de ses matières.
+        self.assertCountEqual(subjects[str(analysis.pk)]["competencies"], [continuity, self.competency])
+        self.assertEqual(subjects["transversal"]["competencies"], [transversal])
+
+    def test_the_subject_picker_is_loaded_before_the_timer(self):
+        html = self.client.get(reverse("sablier:home")).content.decode()
+
+        self.assertLess(html.index("sablier/competency-picker.js"), html.index("sablier/sablier.js"))
 
     def test_the_endpoint_records_a_session(self):
         response = self.client.post(
