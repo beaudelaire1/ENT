@@ -314,3 +314,8 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
    parfois une minute sur une connexion lente. */
 .focus-app:not([data-renderer3d="fallback"]) .focus-stage .world-fallback[src] { display:block; z-index:0!important; }
 .focus-app:not([data-renderer3d="fallback"]) .focus-stage .world-fallback[data-unavailable="true"] { display:none; }
+/* Le disque de musique appartient au coin de la scène. `.focus-stage > *:not(...)` remet
+   chaque enfant de la scène dans le flux (`position:relative`) et l'emportait sur
+   `.stage-disc` par sa spécificité : le disque retombait au centre, sous le temps, pile
+   sur le bouton de pause de l'immersion. */
+.focus-app .focus-stage > .stage-disc { position:absolute; }
