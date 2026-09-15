@@ -1,5 +1,6 @@
 import json
 import re
+from hashlib import sha256
 
 from django.conf import settings
 from django.test import SimpleTestCase
@@ -141,12 +142,38 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             "environment.js",
             "world-kit.js",
             "worlds.js",
+            "photo-world.js",
             "postfx.js",
             "native-modes.css",
         )
         for module in expected:
             path = settings.BASE_DIR / "static" / "sablier" / "premium3d" / module
             self.assertTrue(path.is_file(), module)
+
+    def test_a_photographed_place_ships_its_photo_with_a_verified_provenance(self):
+        """Un lieu photographié est l'image de quelqu'un : licence et empreinte sont consignées."""
+        root = settings.BASE_DIR / "static" / "sablier"
+        photographed = re.findall(r'photo: \{src: "([a-z_]+\.webp)"', self.read_static("premium3d/worlds.js"))
+        self.assertIn("ancient_forest.webp", photographed)
+        provenance = {
+            entry["file"]: entry
+            for entry in json.loads((root / "photos" / "provenance.json").read_text(encoding="utf-8"))
+        }
+        for name in photographed:
+            with self.subTest(photo=name):
+                path = root / "photos" / name
+                self.assertTrue(path.is_file())
+                self.assertEqual(provenance[name]["license"], "CC0-1.0")
+                self.assertEqual(provenance[name]["sha256"], sha256(path.read_bytes()).hexdigest())
+
+    def test_a_photograph_is_shown_as_developed_and_only_once_it_has_arrived(self):
+        """Repasser une photo par l'exposition, l'ACES et le halo la délavait."""
+        engine = self.read_static("premium3d.js")
+        module = self.read_static("premium3d/photo-world.js")
+        self.assertIn("if (post && !currentWorld?.photo) post.render();", engine)
+        self.assertIn("if (!ready && currentWorld?.ready !== false) {", engine)
+        self.assertNotIn("tonemapping_fragment", module)
+        self.assertIn("#include <colorspace_fragment>", module)
 
     def test_graphical_visualisations_delegate_to_realistic_renderers(self):
         delegates = {

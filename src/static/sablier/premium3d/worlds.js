@@ -2,6 +2,7 @@
 // Les outils de fabrication vivent dans compositions.js ; aucun lieu de substitution.
 import {compose} from './compositions.js';
 import {aurora} from './sky-effects.js';
+import {motes, photoBackdrop} from './photo-world.js';
 
 export const RECIPES = {
   star_tree: {
@@ -81,6 +82,9 @@ export const RECIPES = {
     fog: ["#b07747", 0.0034],
   },
   ancient_forest: {
+    // Lieu photographié : aucune composition procédurale n'approchait un vrai sous-bois.
+    // Le ciel de la recette n'éclaire plus que l'objet ; la photo est le lieu visible.
+    photo: {src: "ancient_forest.webp", focus: [0.5, 0.58], drift: 0.06, motes: {color: "#ffe9c4", box: [[-5, 9], [-2, 9], [-24, -4]]}},
     env: {"panorama": "kloofendal_misty_morning_puresky", "kind": "night", "turbidity": 6, "rayleigh": 2.4, "mie": 0.008, "mieG": 0.84, "elevation": 34, "azimuth": 42, "light": "#dff2bf", "directIntensity": 3.6, "exposure": 1.35, "ambient": 1.6, "zenith": "#152c22", "horizon": "#314c3a", "ground": "#172b1c", "glow": "#798b60", "intensity": 2},
     fog: ["#283d2e", 0.014],
   },
@@ -126,6 +130,7 @@ const CAMERAS = {
 export function buildWorld(THREE,key,{mobile=false}={}) {
   const recipe=RECIPES[key];
   if(!recipe)throw new Error(`Univers inconnu : ${key}`);
+  if(recipe.photo)return photoWorld(THREE,key,recipe,mobile);
   const object=compose(THREE,key,mobile);
   if(!object)throw new Error(`Composition absente : ${key}`);
   const updates=[object.userData.update];
@@ -145,6 +150,25 @@ export function buildWorld(THREE,key,{mobile=false}={}) {
       // time est déjà l'horloge d'animation ralentie : ne pas multiplier deux fois.
       for(const update of updates)update(time,1,progress);
       if(flash){const cycle=time%57000;flash.intensity=lightningEnabled&&cycle>55000?Math.sin((cycle-55000)/2000*Math.PI)*.65:0;}
+    },
+  };
+}
+// Lieu photographié : la photographie en fond, des poussières dans ses rayons, rien de bâti.
+// `ready` retient le premier affichage de la scène jusqu'à l'arrivée de la photo.
+function photoWorld(THREE,key,recipe,mobile) {
+  const backdrop=photoBackdrop(THREE,recipe.photo);
+  const dust=motes(THREE,recipe.photo.motes);
+  const object=new THREE.Group();
+  object.add(backdrop.mesh,dust.points);
+  const camera={height:1.72,pitch:0,fov:56,...CAMERAS[key]};
+  if(mobile)camera.fov=Math.max(65,camera.fov);
+  return {object,env:recipe.env,fog:recipe.fog,camera,photo:recipe.photo.src,
+    get ready(){return backdrop.ready;},
+    resize(width,height){backdrop.resize(width,height);},
+    update(time,motion){
+      if(motion<=0)return;
+      backdrop.update(time);
+      dust.update(time);
     },
   };
 }

@@ -252,6 +252,9 @@ function createRuntime(THREE, nodes) {
     if (!target) return;
     const geometries = new Set(), materials = new Set(), textures = new Set();
     target.traverse((node) => {
+      // Ce qu'un objet tient hors de ses matières — la photo d'un lieu, rangée dans ses
+      // uniformes — n'est pas visible au parcours ci-dessous : il le libère lui-même.
+      node.userData.dispose?.();
       if (node.geometry) geometries.add(node.geometry);
       const list = node.material ? (Array.isArray(node.material) ? node.material : [node.material]) : [];
       for (const material of list) {
@@ -296,6 +299,9 @@ function createRuntime(THREE, nodes) {
     camera.updateMatrixWorld(true);
     publishHorizon();
     app.dataset.world = key;
+    if (currentWorld.photo) app.dataset.worldPhoto = currentWorld.photo;
+    else delete app.dataset.worldPhoto;
+    currentWorld.resize?.(width, height);
     scene.add(currentWorld.object);
 
     applyEnvironment(buildEnvironment(THREE, renderer, currentWorld.env));
@@ -328,7 +334,10 @@ function createRuntime(THREE, nodes) {
     app.dataset.sky = next.panorama || "calcule";
     scene.environment = next.environment;
     scene.background = null;
-    if (next.background.isObject3D) scene.add(next.background);
+    // Sous un lieu photographié, le ciel n'éclaire que l'objet : le montrer recouvrirait
+    // la photographie, qui est le lieu visible.
+    if (currentWorld.photo) { /* rien à montrer */ }
+    else if (next.background.isObject3D) scene.add(next.background);
     else scene.background = next.background;
     scene.backgroundIntensity = next.backgroundIntensity ?? 1;
     if (next.rotation) {
@@ -512,6 +521,7 @@ function createRuntime(THREE, nodes) {
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     post?.setSize(width, height);
+    currentWorld?.resize?.(width, height);
     publishHorizon();
   }
 
@@ -571,11 +581,16 @@ function createRuntime(THREE, nodes) {
     active?.update(state.progress, worldTime);
 
     renderer.info.reset();
-    if (post) post.render();
+    // Une photographie est déjà développée : la chaîne de post-traitement lui réappliquait
+    // exposition, courbe ACES et halo sur toute l'image, et la délavait. Rendue directement,
+    // elle reste intacte, tandis que les matières de l'objet gardent leur tonemapping.
+    if (post && !currentWorld?.photo) post.render();
     else renderer.render(scene, camera);
     renders++;
 
-    if (!ready) {
+    // Un lieu photographié n'est montré qu'avec sa photographie : avant elle, la scène
+    // n'est qu'un aplat noir, et c'est le basculement unique qui l'aurait affiché.
+    if (!ready && currentWorld?.ready !== false) {
       // L'unique basculement. Avant lui, rien du lieu n'est montré — ni la scène, encore
       // vide, ni le décor peint, qui n'est qu'un repli : `data-renderer3d` porte l'état et
       // le CSS en tire toutes les conséquences, en une seule transition.

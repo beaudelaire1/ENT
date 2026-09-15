@@ -1,0 +1,26 @@
+[
+  {
+    "world": "ancient_forest",
+    "file": "ancient_forest.webp",
+    "dimensions": [
+      2560,
+      1439
+    ],
+    "title": "Sun's rays in a dense forest",
+    "source": "https://commons.wikimedia.org/wiki/File:Sun%27s_rays_in_a_dense_forest_(Unsplash).jpg",
+    "author": "Filip Varga",
+    "license": "CC0-1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "original": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/db/Sun%27s_rays_in_a_dense_forest_%28Unsplash%29.jpg",
+      "sha256": "6b656e04f6cb3a499f0b0f2e38ca100a7b1216ce2be6934789d69d234a32af74",
+      "dimensions": [
+        4000,
+        2248
+      ]
+    },
+    "quality": 84,
+    "sha256": "6f11988cc8a77830b049aac3102ec276f03abf19679882c6e4058a1a99f5b4b6",
+    "bytes": 992986
+  }
+]

@@ -54,14 +54,17 @@
       320,
       200
     ],
-    "source": "rendu local du moteur premium3d (desktop)",
+    "source": "https://commons.wikimedia.org/wiki/File:Sun%27s_rays_in_a_dense_forest_(Unsplash).jpg",
+    "author": "Filip Varga",
+    "license": "CC0-1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
     "source_dimensions": [
-      1436,
-      896
+      4000,
+      2248
     ],
     "quality": 76,
-    "sha256": "25aa1da041dd594d98af8841fb391237dc7622a1a6281ec066284cd5782d282f",
-    "bytes": 8738
+    "sha256": "b1cd56ba6dcde0512d00a5de19de8babb5442d93fe49da542aa03b8130e4717f",
+    "bytes": 13418
   },
   {
     "world": "ancient_forest",
@@ -70,14 +73,17 @@
       1280,
       800
     ],
-    "source": "rendu local du moteur premium3d (desktop)",
+    "source": "https://commons.wikimedia.org/wiki/File:Sun%27s_rays_in_a_dense_forest_(Unsplash).jpg",
+    "author": "Filip Varga",
+    "license": "CC0-1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
     "source_dimensions": [
-      1436,
-      896
+      4000,
+      2248
     ],
     "quality": 78,
-    "sha256": "b1dd4fddbbb6164a69649b3a5df221ea82836bf81249438cd041e6c37ddf26b0",
-    "bytes": 97972
+    "sha256": "c952fdf220800a92a220057941f7a714409b9dd15e69a80f1ccfe86855bec303",
+    "bytes": 254148
   },
   {
     "world": "ancient_forest",
@@ -86,14 +92,17 @@
       720,
       1571
     ],
-    "source": "rendu local du moteur premium3d (mobile)",
+    "source": "https://commons.wikimedia.org/wiki/File:Sun%27s_rays_in_a_dense_forest_(Unsplash).jpg",
+    "author": "Filip Varga",
+    "license": "CC0-1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
     "source_dimensions": [
-      772,
-      1684
+      4000,
+      2248
     ],
     "quality": 78,
-    "sha256": "852dc2e538842b5a5cadc35fcc31eda129e4c7117ff49de9224b342e85a950cb",
-    "bytes": 74712
+    "sha256": "83bf9a1a862f870eb4af2126fc9b2ba742c4740c9639b391b1d04b80ed704e3d",
+    "bytes": 244756
   },
   {
     "world": "aurora_valley",
