@@ -15,6 +15,7 @@
     <a class="button quiet" href="{% url 'formations:duplicate' path.pk %}">Dupliquer</a>
     <a class="button quiet" href="{% url 'formations:export' path.pk %}">Exporter</a>
     <a class="button" href="{% url 'formations:edit' path.pk %}">Modifier</a>
+    {% if is_primary %}<span class="chip static">Formation principale</span>{% else %}<form method="post" action="{% url 'formations:set_primary' path.pk %}">{% csrf_token %}<button class="button quiet" type="submit">Définir comme formation principale</button></form>{% endif %}
   </div>
 </header>
 

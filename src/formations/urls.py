@@ -15,6 +15,7 @@ urlpatterns = [
     path("<int:pk>/suivi/", views.path_tracking, name="tracking"),
     path("<int:pk>/edit/", views.path_edit, name="edit"),
     path("<int:pk>/delete/", views.path_delete, name="delete"),
+    path("<int:pk>/primary/", views.path_set_primary, name="set_primary"),
     # Chaque objet structurant se crée depuis son parent et se modifie depuis lui-même.
     path("<int:path_pk>/periods/new/", views.period_edit, name="period_new"),
     path("periods/<int:pk>/edit/", views.period_edit, name="period_edit"),

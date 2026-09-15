@@ -82,7 +82,26 @@ def path_detail(request, pk):
         owner=request.user,
         pk=pk,
     )
-    return render(request, "formations/detail.html", {"path": path, "breadcrumbs": path_crumbs(path)})
+    from accounts.models import UserProfile
+
+    is_primary = UserProfile.objects.filter(user=request.user, primary_path=path).exists()
+    return render(
+        request, "formations/detail.html", {"path": path, "is_primary": is_primary, "breadcrumbs": path_crumbs(path)}
+    )
+
+
+@login_required
+@require_POST
+def path_set_primary(request, pk):
+    """Fait de cette formation celle que suit l'accueil."""
+    from accounts.models import UserProfile
+
+    path = get_object_or_404(LearningPath, owner=request.user, pk=pk)
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.primary_path = path
+    profile.save(update_fields=["primary_path"])
+    messages.success(request, f"« {path.title} » est votre formation principale : l’accueil la suit désormais.")
+    return redirect(safe_next(request, reverse("formations:detail", args=[path.pk])))
 
 
 @login_required

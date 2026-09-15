@@ -8,8 +8,16 @@ from .models import Invitation, UserProfile
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ["display_name", "theme", "accent_color", "timezone"]
+        fields = ["display_name", "theme", "accent_color", "timezone", "primary_path"]
         widgets = {"accent_color": forms.TextInput(attrs={"type": "color"})}
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from formations.models import LearningPath
+
+        # Seules les formations du compte : une autre valeur est refusée comme une saisie invalide.
+        self.fields["primary_path"].queryset = LearningPath.objects.filter(owner=user).order_by("title")
+        self.fields["primary_path"].empty_label = "Aucune · suivre la première formation active"
 
 
 class InvitationForm(forms.ModelForm):

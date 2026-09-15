@@ -58,7 +58,7 @@ class ThrottledLoginView(auth_views.LoginView):
 @login_required
 def settings_view(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    form = ProfileForm(request.POST or None, instance=profile)
+    form = ProfileForm(request.POST or None, instance=profile, user=request.user)
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Préférences enregistrées.")

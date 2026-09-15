@@ -22,6 +22,18 @@ class UserProfile(models.Model):
     theme = models.CharField("thème", max_length=10, choices=Theme.choices, default=Theme.SYSTEM)
     accent_color = models.CharField("couleur d’accent", max_length=7, default="#7C6CFF", validators=[accent_validator])
     timezone = models.CharField("fuseau horaire", max_length=64, default="America/Cayenne")
+    # Le choix explicite de la formation que suit l'accueil. L'accueil prenait la première
+    # formation active par ordre alphabétique : avec deux formations, on ne décidait pas
+    # laquelle on voyait.
+    primary_path = models.ForeignKey(
+        "formations.LearningPath",
+        verbose_name="formation principale",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Celle que l’accueil suit. Sans choix, il suit la première formation active qui a une période en cours.",
+    )
     audio_quota_mb = models.PositiveIntegerField(
         "quota audio (Mo)",
         default=settings.AUDIO_DEFAULT_QUOTA_MB,

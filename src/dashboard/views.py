@@ -33,8 +33,16 @@ def home(request):
     now = timezone.now()
     today = timezone.localdate()
     day_start, day_end = day_bounds(today)
+    from accounts.models import UserProfile
+
     formations = LearningPath.objects.filter(owner=request.user).select_related("current_period").order_by("title")
-    current_path = formations.filter(status=LearningPath.Status.ACTIVE, current_period__isnull=False).first()
+    usable = formations.filter(status=LearningPath.Status.ACTIVE, current_period__isnull=False)
+    # La formation principale choisie d'abord ; sans choix, ou si elle n'a plus de période en
+    # cours, la première formation active — l'accueil ne reste jamais vide pour autant.
+    chosen_id = UserProfile.objects.filter(user=request.user).values_list("primary_path_id", flat=True).first()
+    current_path = usable.filter(pk=chosen_id).first() if chosen_id else None
+    chosen_unavailable = bool(chosen_id) and current_path is None
+    current_path = current_path or usable.first()
     academic = None
     if current_path:
         period = current_path.current_period
@@ -59,6 +67,8 @@ def home(request):
         )
         academic = {
             "path": current_path,
+            "chosen": current_path.pk == chosen_id,
+            "chosen_unavailable": chosen_unavailable,
             "period": period,
             "average": period_average(request.user, period),
             "competencies": len(competency_ids),

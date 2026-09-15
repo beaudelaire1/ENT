@@ -75,6 +75,12 @@ def export_account(user):
                     "theme": profile.theme,
                     "accent_color": profile.accent_color,
                     "timezone": profile.timezone,
+                    # Désignée par l'identifiant de sa structure exportée plus haut, et par son titre.
+                    "primary_path": (
+                        {"id": profile.primary_path_id, "title": profile.primary_path.title}
+                        if profile.primary_path_id
+                        else None
+                    ),
                     "email_verified_at": profile.email_verified_at,
                 }
                 if profile
