@@ -85,6 +85,7 @@ def expand_event_series(event: CalendarEvent, rule: str, until) -> int:
             unit=event.unit,
             competency=event.competency,
             assessment=event.assessment,
+            task=event.task,
         )
         created += 1
     return created

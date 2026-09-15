@@ -379,3 +379,7 @@ ul.errorlist { margin:4px 0 0; padding-left:18px; color:var(--danger); font-size
 .quick-capture-form fieldset { display:flex; flex-wrap:wrap; gap:10px; margin:0; padding:0; border:0; }
 .quick-capture-form fieldset label { display:flex; align-items:center; gap:6px; }
 .quick-capture-form fieldset input { width:auto; }
+
+/* Ressources d'une tâche : la liste s'ouvre sur toute la largeur de la rangée d'actions. */
+.task-resources[open] { flex-basis:100%; }
+.task-resources-list { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:6px; }

@@ -159,6 +159,13 @@ def export_account(user):
                 "competency_id",
                 "assessment_id",
             ),
+            # Les ressources propres à chaque tâche ; celles héritées de la formation sont
+            # déjà dans la structure exportée.
+            "task_resources": _rows(
+                Task.resources.through.objects.filter(task__owner=user).order_by("task_id", "libraryitem_id"),
+                "task_id",
+                "libraryitem_id",
+            ),
             "task_focuses": _rows(
                 TaskFocus.objects.filter(owner=user),
                 "task_id",
@@ -180,6 +187,7 @@ def export_account(user):
                 "unit_id",
                 "competency_id",
                 "assessment_id",
+                "task_id",
             ),
         },
         "sablier": {

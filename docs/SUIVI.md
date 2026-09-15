@@ -11,7 +11,7 @@ Chaque point porte trois états, parce qu'ils ne se prouvent pas de la même fa�
 - **Navigateur** — le comportement a été constaté dans un vrai navigateur ;
 - **Préproduction** — vérifié avec les vrais services (PostgreSQL, SMTP, S3, proxy).
 
-**État vérifié le 15 septembre 2026 :** 668 tests Django, `ruff check` et
+**État vérifié le 15 septembre 2026 :** 675 tests Django, `ruff check` et
 `ruff format --check` réussis ; 15 tests Node (`npm test`) réussis.
 
 ## 1. Avant l'ouverture en production — bloquant
@@ -53,7 +53,7 @@ Le contenu détaillé et les cinq parcours de recette sont dans l'audit, section
 | Formation principale choisie et enregistrée | implémenté (`UserProfile.primary_path`, réglages, fiche de formation, export) ; vu dans le navigateur |
 | Capture rapide d'une tâche ou d'un lien ; transformer une note en tâche | implémenté (« + Capturer » dans l'en-tête, `dashboard:capture`, `library:note_to_task`, `Task.resources`) ; vu dans le navigateur sur ordinateur et téléphone |
 | Recherche : raccourci clavier, extraits surlignés, filtres de type | non commencé |
-| Continuité depuis une tâche : ressources, créneau d'agenda, lancement de Sablier | non commencé — le lancement depuis une compétence existe |
+| Continuité depuis une tâche : ressources, créneau d'agenda, lancement de Sablier | implémenté (`planner/continuity.py`, `CalendarEvent.task`, ressources dans le formulaire de tâche, export) ; vu dans le navigateur sur ordinateur, mesuré sur téléphone |
 
 ## 4. Robustesse
 

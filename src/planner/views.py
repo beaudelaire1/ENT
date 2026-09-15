@@ -15,6 +15,7 @@ from core.navigation import crumb, safe_next
 
 from . import undo
 from .calendar import day_bounds, events_in_window, overlaps
+from .continuity import RESOURCE_PREFETCH, planning_slot
 from .forms import CalendarEventForm, TaskForm
 from .models import CalendarEvent, Task
 from .services import expand_event_series, expand_task_series, sync_event_reminder, sync_task_reminder
@@ -31,7 +32,7 @@ def agenda(request):
     view = request.GET.get("view", "month")
     selected_path = LearningPath.objects.filter(owner=request.user, pk=request.GET.get("path")).first()
     events = CalendarEvent.objects.filter(owner=request.user).select_related(
-        "unit__period__path", "competency__path", "assessment"
+        "unit__period__path", "competency__path", "assessment", "task"
     )
     tasks = (
         Task.objects.filter(owner=request.user)
@@ -120,7 +121,11 @@ def agenda(request):
 def task_list(request):
     from formations.models import LearningPath
 
-    tasks = Task.objects.filter(owner=request.user).select_related("series", "unit__period__path", "competency")
+    tasks = (
+        Task.objects.filter(owner=request.user)
+        .select_related("series", "unit__period__path", "competency")
+        .prefetch_related(*RESOURCE_PREFETCH)
+    )
     query = request.GET.get("q", "").strip()
     status = request.GET.get("status", "")
     selected_path = LearningPath.objects.filter(owner=request.user, pk=request.GET.get("path")).first()
@@ -292,20 +297,27 @@ def event_series_delete(request, pk):
 def event_edit(request, pk=None):
     event = get_object_or_404(CalendarEvent, owner=request.user, pk=pk) if pk else None
     initial = {}
-    # « Planifier » depuis une tâche : l'événement reprend son intitulé et ses rattachements.
+    source = None
+    # « Planifier » depuis une tâche : l'événement reprend son intitulé et ses rattachements,
+    # propose un créneau d'une heure et garde le lien vers la tâche une fois enregistré.
     if event is None and request.GET.get("task", "").isdigit():
         source = Task.objects.filter(owner=request.user, pk=request.GET["task"]).first()
         if source:
+            starts_at, ends_at = planning_slot(source)
             initial = {
                 "title": source.title,
                 "unit": source.unit_id,
                 "competency": source.competency_id,
                 "assessment": source.assessment_id,
+                "starts_at": starts_at,
+                "ends_at": ends_at,
             }
     form = CalendarEventForm(
         request.POST or None, instance=event, user=request.user, scope={"owner": request.user}, initial=initial
     )
     if request.method == "POST" and form.is_valid():
+        if source:
+            form.instance.task = source
         event = form.save()
         sync_event_reminder(event)
         rule, until = form.recurrence

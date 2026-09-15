@@ -185,6 +185,16 @@ class CalendarEvent(TimeStampedModel):
         on_delete=models.SET_NULL,
         related_name="calendar_events",
     )
+    # La tâche dont ce créneau est né, par « Planifier » : l'agenda la rappelle, et supprimer
+    # la tâche laisse le créneau en place.
+    task = models.ForeignKey(
+        Task,
+        verbose_name="tâche",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="calendar_events",
+    )
     # Une série est matérialisée : chaque séance est un événement à part entière, qu'on
     # peut déplacer ou annuler seule. `series` désigne la première, qui porte la règle.
     series = models.ForeignKey(

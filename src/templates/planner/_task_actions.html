@@ -1,9 +1,16 @@
 {% comment %}
-  Terminer, reporter, planifier : les actions d'une tâche ouverte, partagées par l'accueil et
-  la liste des tâches. `next` ramène à la page d'origine ; `no_toggle` laisse la liste garder
-  son propre bouton, qui sait aussi rouvrir et terminer une série.
+  Terminer, se concentrer, rouvrir ses ressources, reporter, planifier : les actions d'une
+  tâche ouverte, partagées par l'accueil et la liste des tâches. `next` ramène à la page
+  d'origine ; `no_toggle` laisse la liste garder son propre bouton, qui sait aussi rouvrir et
+  terminer une série.
 {% endcomment %}
+{% load planner_tags %}{% task_resources task as resources %}
 {% if not no_toggle %}<form method="post" action="{% url 'planner:task_toggle' task.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="button small" type="submit">Terminer</button></form>{% endif %}
+<a class="button small" href="{% url 'sablier:home' %}?intention={{ task.title|urlencode }}&amp;duration=25{% if task.competency_id %}&amp;competency={{ task.competency_id }}{% endif %}&amp;next={{ next|urlencode }}">Se concentrer</a>
+{% if resources %}<details class="task-resources">
+  <summary class="button small quiet">Ressources ({{ resources|length }})</summary>
+  <ul class="task-resources-list">{% for entry in resources %}<li><a href="{% url 'library:detail' entry.item.pk %}">{{ entry.item.title }}</a> <span class="muted">· {{ entry.sources|join:", " }}</span></li>{% endfor %}</ul>
+</details>{% endif %}
 {% if task.due_at %}<details class="task-postpone">
   <summary class="button small quiet">Reporter</summary>
   <form method="post" action="{% url 'planner:task_postpone' task.pk %}" class="postpone-form">{% csrf_token %}

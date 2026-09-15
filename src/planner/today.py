@@ -13,6 +13,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from .calendar import day_bounds
+from .continuity import RESOURCE_PREFETCH
 from .models import Task
 
 # Assez pour voir d'un coup d'œil ce qui presse, trop peu pour transformer l'accueil en liste.
@@ -25,7 +26,12 @@ def task_agenda(owner, day=None) -> list[dict]:
     day = day or timezone.localdate()
     start, end = day_bounds(day)
     horizon, _ = day_bounds(day + timedelta(days=UPCOMING_DAYS))
-    open_tasks = Task.objects.filter(owner=owner).exclude(status=Task.Status.DONE).select_related("competency")
+    open_tasks = (
+        Task.objects.filter(owner=owner)
+        .exclude(status=Task.Status.DONE)
+        .select_related("competency")
+        .prefetch_related(*RESOURCE_PREFETCH)
+    )
     by_due = ("due_at", "priority", "title")
     selections = [
         ("overdue", "En retard", open_tasks.filter(due_at__lt=start).order_by(*by_due)),

@@ -2,6 +2,7 @@ from django import forms
 
 from core.forms import ScopedModelForm
 from formations.models import Assessment, Competency, LearningUnit
+from library.models import LibraryItem
 
 from .models import CalendarEvent, Recurrence, Task
 
@@ -65,10 +66,12 @@ class TaskForm(RecurrenceMixin, ScopedModelForm):
             "unit",
             "competency",
             "assessment",
+            "resources",
             "reminder_at",
             "email_reminder",
         ]
         widgets = {
+            "resources": forms.SelectMultiple(attrs={"size": 8}),
             "due_at": DateTimeLocalInput(),
             "reminder_at": DateTimeLocalInput(),
             "description": forms.Textarea(attrs={"rows": 4}),
@@ -79,6 +82,10 @@ class TaskForm(RecurrenceMixin, ScopedModelForm):
         self.fields["unit"].queryset = LearningUnit.objects.filter(period__path__owner=user).select_related("period")
         self.fields["competency"].queryset = Competency.objects.filter(path__owner=user).select_related("path")
         self.fields["assessment"].queryset = Assessment.objects.filter(owner=user).select_related("unit")
+        self.fields["resources"].queryset = LibraryItem.objects.filter(owner=user).order_by("title")
+        self.fields[
+            "resources"
+        ].help_text = "Celles de la matière, de la compétence et de l’évaluation s’ajoutent d’elles-mêmes."
 
     def clean(self):
         cleaned = super().clean()
