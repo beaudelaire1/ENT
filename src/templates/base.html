@@ -75,6 +75,24 @@
       <form class="global-search" action="{% url 'search' %}" method="get">
         <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Rechercher partout…" aria-label="Rechercher">
       </form>
+      <details class="quick-capture">
+        <summary class="button primary" aria-label="Capturer une tâche, une note ou un lien">+ Capturer</summary>
+        <form class="panel quick-capture-form" method="post" action="{% url 'dashboard:capture' %}">{% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <label for="capture-title">Intitulé</label>
+          <input id="capture-title" type="text" name="title" maxlength="180" required>
+          <fieldset><legend class="visually-hidden">Type</legend>
+            <label><input type="radio" name="kind" value="task" checked> Tâche</label>
+            <label><input type="radio" name="kind" value="note"> Note</label>
+            <label><input type="radio" name="kind" value="link"> Lien</label>
+          </fieldset>
+          <label for="capture-url">Adresse <span class="muted">(pour un lien)</span></label>
+          <input id="capture-url" type="url" name="url" maxlength="1000" placeholder="https://">
+          <label for="capture-due">Échéance <span class="muted">(facultative, pour une tâche)</span></label>
+          <input id="capture-due" type="datetime-local" name="due">
+          <button class="button primary" type="submit">Ajouter</button>
+        </form>
+      </details>
       <span class="user-chip">{{ appearance.display_name|default:user.username }}</span>
     </header>
     <main class="main-content" id="main-content" tabindex="-1">

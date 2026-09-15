@@ -91,6 +91,12 @@ class Task(TimeStampedModel):
         on_delete=models.SET_NULL,
         related_name="tasks",
     )
+    # Les ressources propres à la tâche : la note dont elle est née, un document à reprendre.
+    # Celles de sa matière, de sa compétence et de son évaluation s'y ajoutent à l'affichage
+    # sans être recopiées ici.
+    resources = models.ManyToManyField(
+        "library.LibraryItem", verbose_name="ressources", blank=True, related_name="tasks"
+    )
     objects = OwnedQuerySet.as_manager()
 
     class Meta:

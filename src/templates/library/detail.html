@@ -13,6 +13,9 @@
     {% elif item.kind == 'link' %}
       <a class="button primary" href="{{ item.url }}" target="_blank" rel="noopener">Ouvrir</a>
     {% endif %}
+    {% if item.kind == 'note' %}
+      <form method="post" action="{% url 'library:note_to_task' item.pk %}">{% csrf_token %}<button class="button" type="submit">Transformer en tâche</button></form>
+    {% endif %}
     <a class="button" href="{% url 'library:links' item.pk %}">Associer</a>
     <a class="button" href="{% url 'library:edit' item.pk %}">Modifier</a>
   </div>

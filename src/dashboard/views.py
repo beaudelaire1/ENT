@@ -4,13 +4,18 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import escape
+from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_POST
+
+from core.navigation import safe_next
 
 from .models import DashboardWidget
 from .services import ensure_default_widgets
@@ -140,17 +145,53 @@ def save_layout(request):
 @login_required
 @require_POST
 def quick_note(request):
-    from library.models import LibraryItem
+    from library.notes import create_plain_note
 
     text = request.POST.get("text", "").strip()
     if text:
-        LibraryItem.objects.create(
-            owner=request.user,
-            kind=LibraryItem.Kind.NOTE,
-            title=text[:70],
-            note_text=text,
-            note_delta={"ops": [{"insert": text + "\n"}]},
-            note_html=f"<p>{escape(text)}</p>",
-        )
+        create_plain_note(request.user, text)
         messages.success(request, "Note ajoutée à la bibliothèque.")
     return redirect("dashboard:home")
+
+
+@login_required
+@require_POST
+def capture(request):
+    """Une tâche, une note ou un lien en quelques secondes, depuis n'importe quelle page.
+
+    Un intitulé suffit : aucune formation, aucun dossier n'est demandé. On complète plus
+    tard, depuis la tâche ou la bibliothèque ; la capture ne doit jamais faire hésiter.
+    """
+    from library.models import LibraryItem
+    from library.notes import create_plain_note
+    from planner.models import Task
+
+    back = safe_next(request, reverse("dashboard:home"))
+    title = request.POST.get("title", "").strip()
+    kind = request.POST.get("kind", "task")
+    if not title:
+        messages.error(request, "Donnez au moins un intitulé.")
+        return redirect(back)
+    if kind == "note":
+        create_plain_note(request.user, title)
+        messages.success(request, "Note ajoutée à la bibliothèque.")
+    elif kind == "link":
+        url = request.POST.get("url", "").strip()
+        try:
+            URLValidator(schemes=["http", "https"])(url)
+        except ValidationError:
+            messages.error(request, "Indiquez une adresse complète, commençant par https://.")
+            return redirect(back)
+        LibraryItem.objects.create(owner=request.user, kind=LibraryItem.Kind.LINK, title=title[:200], url=url[:1000])
+        messages.success(request, "Lien ajouté à la bibliothèque.")
+    else:
+        due_at = None
+        if request.POST.get("due"):
+            parsed = parse_datetime(request.POST["due"])
+            if parsed is None:
+                messages.error(request, "L’échéance n’est pas une date valide.")
+                return redirect(back)
+            due_at = timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+        Task.objects.create(owner=request.user, title=title[:180], due_at=due_at)
+        messages.success(request, f"Tâche « {title[:180]} » ajoutée.")
+    return redirect(back)

@@ -9,6 +9,8 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.text import Truncator
+from django.views.decorators.http import require_POST
 
 from core.deletion import confirm_delete
 from core.editing import form_page
@@ -153,6 +155,28 @@ def item_detail(request, pk):
             "breadcrumbs": item_crumbs(item),
         },
     )
+
+
+@login_required
+@require_POST
+def note_to_task(request, pk):
+    """Faire d'une note une tâche, sans rien perdre de la note.
+
+    La tâche reprend le titre et un extrait ; la note reste intacte et devient une ressource
+    de la tâche, d'où on la rouvre. On arrive ensuite sur la tâche pour l'échéance.
+    """
+    from planner.models import Task
+
+    note = get_object_or_404(LibraryItem, owner=request.user, pk=pk, kind=LibraryItem.Kind.NOTE)
+    task = Task.objects.create(
+        owner=request.user,
+        title=Truncator(note.title).chars(180),
+        description=Truncator(note.note_text).chars(500),
+    )
+    task.resources.add(note)
+    messages.success(request, "Tâche créée ; la note y reste rattachée.")
+    detail = reverse("library:detail", args=[note.pk])
+    return redirect(f"{reverse('planner:task_edit', args=[task.pk])}?{urlencode({'next': detail})}")
 
 
 LINK_RESULT_LIMIT = 40
