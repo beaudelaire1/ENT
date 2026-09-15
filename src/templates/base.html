@@ -83,6 +83,7 @@
 {% endif %}
       {% if user.is_authenticated %}{% include "core/_breadcrumbs.html" %}{% endif %}
       {% if messages %}<div class="messages" aria-live="polite">{% for message in messages %}<div class="message {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% if planner_undo %}<form class="message undo" method="post" action="{% url 'planner:task_undo' %}" role="status" aria-live="polite">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><span>{{ planner_undo.label }}</span><button class="button small quiet" type="submit">Annuler</button></form>{% endif %}
       {% block content %}{% endblock %}
     </main>
   {% if user.is_authenticated %}</div>{% endif %}

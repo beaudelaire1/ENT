@@ -49,7 +49,7 @@ Le contenu détaillé et les cinq parcours de recette sont dans l'audit, section
 
 | Livrable | État |
 |---|---|
-| Accueil par échéance : en retard, du jour, sans date ; Reporter, Terminer, Planifier, avec annulation | non commencé — seules les priorités jour/semaine/mois existent |
+| Accueil par échéance : en retard, du jour, sans date ; Reporter, Terminer, Planifier, avec annulation | implémenté (`planner/today.py`, `planner/undo.py`) ; vu dans le navigateur sur ordinateur et téléphone |
 | Formation principale choisie et enregistrée | non commencé — l'accueil prend la première formation active |
 | Capture rapide d'une tâche ou d'un lien ; transformer une note en tâche | partiel — la note rapide existe seule |
 | Recherche : raccourci clavier, extraits surlignés, filtres de type | non commencé |

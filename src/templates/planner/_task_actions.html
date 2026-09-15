@@ -1,0 +1,17 @@
+{% comment %}
+  Terminer, reporter, planifier : les actions d'une tâche ouverte, partagées par l'accueil et
+  la liste des tâches. `next` ramène à la page d'origine ; `no_toggle` laisse la liste garder
+  son propre bouton, qui sait aussi rouvrir et terminer une série.
+{% endcomment %}
+{% if not no_toggle %}<form method="post" action="{% url 'planner:task_toggle' task.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="button small" type="submit">Terminer</button></form>{% endif %}
+{% if task.due_at %}<details class="task-postpone">
+  <summary class="button small quiet">Reporter</summary>
+  <form method="post" action="{% url 'planner:task_postpone' task.pk %}" class="postpone-form">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="button small quiet" type="submit" name="to" value="tomorrow">Demain</button>
+    <button class="button small quiet" type="submit" name="to" value="week">Dans une semaine</button>
+    <input type="date" name="date" min="{% now 'Y-m-d' %}" aria-label="Nouvelle échéance pour « {{ task.title }} »">
+    <button class="button small quiet" type="submit" name="to" value="date">Choisir</button>
+  </form>
+</details>{% endif %}
+<a class="button small quiet" href="{% url 'planner:event_new' %}?task={{ task.pk }}&amp;next={{ next|urlencode }}">Planifier</a>

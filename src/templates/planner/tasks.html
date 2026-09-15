@@ -18,6 +18,7 @@
           <form method="post" action="{% url 'planner:task_focus' task.pk 'day' %}">{% csrf_token %}<button class="button small quiet" type="submit" title="Définir comme priorité d’aujourd’hui">Jour</button></form>
           <form method="post" action="{% url 'planner:task_focus' task.pk 'week' %}">{% csrf_token %}<button class="button small quiet" type="submit" title="Définir comme priorité de cette semaine">Semaine</button></form>
           <form method="post" action="{% url 'planner:task_focus' task.pk 'month' %}">{% csrf_token %}<button class="button small quiet" type="submit" title="Définir comme priorité de ce mois">Mois</button></form>
+          {% include "planner/_task_actions.html" with task=task next=request.get_full_path no_toggle=True %}
         {% endif %}
         <a class="button small quiet" href="{% url 'planner:task_edit' task.pk %}">Modifier</a><a class="button small quiet danger" href="{% url 'planner:task_delete' task.pk %}">Supprimer</a>{% if task.series_id %}<a class="button small quiet danger" href="{% url 'planner:task_series_delete' task.pk %}">Toute la série</a>{% endif %}<form method="post" action="{% url 'planner:task_toggle' task.pk %}">{% csrf_token %}<button class="button small">{% if task.status == 'done' %}Rouvrir{% else %}Terminer{% endif %}</button>{% if task.series_id %}<button class="button small quiet" type="submit" name="scope" value="series">{% if task.status == 'done' %}Rouvrir la série{% else %}Terminer la série{% endif %}</button>{% endif %}</form>
       </div>

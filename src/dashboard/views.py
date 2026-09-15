@@ -26,7 +26,8 @@ def home(request):
     from notifications.models import Notification
     from planner.calendar import day_bounds, events_in_window
     from planner.focus import current_focus_rows
-    from planner.models import CalendarEvent, Task
+    from planner.models import CalendarEvent
+    from planner.today import task_agenda
 
     widgets = ensure_default_widgets(request.user)
     now = timezone.now()
@@ -82,9 +83,9 @@ def home(request):
         "events_today": events_in_window(CalendarEvent.objects.filter(owner=request.user), day_start, day_end).order_by(
             "starts_at"
         )[:8],
-        "tasks": Task.objects.filter(owner=request.user)
-        .exclude(status=Task.Status.DONE)
-        .order_by("priority", "due_at")[:8],
+        # Rangées par échéance, et non plus d'abord par priorité : voir `planner.today`.
+        "task_agenda": (agenda := task_agenda(request.user, today)),
+        "has_open_tasks": any(group["tasks"] for group in agenda),
         "task_focuses": current_focus_rows(request.user, today),
         "notifications": Notification.objects.filter(owner=request.user, read_at__isnull=True)[:6],
         "recent_items": LibraryItem.objects.filter(owner=request.user).order_by("-updated_at")[:6],

@@ -13,10 +13,15 @@ from django.views.decorators.http import require_POST
 from core.deletion import confirm_delete
 from core.navigation import crumb, safe_next
 
+from . import undo
 from .calendar import day_bounds, events_in_window, overlaps
 from .forms import CalendarEventForm, TaskForm
 from .models import CalendarEvent, Task
 from .services import expand_event_series, expand_task_series, sync_event_reminder, sync_task_reminder
+
+# Reporter, en jours à partir d'aujourd'hui : « demain » part d'aujourd'hui même pour une
+# tâche en retard d'une semaine, sans quoi la reporter la laisserait encore en retard.
+POSTPONE_DAYS = {"tomorrow": 1, "week": 7}
 
 
 @login_required
@@ -183,11 +188,57 @@ def task_edit(request, pk=None):
 def task_toggle(request, pk):
     task = get_object_or_404(Task, owner=request.user, pk=pk)
     target_status = Task.Status.TODO if task.status == Task.Status.DONE else Task.Status.DONE
-    targets = task.series.tasks.all() if request.POST.get("scope") == "series" and task.series_id else [task]
+    whole_series = request.POST.get("scope") == "series" and task.series_id
+    targets = task.series.tasks.all() if whole_series else [task]
+    if whole_series:
+        # Une série entière ne se rétablit pas d'un clic sans ambiguïté : rien d'annulable.
+        undo.forget(request)
+    else:
+        done = target_status == Task.Status.DONE
+        undo.remember(request, task, f"« {task.title} » est {'terminée' if done else 'rouverte'}.")
     for target in targets:
         target.status = target_status
         target.save(update_fields=["status", "updated_at"])
         sync_task_reminder(target)
+    return redirect(safe_next(request, reverse("planner:tasks")))
+
+
+@login_required
+@require_POST
+def task_postpone(request, pk):
+    """Repousse l'échéance d'une seule tâche, en gardant son heure et l'avance de son rappel."""
+    task = get_object_or_404(Task, owner=request.user, pk=pk)
+    today = timezone.localdate()
+    choice = request.POST.get("to", "")
+    if choice in POSTPONE_DAYS:
+        target_day = today + timedelta(days=POSTPONE_DAYS[choice])
+    else:
+        try:
+            target_day = datetime.strptime(request.POST.get("date", ""), "%Y-%m-%d").date()
+        except ValueError:
+            target_day = None
+        if target_day is None or target_day < today:
+            messages.error(request, "Choisissez une date à partir d’aujourd’hui.")
+            return redirect(safe_next(request, reverse("planner:tasks")))
+    moment = timezone.localtime(task.due_at).time() if task.due_at else time(9, 0)
+    new_due = timezone.make_aware(datetime.combine(target_day, moment))
+    undo.remember(request, task, f"« {task.title} » est reportée au {target_day:%d/%m}.")
+    if task.reminder_at and task.due_at:
+        task.reminder_at += new_due - task.due_at
+    task.due_at = new_due
+    task.save(update_fields=["due_at", "reminder_at", "updated_at"])
+    sync_task_reminder(task)
+    return redirect(safe_next(request, reverse("planner:tasks")))
+
+
+@login_required
+@require_POST
+def task_undo(request):
+    task = undo.restore(request)
+    if task:
+        messages.success(request, f"« {task.title} » : action annulée.")
+    else:
+        messages.info(request, "Il n’y a plus rien à annuler.")
     return redirect(safe_next(request, reverse("planner:tasks")))
 
 
@@ -240,7 +291,20 @@ def event_series_delete(request, pk):
 @login_required
 def event_edit(request, pk=None):
     event = get_object_or_404(CalendarEvent, owner=request.user, pk=pk) if pk else None
-    form = CalendarEventForm(request.POST or None, instance=event, user=request.user, scope={"owner": request.user})
+    initial = {}
+    # « Planifier » depuis une tâche : l'événement reprend son intitulé et ses rattachements.
+    if event is None and request.GET.get("task", "").isdigit():
+        source = Task.objects.filter(owner=request.user, pk=request.GET["task"]).first()
+        if source:
+            initial = {
+                "title": source.title,
+                "unit": source.unit_id,
+                "competency": source.competency_id,
+                "assessment": source.assessment_id,
+            }
+    form = CalendarEventForm(
+        request.POST or None, instance=event, user=request.user, scope={"owner": request.user}, initial=initial
+    )
     if request.method == "POST" and form.is_valid():
         event = form.save()
         sync_event_reminder(event)
