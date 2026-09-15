@@ -35,6 +35,7 @@ import { makeSpiralRuntime } from "./premium3d/spiral.js";
 import { makeCelestialRuntime } from "./premium3d/celestial.js";
 import { buildWorld } from "./premium3d/worlds.js";
 import { buildEnvironment } from "./premium3d/environment.js";
+import { loadPanorama } from "./premium3d/panoramas.js";
 import { createPostFX } from "./premium3d/postfx.js";
 import { disposeTextures, radialSprite } from "./premium3d/textures.js";
 
@@ -184,6 +185,7 @@ function createRuntime(THREE, nodes) {
   let active = null;
   let currentWorld = null;
   let environment = null;
+  let environmentToken = 0;
   let post = null;
   let width = 0, height = 0;
   let frame = 0;
@@ -296,34 +298,70 @@ function createRuntime(THREE, nodes) {
     app.dataset.world = key;
     scene.add(currentWorld.object);
 
-    environment = buildEnvironment(THREE, renderer, currentWorld.env);
-    scene.environment = environment.environment;
-    if (environment.background.isObject3D) scene.add(environment.background);
-    else scene.background = environment.background;
+    applyEnvironment(buildEnvironment(THREE, renderer, currentWorld.env));
 
+    // Le ciel photographique arrive par le réseau : la scène s'affiche d'abord sous son
+    // ciel calculé, puis bascule sans transition visible dès que la capture est là. Le
+    // jeton garde l'univers en cours — changer d'ambiance pendant le chargement ne doit
+    // pas repeindre le nouveau lieu avec le ciel de l'ancien.
+    const token = ++environmentToken;
+    loadPanorama(THREE, renderer, currentWorld.env).then((photograph) => {
+      if (!photograph) return;
+      if (token !== environmentToken) { photograph.dispose(); return; }
+      applyEnvironment(photograph);
+    });
+  }
+
+  // Installe un environnement — calculé ou photographié — sur la scène : fond visible,
+  // carte d'éclairage, brume, temps de pose et lumière directe. Tout passe par ici, si
+  // bien qu'un ciel qui arrive en retard produit exactement la même image qu'un ciel
+  // présent dès le premier rendu.
+  function applyEnvironment(next) {
+    if (environment) {
+      if (environment.background?.isObject3D) environment.background.removeFromParent();
+      environment.dispose();
+    }
+    environment = next;
+
+    // Le nom du ciel installé est publié : une capture de contrôle peut vérifier qu'elle
+    // photographie bien l'univers sous sa vraie voûte, et non sous le ciel de repli.
+    app.dataset.sky = next.panorama || "calcule";
+    scene.environment = next.environment;
+    scene.background = null;
+    if (next.background.isObject3D) scene.add(next.background);
+    else scene.background = next.background;
+    scene.backgroundIntensity = next.backgroundIntensity ?? 1;
+    if (next.rotation) {
+      scene.backgroundRotation.copy(next.rotation);
+      scene.environmentRotation.copy(next.rotation);
+    } else {
+      scene.backgroundRotation.set(0, 0, 0);
+      scene.environmentRotation.set(0, 0, 0);
+    }
+
+    // La brume prend la couleur mesurée de la bande d'horizon quand elle existe : une
+    // vallée bleue sous un ciel doré n'a jamais l'air d'appartenir au même lieu.
     const [fogColor, fogDensity] = currentWorld.fog || ["#0a1018", 0.006];
-    scene.fog = new THREE.FogExp2(new THREE.Color(fogColor), fogDensity);
+    const shade = next.horizon ? next.horizon.clone() : new THREE.Color(fogColor);
+    scene.fog = new THREE.FogExp2(shade.clone(), fogDensity);
 
-    // Le ciel à diffusion atmosphérique délivre une énergie physique : sans exposition
-    // adaptée, un plein soleil sature toute l'image en blanc. Chaque univers porte donc
-    // la sienne, comme on choisirait un temps de pose.
-    // Les nuits demandent une pose plus longue que les jours — et davantage qu'avant :
-    // tant que le halo réappliquait la courbe sRGB sur une image déjà encodée, les tons
-    // moyens remontaient artificiellement. La chaîne corrigée rend leurs vrais noirs, il
-    // faut donc ouvrir franchement.
-    const exposure = currentWorld.env.exposure
+    // Le ciel délivre une énergie physique : sans exposition adaptée, un plein soleil
+    // sature toute l'image en blanc et une nuit tombe au noir. Chaque univers porte donc
+    // la sienne, comme on choisirait un temps de pose — mesurée sur la capture lorsqu'il
+    // y en a une, écrite dans la recette sinon.
+    const exposure = next.exposure
+      ?? currentWorld.env.exposure
       ?? (currentWorld.env.kind === "day" ? 0.4 : 2);
     renderer.toneMappingExposure = exposure;
     post?.setExposure(exposure);
 
     // L'appoint reste discret : trop clair, il éclaire le sol plus fort que le ciel qui
     // le surplombe et l'horizon se casse en deux bandes franches.
-    const shade = new THREE.Color(fogColor);
     ambient.color.copy(shade).lerp(new THREE.Color(0xffffff), 0.22);
     ambient.groundColor.copy(shade).multiplyScalar(0.3);
     ambient.intensity = currentWorld.env.ambient ?? (currentWorld.env.kind === "day" ? 1.6 : 0.7);
 
-    const sun = environment.sun;
+    const sun = next.sun;
     keyLight.color.set(sun.color);
     keyLight.intensity = sun.intensity;
     keyLight.position.copy(sun.direction).multiplyScalar(40);
@@ -560,6 +598,8 @@ function createRuntime(THREE, nodes) {
     geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures,
     calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, hidden: document.hidden,
     materialLoads: Number(app.dataset.materialLoads || 0), materialRevision: Number(app.dataset.materialRevision || 0),
+    sky: app.dataset.sky, exposure: renderer.toneMappingExposure,
+    background: scene.background?.isTexture ? [scene.background.image?.width, scene.background.image?.height] : scene.background?.type || null,
     gpu: gpuExtension ? gl.getParameter(gpuExtension.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)}) };
   document.addEventListener('visibilitychange', () => {
     cancelAnimationFrame(frame); lastTime = null;

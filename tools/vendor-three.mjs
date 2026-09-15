@@ -23,6 +23,8 @@ const BUILD = ["three.module.js", "three.core.js"];
 // des flammes, du soleil et du sable.
 const ADDON_FILES = [
   "objects/Sky.js",
+  "loaders/RGBELoader.js",
+  "loaders/HDRLoader.js",
   "postprocessing/EffectComposer.js",
   "postprocessing/Pass.js",
   "postprocessing/RenderPass.js",

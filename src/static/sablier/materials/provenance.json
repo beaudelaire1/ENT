@@ -1,87 +1,6 @@
 [
   {
-    "asset": "forest_floor",
-    "channel": "diff",
-    "file": "forest_floor-diff.webp",
-    "source": "https://polyhaven.com/a/forest_floor",
-    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_floor/forest_floor_diff_1k.jpg",
-    "authors": {
-      "eye-candy.xyz": "All"
-    },
-    "license": "CC0-1.0",
-    "license_url": "https://polyhaven.com/license",
-    "source_md5": "d67f308e4b8be6a65989e8dc76ec40fe",
-    "sha256": "8aaaa3ed32e9b0714df187dc180949796c96a24332927fb35ea0b88c0b3c8957",
-    "dimensions": [
-      1024,
-      1024
-    ],
-    "bytes": 552148,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
-  },
-  {
-    "asset": "forest_floor",
-    "channel": "normal",
-    "file": "forest_floor-normal.webp",
-    "source": "https://polyhaven.com/a/forest_floor",
-    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_floor/forest_floor_nor_gl_1k.jpg",
-    "authors": {
-      "eye-candy.xyz": "All"
-    },
-    "license": "CC0-1.0",
-    "license_url": "https://polyhaven.com/license",
-    "source_md5": "7cb480d082527766acdf3b6c8cba50f4",
-    "sha256": "983e0701be3676ebded13b65c39c4d4271a29ae41493833cfcebc986ebbdde6e",
-    "dimensions": [
-      1024,
-      1024
-    ],
-    "bytes": 688856,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
-  },
-  {
-    "asset": "wood_table_worn",
-    "channel": "diff",
-    "file": "wood_table_worn-diff.webp",
-    "source": "https://polyhaven.com/a/wood_table_worn",
-    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_diff_1k.jpg",
-    "authors": {
-      "Dimitrios Savva": "Photography",
-      "Rico Cilliers": "Processing"
-    },
-    "license": "CC0-1.0",
-    "license_url": "https://polyhaven.com/license",
-    "source_md5": "8c71f701f70fef34b87fb7c8742ad0a5",
-    "sha256": "a1113a9874a2b345d6b930a516aca8b2f8f1158938697c2b577d20d624cfcb12",
-    "dimensions": [
-      1024,
-      1024
-    ],
-    "bytes": 232190,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
-  },
-  {
-    "asset": "wood_table_worn",
-    "channel": "normal",
-    "file": "wood_table_worn-normal.webp",
-    "source": "https://polyhaven.com/a/wood_table_worn",
-    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_nor_gl_1k.jpg",
-    "authors": {
-      "Dimitrios Savva": "Photography",
-      "Rico Cilliers": "Processing"
-    },
-    "license": "CC0-1.0",
-    "license_url": "https://polyhaven.com/license",
-    "source_md5": "d8e76d135e94e32bc81eedb3342c7614",
-    "sha256": "1e337ead51c8d44682e8b1af5dca6b3c6cd3a2e44e9c33a669f91ade33301fbd",
-    "dimensions": [
-      1024,
-      1024
-    ],
-    "bytes": 338458,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
-  },
-  {
+    "kind": "rock",
     "asset": "rock_face_03",
     "channel": "diff",
     "file": "rock_face_03-diff.webp",
@@ -100,9 +19,10 @@
       1024
     ],
     "bytes": 347992,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
   },
   {
+    "kind": "rock",
     "asset": "rock_face_03",
     "channel": "normal",
     "file": "rock_face_03-normal.webp",
@@ -121,9 +41,95 @@
       1024
     ],
     "bytes": 547940,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
   },
   {
+    "kind": "rock",
+    "asset": "rock_face_03",
+    "channel": "arm",
+    "file": "rock_face_03-arm.webp",
+    "source": "https://polyhaven.com/a/rock_face_03",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face_03/rock_face_03_arm_1k.jpg",
+    "authors": {
+      "Dario Barresi": "Photography",
+      "Rico Cilliers": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "351c58daba868568fb5a191194aa5302",
+    "sha256": "d9f1a072b4954fbc0787bfec09c50fbac7fdacee7e180d87bc67a2a1e4b0890b",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 233410,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "soil",
+    "asset": "forest_floor",
+    "channel": "diff",
+    "file": "forest_floor-diff.webp",
+    "source": "https://polyhaven.com/a/forest_floor",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_floor/forest_floor_diff_1k.jpg",
+    "authors": {
+      "eye-candy.xyz": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "d67f308e4b8be6a65989e8dc76ec40fe",
+    "sha256": "8aaaa3ed32e9b0714df187dc180949796c96a24332927fb35ea0b88c0b3c8957",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 552148,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "soil",
+    "asset": "forest_floor",
+    "channel": "normal",
+    "file": "forest_floor-normal.webp",
+    "source": "https://polyhaven.com/a/forest_floor",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_floor/forest_floor_nor_gl_1k.jpg",
+    "authors": {
+      "eye-candy.xyz": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "7cb480d082527766acdf3b6c8cba50f4",
+    "sha256": "983e0701be3676ebded13b65c39c4d4271a29ae41493833cfcebc986ebbdde6e",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 688856,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "soil",
+    "asset": "forest_floor",
+    "channel": "arm",
+    "file": "forest_floor-arm.webp",
+    "source": "https://polyhaven.com/a/forest_floor",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_floor/forest_floor_arm_1k.jpg",
+    "authors": {
+      "eye-candy.xyz": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "85b0c5f36a11f981dc7e6256bc23161a",
+    "sha256": "8aa0433e7e6fd1524e3a4318ef0da4999a0f229fdeea07765917f08ec68af89d",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 357594,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "bark",
     "asset": "bark_brown_02",
     "channel": "diff",
     "file": "bark_brown_02-diff.webp",
@@ -141,9 +147,10 @@
       1024
     ],
     "bytes": 394842,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
   },
   {
+    "kind": "bark",
     "asset": "bark_brown_02",
     "channel": "normal",
     "file": "bark_brown_02-normal.webp",
@@ -161,6 +168,600 @@
       1024
     ],
     "bytes": 536488,
-    "processing": "1024 px maximum, WebP RGB, normale OpenGL"
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "bark",
+    "asset": "bark_brown_02",
+    "channel": "arm",
+    "file": "bark_brown_02-arm.webp",
+    "source": "https://polyhaven.com/a/bark_brown_02",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bark_brown_02/bark_brown_02_arm_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "6a566390a8930454c9ad4056273b08fb",
+    "sha256": "d178b2998b7ea856a55689a4e3c0cce1454220ac4890a84d0f2db3a21c0d34e3",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 229370,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "wood",
+    "asset": "wood_table_worn",
+    "channel": "diff",
+    "file": "wood_table_worn-diff.webp",
+    "source": "https://polyhaven.com/a/wood_table_worn",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_diff_1k.jpg",
+    "authors": {
+      "Dimitrios Savva": "Photography",
+      "Rico Cilliers": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "8c71f701f70fef34b87fb7c8742ad0a5",
+    "sha256": "a1113a9874a2b345d6b930a516aca8b2f8f1158938697c2b577d20d624cfcb12",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 232190,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "wood",
+    "asset": "wood_table_worn",
+    "channel": "normal",
+    "file": "wood_table_worn-normal.webp",
+    "source": "https://polyhaven.com/a/wood_table_worn",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_nor_gl_1k.jpg",
+    "authors": {
+      "Dimitrios Savva": "Photography",
+      "Rico Cilliers": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "d8e76d135e94e32bc81eedb3342c7614",
+    "sha256": "1e337ead51c8d44682e8b1af5dca6b3c6cd3a2e44e9c33a669f91ade33301fbd",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 338458,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "wood",
+    "asset": "wood_table_worn",
+    "channel": "arm",
+    "file": "wood_table_worn-arm.webp",
+    "source": "https://polyhaven.com/a/wood_table_worn",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_arm_1k.jpg",
+    "authors": {
+      "Dimitrios Savva": "Photography",
+      "Rico Cilliers": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "337f3d8c644bfb190f9f30aad0689163",
+    "sha256": "76e5c7b3e4c39bd6c48d2c51bb1e961dab19976985aea449ecc4637887a53e5d",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 223950,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "stone",
+    "asset": "large_sandstone_blocks_01",
+    "channel": "diff",
+    "file": "large_sandstone_blocks_01-diff.webp",
+    "source": "https://polyhaven.com/a/large_sandstone_blocks_01",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/large_sandstone_blocks_01/large_sandstone_blocks_01_diff_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "78dd6175efd141c63bf19cc40f97cb9a",
+    "sha256": "807a89714e4f3b21a1f1398658c11a81e990df7102eb15c28c381a1743816690",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 346212,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "stone",
+    "asset": "large_sandstone_blocks_01",
+    "channel": "normal",
+    "file": "large_sandstone_blocks_01-normal.webp",
+    "source": "https://polyhaven.com/a/large_sandstone_blocks_01",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/large_sandstone_blocks_01/large_sandstone_blocks_01_nor_gl_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "cb9717ae6a54990c0bc57b1e10f674a8",
+    "sha256": "eaa0d891e9f48d5634c3dcdc1900090ebfd3b8664d7daf60b1bb724b1dc0e4a4",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 495260,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "stone",
+    "asset": "large_sandstone_blocks_01",
+    "channel": "arm",
+    "file": "large_sandstone_blocks_01-arm.webp",
+    "source": "https://polyhaven.com/a/large_sandstone_blocks_01",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/large_sandstone_blocks_01/large_sandstone_blocks_01_arm_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "d48e940353414dc6a0c70dedc1141265",
+    "sha256": "7e7d4cc4b4a6af5e7cce555a9823a53b0a573db14803079b2547d17e7230c9cd",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 215242,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "sand",
+    "asset": "sandy_gravel_02",
+    "channel": "diff",
+    "file": "sandy_gravel_02-diff.webp",
+    "source": "https://polyhaven.com/a/sandy_gravel_02",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sandy_gravel_02/sandy_gravel_02_diff_1k.jpg",
+    "authors": {
+      "Dario Barresi": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "e8f0496f1e0e923514470171de033bf9",
+    "sha256": "39fd610d0316ffcd594a320ce7af828774005ff6ed451ec13b9d00b706f598d7",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 365886,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "sand",
+    "asset": "sandy_gravel_02",
+    "channel": "normal",
+    "file": "sandy_gravel_02-normal.webp",
+    "source": "https://polyhaven.com/a/sandy_gravel_02",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sandy_gravel_02/sandy_gravel_02_nor_gl_1k.jpg",
+    "authors": {
+      "Dario Barresi": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "a0174cc069d02b825b546d8547b4a49a",
+    "sha256": "dafc638d3fabd45ef7fdd3f6ff78a80ebe3fdefced1509cd9899f452eb07a511",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 632336,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "sand",
+    "asset": "sandy_gravel_02",
+    "channel": "arm",
+    "file": "sandy_gravel_02-arm.webp",
+    "source": "https://polyhaven.com/a/sandy_gravel_02",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sandy_gravel_02/sandy_gravel_02_arm_1k.jpg",
+    "authors": {
+      "Dario Barresi": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "1fef9778c9be98b81bb30a69437ec1da",
+    "sha256": "b7efa51238bd81dbf9a50b7c296615e257a22a61e44e61df235b4b97c1643023",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 263214,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "snow",
+    "asset": "snow_02",
+    "channel": "diff",
+    "file": "snow_02-diff.webp",
+    "source": "https://polyhaven.com/a/snow_02",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/snow_02/snow_02_diff_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "fc54766c6b36ff298699115a619d440b",
+    "sha256": "7093cebafcfb435a6da63e5ffd038a2cfaba4a93688920c23ede16372a9fe401",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 157726,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "snow",
+    "asset": "snow_02",
+    "channel": "normal",
+    "file": "snow_02-normal.webp",
+    "source": "https://polyhaven.com/a/snow_02",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/snow_02/snow_02_nor_gl_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "f16b5701f9ad521cdd6af10c1d6d2b48",
+    "sha256": "f57e9db2b9676cd6d72e8c6af284d7120240e29b89ed4c9ff982d952cb475fb2",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 556370,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "snow",
+    "asset": "snow_02",
+    "channel": "arm",
+    "file": "snow_02-arm.webp",
+    "source": "https://polyhaven.com/a/snow_02",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/snow_02/snow_02_arm_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "701fa0f0fa36bc69f3a8f3cde0ad2d95",
+    "sha256": "554b3e5fe8b19dec5424e7bd1e4f47ea5624e8533bf16527c36b3e0a32fa55ff",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 62150,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "marble",
+    "asset": "marble_01",
+    "channel": "diff",
+    "file": "marble_01-diff.webp",
+    "source": "https://polyhaven.com/a/marble_01",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_diff_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "04325ced5018eb8a2e598a4ef69cb176",
+    "sha256": "49b3b89932254dc703d84f3b2865bfcee7b65ce69192d9846c10582af5021f51",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 110556,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "marble",
+    "asset": "marble_01",
+    "channel": "normal",
+    "file": "marble_01-normal.webp",
+    "source": "https://polyhaven.com/a/marble_01",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_nor_gl_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "fa073d722cde733c1bd6cc6e8897c8e3",
+    "sha256": "f1190a7e71ee23e3fa7a290666f541dddbbb639dcda060e6c7eacd1a4c2745a3",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 27320,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "marble",
+    "asset": "marble_01",
+    "channel": "arm",
+    "file": "marble_01-arm.webp",
+    "source": "https://polyhaven.com/a/marble_01",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_arm_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "51017a4e4f320c3b58763c66727d89c1",
+    "sha256": "74624b090f05103c96f39e03108af9e543b52e492993edc8439166451d0e52bd",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 36726,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "paving",
+    "asset": "cobblestone_floor_04",
+    "channel": "diff",
+    "file": "cobblestone_floor_04-diff.webp",
+    "source": "https://polyhaven.com/a/cobblestone_floor_04",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cobblestone_floor_04/cobblestone_floor_04_diff_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "b57737026948ed8b4fce9b0cb3c91e81",
+    "sha256": "5efa6ac129641583a11387d3d57174877bd75be20fa83febc615dd32d98f8b24",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 284182,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "paving",
+    "asset": "cobblestone_floor_04",
+    "channel": "normal",
+    "file": "cobblestone_floor_04-normal.webp",
+    "source": "https://polyhaven.com/a/cobblestone_floor_04",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cobblestone_floor_04/cobblestone_floor_04_nor_gl_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "583a0f00ea8cb54ed38265ff2db6f022",
+    "sha256": "5a5b5443887af027a4c6454096b86f17976f46a8f028ba08a595ce39ac3b96a0",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 389636,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "paving",
+    "asset": "cobblestone_floor_04",
+    "channel": "arm",
+    "file": "cobblestone_floor_04-arm.webp",
+    "source": "https://polyhaven.com/a/cobblestone_floor_04",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cobblestone_floor_04/cobblestone_floor_04_arm_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "9a919928a55dacdbf4e9c77c9a2e80af",
+    "sha256": "5c091ec2c4a9f8ae797de1ff7a6b1bc91a0e2d4a0a5712b4c6cb26d78e2039b5",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 241992,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "concrete",
+    "asset": "concrete_floor_worn_001",
+    "channel": "diff",
+    "file": "concrete_floor_worn_001-diff.webp",
+    "source": "https://polyhaven.com/a/concrete_floor_worn_001",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_worn_001/concrete_floor_worn_001_diff_1k.jpg",
+    "authors": {
+      "Dimitrios Savva": "Photography",
+      "Rico Cilliers": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "e35597cca586150b1ab2aa9a331a39c5",
+    "sha256": "b50a27bfcd63e786526c7fc03fccb6f285c02d9568cad7c1f7ed52f05d0857af",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 83616,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "concrete",
+    "asset": "concrete_floor_worn_001",
+    "channel": "normal",
+    "file": "concrete_floor_worn_001-normal.webp",
+    "source": "https://polyhaven.com/a/concrete_floor_worn_001",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_worn_001/concrete_floor_worn_001_nor_gl_1k.jpg",
+    "authors": {
+      "Dimitrios Savva": "Photography",
+      "Rico Cilliers": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "9de6626758f8793b71182b892c110827",
+    "sha256": "722191e4fc925a70e5fdd057e87853ec50bc7a30c7c5ead451a2048df5b44080",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 146192,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "concrete",
+    "asset": "concrete_floor_worn_001",
+    "channel": "arm",
+    "file": "concrete_floor_worn_001-arm.webp",
+    "source": "https://polyhaven.com/a/concrete_floor_worn_001",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_worn_001/concrete_floor_worn_001_arm_1k.jpg",
+    "authors": {
+      "Dimitrios Savva": "Photography",
+      "Rico Cilliers": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "8174fe8a5c982edef079c3c3775e5377",
+    "sha256": "f8efbae7c8b8fd36d24b074ef6511d6ae94b8cbaa87ee949ed7dbc11deeb8f6b",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 152748,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "grass",
+    "asset": "aerial_grass_rock",
+    "channel": "diff",
+    "file": "aerial_grass_rock-diff.webp",
+    "source": "https://polyhaven.com/a/aerial_grass_rock",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_diff_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "e920ce36afd0abff000b8366d3d768d3",
+    "sha256": "4142f57cd397bf7ee1553797d93220ac7f40c2c41d0468f4713a3eedc53f0e4b",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 335138,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "grass",
+    "asset": "aerial_grass_rock",
+    "channel": "normal",
+    "file": "aerial_grass_rock-normal.webp",
+    "source": "https://polyhaven.com/a/aerial_grass_rock",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_nor_gl_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "c8aa4c4f09b113cc7edef89ddeaccad9",
+    "sha256": "b390b29f47a873fc7c1915835732f94018cef39f5fd51d551cab578f12bd3a5e",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 493262,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "grass",
+    "asset": "aerial_grass_rock",
+    "channel": "arm",
+    "file": "aerial_grass_rock-arm.webp",
+    "source": "https://polyhaven.com/a/aerial_grass_rock",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_arm_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "1f37fdb9b46b7fe34932ed9aa77df0bf",
+    "sha256": "6571e64cb31fd0df96e67c519ca71d7d42357bdcff8040b0300a89a8288ceaf1",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 250274,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "metal",
+    "asset": "metal_plate",
+    "channel": "diff",
+    "file": "metal_plate-diff.webp",
+    "source": "https://polyhaven.com/a/metal_plate",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/metal_plate/metal_plate_diff_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "bd9daf4c04046ca392a38b8df955ed26",
+    "sha256": "72d6ddd7f9b71cfeae6e44cb894696fefd6b85378e3b09d6db00f2fa89387703",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 169728,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "metal",
+    "asset": "metal_plate",
+    "channel": "normal",
+    "file": "metal_plate-normal.webp",
+    "source": "https://polyhaven.com/a/metal_plate",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/metal_plate/metal_plate_nor_gl_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "d379e66130ad6ccff217ac9b13de935d",
+    "sha256": "4a92562fda98950ea7ee735d75a61e8f65945644715954ca32064ddb9256fc44",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 304408,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
+  },
+  {
+    "kind": "metal",
+    "asset": "metal_plate",
+    "channel": "arm",
+    "file": "metal_plate-arm.webp",
+    "source": "https://polyhaven.com/a/metal_plate",
+    "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/metal_plate/metal_plate_arm_1k.jpg",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "13f064ffa4863a4170d902f675eb022e",
+    "sha256": "42712db0cb6e4af605fdda1aaff1bc08cf331054ca768e5e7aa763fc264cc843",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "bytes": 344068,
+    "processing": "1024 px maximum, WebP RGB, normale OpenGL, ARM empaqueté"
   }
 ]

@@ -1,0 +1,810 @@
+[
+  {
+    "panorama": "moonless_golf",
+    "universes": [
+      "star_tree"
+    ],
+    "sky": "moonless_golf-sky.webp",
+    "light": "moonless_golf-light.hdr",
+    "white": 1.208777,
+    "average": 0.28428,
+    "sun": {
+      "direction": [
+        -0.27172,
+        0.1024,
+        -0.95691
+      ],
+      "elevation": 5.88,
+      "azimuth": 195.85,
+      "color": "#fff7b8",
+      "share": 0.195
+    },
+    "source": "https://polyhaven.com/a/moonless_golf",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/moonless_golf_4k.hdr",
+    "authors": {
+      "Greg Zaal": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "bdbb3b2a8216e2b1091edaa2a160f0c7",
+    "sky_sha256": "c857b116c505ef1b94a177ac65909a800c275d7435d2e9ff5fa1ed05df8b0b8f",
+    "light_sha256": "cb4c12e16d72201e7e52517a3fe94046f3a227a809adeabcd966d713add5f357",
+    "bytes": [
+      335334,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "kloppenheim_02_puresky",
+    "universes": [
+      "eternity_fountain"
+    ],
+    "sky": "kloppenheim_02_puresky-sky.webp",
+    "light": "kloppenheim_02_puresky-light.hdr",
+    "white": 1.757406,
+    "average": 0.483252,
+    "sun": {
+      "direction": [
+        0.77655,
+        0.29322,
+        0.55767
+      ],
+      "elevation": 17.05,
+      "azimuth": 54.32,
+      "color": "#e6efff",
+      "share": 0.3037
+    },
+    "source": "https://polyhaven.com/a/kloppenheim_02_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kloppenheim_02_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "25119faf6bad4d58d19e2f28e193d804",
+    "sky_sha256": "1e65ae2dbadf747b2994ccae41296d179fe7f90fe4ae80cfe6061f306fed6e1e",
+    "light_sha256": "8267afb18144ad9797b98a90d8cbe2bd804368a26c757d771f4288459b1e1cdb",
+    "bytes": [
+      244004,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "qwantani_mid_morning_puresky",
+    "universes": [
+      "eden"
+    ],
+    "sky": "qwantani_mid_morning_puresky-sky.webp",
+    "light": "qwantani_mid_morning_puresky-light.hdr",
+    "white": 1.325002,
+    "average": 1.570072,
+    "sun": {
+      "direction": [
+        0.61826,
+        0.64456,
+        0.44977
+      ],
+      "elevation": 40.13,
+      "azimuth": 53.96,
+      "color": "#fff8ee",
+      "share": 0.4763
+    },
+    "source": "https://polyhaven.com/a/qwantani_mid_morning_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/qwantani_mid_morning_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Photography",
+      "Jarod Guest": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "e403ba6805b2e6b7da51a13a4aaab898",
+    "sky_sha256": "230eb029d110fbf9d123bef60dc4261ef9a6429468d081043947e0cb52371cc8",
+    "light_sha256": "6f8dfde4ee9f13152707540156f636fa6a1e2cd15835c36df62fa03706aa715f",
+    "bytes": [
+      46114,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "qwantani_moonrise_puresky",
+    "universes": [
+      "time_river"
+    ],
+    "sky": "qwantani_moonrise_puresky-sky.webp",
+    "light": "qwantani_moonrise_puresky-light.hdr",
+    "white": 5.481575,
+    "average": 1.775558,
+    "sun": {
+      "direction": [
+        0.78502,
+        0.24,
+        0.57109
+      ],
+      "elevation": 13.89,
+      "azimuth": 53.96,
+      "color": "#ffe3cc",
+      "share": 0.2298
+    },
+    "source": "https://polyhaven.com/a/qwantani_moonrise_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/qwantani_moonrise_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Photography",
+      "Jarod Guest": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "47d0df8c2e0d3c411ceb4dd222bdd1a1",
+    "sky_sha256": "2a9bc7c9beeb7b299d59d567afe4df72d61fd441e4ad6137a76692d682d531f3",
+    "light_sha256": "e5cb280d5401ca71bad610e6d0f35483a0414d73ce5114e6fca205fa3deb6298",
+    "bytes": [
+      78910,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "belfast_sunset_puresky",
+    "universes": [
+      "memories"
+    ],
+    "sky": "belfast_sunset_puresky-sky.webp",
+    "light": "belfast_sunset_puresky-light.hdr",
+    "white": 16.829849,
+    "average": 1.37701,
+    "sun": {
+      "direction": [
+        0.6756,
+        0.06802,
+        0.73413
+      ],
+      "elevation": 3.9,
+      "azimuth": 42.62,
+      "color": "#ffd29f",
+      "share": 0.0603
+    },
+    "source": "https://polyhaven.com/a/belfast_sunset_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/belfast_sunset_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Processing",
+      "Dimitrios Savva": "Photography",
+      "Jarod Guest": "Sky edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "52d2339c16069a2aaa7fd37a320d8495",
+    "sky_sha256": "1e7007677048e6d092fd5308682be60458513dd2015990f73d57ebb723f2b1d6",
+    "light_sha256": "809f240d559e926191a5837d171aa94294f6fd0c6180ad3c2293b2074a449a27",
+    "bytes": [
+      64352,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "rogland_clear_night",
+    "universes": [
+      "interstellar"
+    ],
+    "sky": "rogland_clear_night-sky.webp",
+    "light": "rogland_clear_night-light.hdr",
+    "white": 0.97524,
+    "average": 0.294563,
+    "sun": {
+      "direction": [
+        0.55015,
+        0.83493,
+        0.01529
+      ],
+      "elevation": 56.61,
+      "azimuth": 88.41,
+      "color": "#a7c0ff",
+      "share": 0.0006
+    },
+    "source": "https://polyhaven.com/a/rogland_clear_night",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/rogland_clear_night_4k.hdr",
+    "authors": {
+      "Greg Zaal": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "24f1045ef4a6402adc3ab1454a11dd42",
+    "sky_sha256": "f4a784c6a5b204c92c9939b2cb32bec35b7328780039044c60eca5f95e9d536e",
+    "light_sha256": "2d7475e5bb984a18e4e5cceb0087eac979d611bfd30e6a5476bfdbd661ef3b0f",
+    "bytes": [
+      1575994,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "satara_night_no_lamps",
+    "universes": [
+      "galaxy"
+    ],
+    "sky": "satara_night_no_lamps-sky.webp",
+    "light": "satara_night_no_lamps-light.hdr",
+    "white": 0.401635,
+    "average": 0.075218,
+    "sun": {
+      "direction": [
+        0.07333,
+        0.99657,
+        -0.03833
+      ],
+      "elevation": 85.25,
+      "azimuth": 117.6,
+      "color": "#71bdff",
+      "share": 0.006
+    },
+    "source": "https://polyhaven.com/a/satara_night_no_lamps",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/satara_night_no_lamps_4k.hdr",
+    "authors": {
+      "Greg Zaal": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "eb93139b553c68837cc8b674728a7d0b",
+    "sky_sha256": "864cdc5bea1a17c047e1695937449a9b528e4fc30bba66666d2caf994f855c92",
+    "light_sha256": "66b0a9a573f929852bfc9c9cbdf48fe2a47437485b812f1f10da908e36a0125c",
+    "bytes": [
+      2332336,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "kloppenheim_06_puresky",
+    "universes": [
+      "heaven"
+    ],
+    "sky": "kloppenheim_06_puresky-sky.webp",
+    "light": "kloppenheim_06_puresky-light.hdr",
+    "white": 5.136913,
+    "average": 0.938885,
+    "sun": {
+      "direction": [
+        0.7797,
+        0.13772,
+        0.61083
+      ],
+      "elevation": 7.92,
+      "azimuth": 51.92,
+      "color": "#ffca87",
+      "share": 0.0014
+    },
+    "source": "https://polyhaven.com/a/kloppenheim_06_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kloppenheim_06_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "63e9826c43b973f8b6ecb07cb6a89227",
+    "sky_sha256": "0f205460a45ba2dc69a0696425fb5fa1f55ada33864124d4b5e5b2efee7dd96b",
+    "light_sha256": "3dc51e813d49c4cce1e860dfd29f280d88195f1a9c547b6bcbeb6207cbc5c55f",
+    "bytes": [
+      133332,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "syferfontein_0d_clear_puresky",
+    "universes": [
+      "oasis"
+    ],
+    "sky": "syferfontein_0d_clear_puresky-sky.webp",
+    "light": "syferfontein_0d_clear_puresky-light.hdr",
+    "white": 11.384864,
+    "average": 0.802602,
+    "sun": {
+      "direction": [
+        0.81476,
+        0.08004,
+        0.57424
+      ],
+      "elevation": 4.59,
+      "azimuth": 54.82,
+      "color": "#ffe4ba",
+      "share": 0.1032
+    },
+    "source": "https://polyhaven.com/a/syferfontein_0d_clear_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/syferfontein_0d_clear_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "8c829355bb5582fe20784e0b642e4888",
+    "sky_sha256": "097ac67f61cd9cba46acc67cc602a7af0569fe88c71484d5655bf8a53d1d44e8",
+    "light_sha256": "2c004732ddd6c7a4c4684e4e5284f2db829b1a57459539aea66618b7968733e4",
+    "bytes": [
+      43138,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "kloppenheim_07_puresky",
+    "universes": [
+      "rain_refuge"
+    ],
+    "sky": "kloppenheim_07_puresky-sky.webp",
+    "light": "kloppenheim_07_puresky-light.hdr",
+    "white": 1.181792,
+    "average": 0.331586,
+    "sun": {
+      "direction": [
+        0.63703,
+        0.61867,
+        0.45983
+      ],
+      "elevation": 38.22,
+      "azimuth": 54.18,
+      "color": "#dff4ff",
+      "share": 0.0004
+    },
+    "source": "https://polyhaven.com/a/kloppenheim_07_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kloppenheim_07_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "f88d16589849778174261f25a676f2b4",
+    "sky_sha256": "ba30fd33070531f91855fff532da87a223d92d2a963ad7df1bb56696424269a1",
+    "light_sha256": "e9fe8b1dd5d47f5aa1127331dad9d24eceed689ae886b6ce01ad97624d6bc2e9",
+    "bytes": [
+      101420,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "qwantani_night_puresky",
+    "universes": [
+      "aurora_valley"
+    ],
+    "sky": "qwantani_night_puresky-sky.webp",
+    "light": "qwantani_night_puresky-light.hdr",
+    "white": 14.158397,
+    "average": 0.890121,
+    "sun": {
+      "direction": [
+        -0.02063,
+        0.99488,
+        0.09894
+      ],
+      "elevation": 84.2,
+      "azimuth": 348.22,
+      "color": "#ffca6a",
+      "share": 0.0003
+    },
+    "source": "https://polyhaven.com/a/qwantani_night_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/qwantani_night_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Photography",
+      "Jarod Guest": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "acd645e92308841aa0c82eada9830f2d",
+    "sky_sha256": "a75e1377b327f1b7dbbbb5656406565adae59f6bfb48d53fcf340f55859cd0b1",
+    "light_sha256": "4175733d9370ac4338638d4d5b4ba3974fc00453083dde7b835cdfa8aa6fab00",
+    "bytes": [
+      122890,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "qwantani_morning_puresky",
+    "universes": [
+      "spring_meadow"
+    ],
+    "sky": "qwantani_morning_puresky-sky.webp",
+    "light": "qwantani_morning_puresky-light.hdr",
+    "white": 3.149034,
+    "average": 1.777185,
+    "sun": {
+      "direction": [
+        0.75885,
+        0.34554,
+        0.55205
+      ],
+      "elevation": 20.21,
+      "azimuth": 53.96,
+      "color": "#ffe9cb",
+      "share": 0.3255
+    },
+    "source": "https://polyhaven.com/a/qwantani_morning_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/qwantani_morning_puresky_4k.hdr",
+    "authors": {
+      "Jarod Guest": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "b065d32bfc96c2a87f0547bd06ba30f5",
+    "sky_sha256": "6e3b994ca266757a2cfb512540b5e1670554a71abb540d8e17d4d47ceb3d4fe9",
+    "light_sha256": "5f20859c433ae02a7d170263f204552d6419b2dca2a1b782983678bfeb95d05f",
+    "bytes": [
+      43808,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "kloofendal_48d_partly_cloudy_puresky",
+    "universes": [
+      "summer_terrace"
+    ],
+    "sky": "kloofendal_48d_partly_cloudy_puresky-sky.webp",
+    "light": "kloofendal_48d_partly_cloudy_puresky-light.hdr",
+    "white": 5.566804,
+    "average": 1.158501,
+    "sun": {
+      "direction": [
+        0.55435,
+        0.74158,
+        0.37783
+      ],
+      "elevation": 47.87,
+      "azimuth": 55.72,
+      "color": "#fcfff7",
+      "share": 0.2615
+    },
+    "source": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kloofendal_48d_partly_cloudy_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "816340c969d2e60d659051d13ac3c4dc",
+    "sky_sha256": "9e5afd0dcc95b5b4d472fc0be01cc1379d345137b9b0d21f23f6b9f041757220",
+    "light_sha256": "9c8a487c17ead4fa298904390e65de87302d32456100d8938dd78cc4da51dc4a",
+    "bytes": [
+      114634,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "evening_road_01_puresky",
+    "universes": [
+      "autumn_lake"
+    ],
+    "sky": "evening_road_01_puresky-sky.webp",
+    "light": "evening_road_01_puresky-light.hdr",
+    "white": 7.712914,
+    "average": 1.244099,
+    "sun": {
+      "direction": [
+        0.74225,
+        0.24851,
+        0.62234
+      ],
+      "elevation": 14.39,
+      "azimuth": 50.02,
+      "color": "#ffe8bd",
+      "share": 0.0138
+    },
+    "source": "https://polyhaven.com/a/evening_road_01_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/evening_road_01_puresky_4k.hdr",
+    "authors": {
+      "Jarod Guest": "Sky Edits",
+      "Sergej Majboroda": "Original"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "3461499a68e8fe03ec42592f4bc2d5ef",
+    "sky_sha256": "5800d9cce0ef5739888112df857c73c1af93bf75d1838d1ef8d29a407d63a40e",
+    "light_sha256": "6a6ca641141f2ef61c4edc611b6d6a47ecffd1a47c1b92ce15a3812323100133",
+    "bytes": [
+      138528,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "snow_field_2_puresky",
+    "universes": [
+      "winter_lodge"
+    ],
+    "sky": "snow_field_2_puresky-sky.webp",
+    "light": "snow_field_2_puresky-light.hdr",
+    "white": 1.67765,
+    "average": 0.801666,
+    "sun": {
+      "direction": [
+        0.75448,
+        0.12938,
+        0.64345
+      ],
+      "elevation": 7.43,
+      "azimuth": 49.54,
+      "color": "#ffe6cd",
+      "share": 0.0051
+    },
+    "source": "https://polyhaven.com/a/snow_field_2_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/snow_field_2_puresky_4k.hdr",
+    "authors": {
+      "Jarod Guest": "Sky Edits",
+      "Sergej Majboroda": "Original"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "f56779db3629d28b6831921f6c901a91",
+    "sky_sha256": "f4034c208862f53c6f223d0e9013920ae3fbb2401d63308f407001c6c26becf6",
+    "light_sha256": "9d9ee504e37b517aa577f20e56b6ce143288f2639e20288fcdae03eb2f181445",
+    "bytes": [
+      59030,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "neuer_zollhof",
+    "universes": [
+      "rain_city"
+    ],
+    "sky": "neuer_zollhof-sky.webp",
+    "light": "neuer_zollhof-light.hdr",
+    "white": 1.915119,
+    "average": 2.568097,
+    "sun": {
+      "direction": [
+        0.62492,
+        0.57548,
+        0.52754
+      ],
+      "elevation": 35.13,
+      "azimuth": 49.83,
+      "color": "#ffc63d",
+      "share": 0.3099
+    },
+    "source": "https://polyhaven.com/a/neuer_zollhof",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/neuer_zollhof_4k.hdr",
+    "authors": {
+      "Greg Zaal": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "afdb07662cb995b4e6782ef45e1bb0b6",
+    "sky_sha256": "fd3b2b3e1a454eda154f7d4dca9efa680e62f4b559f5b429ceb19ba61862b87c",
+    "light_sha256": "cb902f9a8aed5330240258783628e91ff7fa030b04fab16089455605678e1e8f",
+    "bytes": [
+      677510,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "table_mountain_2_puresky",
+    "universes": [
+      "ocean_cliffs"
+    ],
+    "sky": "table_mountain_2_puresky-sky.webp",
+    "light": "table_mountain_2_puresky-light.hdr",
+    "white": 3.8552,
+    "average": 0.829222,
+    "sun": {
+      "direction": [
+        0.64107,
+        0.12545,
+        0.75716
+      ],
+      "elevation": 7.21,
+      "azimuth": 40.25,
+      "color": "#ffebb0",
+      "share": 0.2714
+    },
+    "source": "https://polyhaven.com/a/table_mountain_2_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/table_mountain_2_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky Edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "a8159ca0e51b34606fff4fca703f8a21",
+    "sky_sha256": "8ced90578686ab0199ced81e6345f166557f49077763c23dafbe8d21552b8d65",
+    "light_sha256": "1bd24d1d5e86e7eb2077c498e4ffe2f44a0e6edda79658ab7c528711a90680b4",
+    "bytes": [
+      68654,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "mpumalanga_veld_puresky",
+    "universes": [
+      "sahara_observatory"
+    ],
+    "sky": "mpumalanga_veld_puresky-sky.webp",
+    "light": "mpumalanga_veld_puresky-light.hdr",
+    "white": 4.969669,
+    "average": 1.921733,
+    "sun": {
+      "direction": [
+        0.79954,
+        0.14976,
+        0.58165
+      ],
+      "elevation": 8.61,
+      "azimuth": 53.96,
+      "color": "#fffbde",
+      "share": 0.4011
+    },
+    "source": "https://polyhaven.com/a/mpumalanga_veld_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/mpumalanga_veld_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky Edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "5057669f9f158fe4217f1010abc0ac9c",
+    "sky_sha256": "82ab4aaa278972c2602a6d664f556d543709ed55b53dc73eedc66ee3d8e78655",
+    "light_sha256": "e52a0f698ce15f20ca1c323a226b7359f2d447fc43e8c4da35c0b3f4964de8bd",
+    "bytes": [
+      46936,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "kloofendal_misty_morning_puresky",
+    "universes": [
+      "ancient_forest"
+    ],
+    "sky": "kloofendal_misty_morning_puresky-sky.webp",
+    "light": "kloofendal_misty_morning_puresky-light.hdr",
+    "white": 1.636487,
+    "average": 1.130679,
+    "sun": {
+      "direction": [
+        0.2046,
+        0.97852,
+        0.02544
+      ],
+      "elevation": 78.1,
+      "azimuth": 82.91,
+      "color": "#e4edff",
+      "share": 0.6747
+    },
+    "source": "https://polyhaven.com/a/kloofendal_misty_morning_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kloofendal_misty_morning_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "7f0f40b402cd944c599b88000f53e108",
+    "sky_sha256": "2e8f6e37dbc65d38a0ee8888c9841f6cc19f36db204c5144e8cf3e038a268529",
+    "light_sha256": "93dee2773d99b0315ae0cea63b0ffe26ef573d2317e367fc29ee41f04f75f20c",
+    "bytes": [
+      41454,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "kloppenheim_01_puresky",
+    "universes": [
+      "storm_cliffs"
+    ],
+    "sky": "kloppenheim_01_puresky-sky.webp",
+    "light": "kloppenheim_01_puresky-light.hdr",
+    "white": 4.748785,
+    "average": 0.948395,
+    "sun": {
+      "direction": [
+        0.81109,
+        0.05826,
+        0.58201
+      ],
+      "elevation": 3.34,
+      "azimuth": 54.34,
+      "color": "#ffaa51",
+      "share": 0.001
+    },
+    "source": "https://polyhaven.com/a/kloppenheim_01_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kloppenheim_01_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky edits"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "6f090dd65ba66ab4fa1120151653cd8f",
+    "sky_sha256": "0b04a35590fffd0e2367ae513418c59c4afe04c3c7d724beb501632b2a4d4717",
+    "light_sha256": "22c9e4be55457cd062c87e20bde3a471c7ba564c10b763b6dd255c816d129e3d",
+    "bytes": [
+      44974,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "qwantani_moon_noon_puresky",
+    "universes": [
+      "polar_sky"
+    ],
+    "sky": "qwantani_moon_noon_puresky-sky.webp",
+    "light": "qwantani_moon_noon_puresky-light.hdr",
+    "white": 1.132287,
+    "average": 1.026287,
+    "sun": {
+      "direction": [
+        0.39621,
+        0.8716,
+        0.28868
+      ],
+      "elevation": 60.64,
+      "azimuth": 53.92,
+      "color": "#fff5f2",
+      "share": 0.5256
+    },
+    "source": "https://polyhaven.com/a/qwantani_moon_noon_puresky",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/qwantani_moon_noon_puresky_4k.hdr",
+    "authors": {
+      "Greg Zaal": "Photography",
+      "Jarod Guest": "Processing"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "9bb9a0b94f054ed9a4ab5f40a34e1003",
+    "sky_sha256": "8edcba48fae7a588cea09f1230ca1ac8f7bd96877d9a607d410392dc2c856c04",
+    "light_sha256": "ef9fdd65857dc50ac90459a27b72cc9275f27da424164a23cfbe0ef07bca5c56",
+    "bytes": [
+      69614,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  },
+  {
+    "panorama": "rooftop_night",
+    "universes": [
+      "midnight_rooftop"
+    ],
+    "sky": "rooftop_night-sky.webp",
+    "light": "rooftop_night-light.hdr",
+    "white": 8.12631,
+    "average": 0.859895,
+    "sun": {
+      "direction": [
+        0.79594,
+        0.60482,
+        -0.02599
+      ],
+      "elevation": 37.22,
+      "azimuth": 91.87,
+      "color": "#ffede8",
+      "share": 0.3967
+    },
+    "source": "https://polyhaven.com/a/rooftop_night",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/rooftop_night_4k.hdr",
+    "authors": {
+      "Greg Zaal": "All"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://polyhaven.com/license",
+    "source_md5": "29ff31cdd0d50c4e3ab0ef7bcd55ed7b",
+    "sky_sha256": "6470c20eaf0023d59c7dbb186788d165d8415b56e7fa03f2694b24f13b24d4c8",
+    "light_sha256": "e479b2afbbc19e86fe96da763f3f240b23eec4c10d18d083091ec89f974cc5c5",
+    "bytes": [
+      206414,
+      524337
+    ],
+    "processing": "fond 4096×2048 WebP sRGB divisé par le blanc, éclairage 512×256 RGBE"
+  }
+]
