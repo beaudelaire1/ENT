@@ -13,7 +13,6 @@
 // `tools/sablier-photo-worlds.py`, qui en consigne la provenance.
 const BASE = new URL("../photos/", import.meta.url);
 const TAU = Math.PI * 2;
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 function page() {
   return document.querySelector("#focus-app");
@@ -74,23 +73,20 @@ export function photoBackdrop(THREE, { src, focus = [0.5, 0.5], drift = 0.06 }) 
   mesh.renderOrder = -100;
 
   let imageAspect = 16 / 9;
-  let viewAspect = 16 / 9;
+  let view = { w: 16, h: 9 };
   let zoom = 1;
   let pan = [0, 0];
+  let current = null;
   let loaded = false;
 
-  // Couvre l'écran sans déformer : l'axe le plus serré montre toute l'image, l'autre la
-  // rogne autour du point focal, sans jamais sortir de ses bords.
+  // Couvre l'écran sans déformer, rognée autour du point focal. La fenêtre visible vient des
+  // règles de placement (`placement.js`) et non d'un calcul d'ici : la photo et l'objet posé
+  // dessus doivent cadrer sur la même fenêtre, au pixel près.
   function frame() {
-    const cover = viewAspect > imageAspect ? [1, imageAspect / viewAspect] : [viewAspect / imageAspect, 1];
-    const sx = cover[0] / zoom;
-    const sy = cover[1] / zoom;
+    current = globalThis.SablierPlacement.frame({ imageAspect, view, focus, zoom, pan });
+    uniforms.span.value.set(current.sx, current.sy);
     // L'image est retournée au chargement : le haut de la photo est en v = 1.
-    uniforms.span.value.set(sx, sy);
-    uniforms.origin.value.set(
-      clamp(focus[0] + pan[0] - sx / 2, 0, 1 - sx),
-      clamp(1 - focus[1] + pan[1] - sy / 2, 0, 1 - sy),
-    );
+    uniforms.origin.value.set(current.ox, 1 - current.oy - current.sy);
   }
 
   pending(1);
@@ -121,8 +117,12 @@ export function photoBackdrop(THREE, { src, focus = [0.5, 0.5], drift = 0.06 }) 
     mesh,
     get ready() { return loaded; },
     resize(width, height) {
-      viewAspect = width / Math.max(1, height);
+      view = { w: width, h: Math.max(1, height) };
       frame();
+    },
+    // La fenêtre d'image visible à cet instant, dérive comprise : `sablier.js` y pose l'objet.
+    frame() {
+      return current && { ...current, imageAspect };
     },
     setFlash(value) {
       uniforms.flash.value = value;

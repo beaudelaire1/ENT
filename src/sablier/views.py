@@ -47,6 +47,7 @@ def sablier_asset_version() -> str:
 
 
 TRANSVERSAL_SUBJECT = "transversal"
+PHOTOS = settings.BASE_DIR / "static" / "sablier" / "photos"
 
 
 def competency_subjects(user) -> list[dict]:
@@ -157,6 +158,14 @@ def home(request):
             "scenes": scenes.SCENES,
             "palette_css": scenes.palette_css(),
             "decors": {scene.key: scene.decor for scene in scenes.SCENES},
+            # Ce que l'image de chaque lieu offre pour y poser un objet — supports, ciel,
+            # fenêtre, cadrage —, lu par `placement.js`. `photo` dit si le lieu est une image
+            # cadrée par son point focal, ou une scène en volume qui occupe l'écran entier.
+            "places": {
+                scene.decor: {**scene.place, "photo": (PHOTOS / f"{scene.decor}.webp").is_file()}
+                for scene in scenes.SCENES
+                if scene.place
+            },
             # Les feuilles et scripts de Sablier changent souvent : sans cette empreinte,
             # le navigateur servirait l'ancienne version après chaque correction.
             "asset_version": asset_version,

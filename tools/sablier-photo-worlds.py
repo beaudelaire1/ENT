@@ -18,8 +18,9 @@ univers, le script :
   partir de la même image : la galerie et le poste sans WebGL montrent le même lieu ;
 * consigne la provenance de chaque fichier.
 
-Le point gardé au centre quand un cadre rogne l'image (``focus``) est lu dans
-``premium3d/worlds.js`` : la scène et les vues fixes cadrent au même endroit.
+Le point gardé au centre quand un cadre rogne l'image (``focus``) est lu dans la
+description du lieu (``src/sablier/scenes_catalog.json``) : la scène, les vues fixes et
+l'objet posé par les règles cadrent au même endroit.
 
 Aucune image n'est jamais agrandie : une vue plus grande que la zone disponible dans
 l'original est produite à la taille de cette zone.
@@ -47,6 +48,7 @@ SOURCES = Path(__file__).with_name("sablier-photo-sources.json")
 CACHE = ROOT / ".dist/photos"
 STATIC = ROOT / "src/static/sablier"
 RECIPES = STATIC / "premium3d/worlds.js"
+CATALOG = ROOT / "src/sablier/scenes_catalog.json"
 PHOTOS_DIR = STATIC / "photos"
 THUMBNAILS = STATIC / "thumbnails"
 
@@ -64,10 +66,10 @@ CREDIT = ("kind", "title", "author", "source", "generator", "generated_on", "pro
 
 
 def focuses() -> dict[str, tuple[float, float]]:
-    """Le point focal de chaque univers photographique, lu dans sa recette."""
-    recipes = RECIPES.read_text(encoding="utf-8")
-    found = re.findall(r'photo: \{src: "([a-z_]+)\.webp", focus: \[([\d.]+), ([\d.]+)\]', recipes)
-    return {world: (float(x), float(y)) for world, x, y in found}
+    """Le point focal de chaque univers photographique, lu dans la description de son lieu."""
+    imaged = set(re.findall(r'photo: \{src: "([a-z_]+)\.webp"', RECIPES.read_text(encoding="utf-8")))
+    catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+    return {entry["decor"]: tuple(entry["place"]["focus"]) for entry in catalog if entry["decor"] in imaged}
 
 
 def original(entry: dict, *, repin: bool = False) -> Path:

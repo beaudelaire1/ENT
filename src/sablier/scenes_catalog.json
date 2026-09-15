@@ -16,7 +16,61 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Arbre solitaire, lanternes aux branches. Rive nocturne, arbre de trois quarts."
+    "description": "Arbre solitaire, lanternes aux branches. Rive nocturne, arbre de trois quarts.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.36,
+        0.5
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.02,
+              0.74
+            ],
+            [
+              0.33,
+              0.72
+            ]
+          ],
+          "depth": [
+            0.2,
+            0.35
+          ]
+        },
+        {
+          "kind": "sol",
+          "surface": "pierre",
+          "line": [
+            [
+              0.0,
+              0.97
+            ],
+            [
+              0.3,
+              0.96
+            ]
+          ],
+          "depth": 0.05
+        }
+      ],
+      "sky": {
+        "horizon": 0.62,
+        "area": [
+          0.4,
+          0.0,
+          1.0,
+          0.45
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "fontaine",
@@ -35,7 +89,73 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Bassins en cascade et maisons superposées. Parvis au pied de la falaise."
+    "description": "Bassins en cascade et maisons superposées. Parvis au pied de la falaise.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.42,
+        0.5
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.25,
+              0.7
+            ],
+            [
+              0.47,
+              0.69
+            ]
+          ],
+          "depth": 0.45
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.82,
+              0.74
+            ],
+            [
+              0.98,
+              0.75
+            ]
+          ],
+          "depth": 0.15
+        },
+        {
+          "kind": "sol",
+          "surface": "pierre",
+          "line": [
+            [
+              0.05,
+              0.95
+            ],
+            [
+              0.75,
+              0.95
+            ]
+          ],
+          "depth": 0.05
+        }
+      ],
+      "sky": {
+        "horizon": 0.48,
+        "area": [
+          0.5,
+          0.0,
+          1.0,
+          0.45
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "eden",
@@ -54,7 +174,73 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Jardin à plusieurs niveaux. Entrée ouverte du jardin."
+    "description": "Jardin à plusieurs niveaux. Entrée ouverte du jardin.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.55,
+        0.5
+      ],
+      "drift": 0.06,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "pierre",
+          "line": [
+            [
+              0.2,
+              0.93
+            ],
+            [
+              0.58,
+              0.92
+            ]
+          ],
+          "depth": 0.1
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.68,
+              0.74
+            ],
+            [
+              0.95,
+              0.77
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.0,
+              0.61
+            ],
+            [
+              0.28,
+              0.6
+            ]
+          ],
+          "depth": 0.25
+        }
+      ],
+      "sky": {
+        "horizon": null,
+        "area": [
+          0.35,
+          0.0,
+          0.75,
+          0.14
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "fleuve_temps",
@@ -73,7 +259,58 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Fleuve sinueux. Berge à hauteur humaine."
+    "description": "Fleuve sinueux. Berge à hauteur humaine.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.5,
+        0.5
+      ],
+      "drift": 0.0,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "sable",
+          "line": [
+            [
+              0.05,
+              0.72
+            ],
+            [
+              0.35,
+              0.68
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "sol",
+          "surface": "sable",
+          "line": [
+            [
+              0.1,
+              0.62
+            ],
+            [
+              0.55,
+              0.58
+            ]
+          ],
+          "depth": 0.35
+        }
+      ],
+      "sky": {
+        "horizon": 0.5,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.48
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "souvenirs",
@@ -92,7 +329,55 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Cadres, commode, table et fauteuil. Pièce intime, face au mur de souvenirs."
+    "description": "Cadres, commode, table et fauteuil. Pièce intime, face au mur de souvenirs.",
+    "place": {
+      "type": "interieur",
+      "focus": [
+        0.25,
+        0.5
+      ],
+      "drift": 0.04,
+      "supports": [
+        {
+          "kind": "table",
+          "surface": "bois",
+          "line": [
+            [
+              0.5,
+              0.8
+            ],
+            [
+              0.9,
+              0.81
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "table",
+          "surface": "bois",
+          "line": [
+            [
+              0.03,
+              0.41
+            ],
+            [
+              0.36,
+              0.41
+            ]
+          ],
+          "depth": 0.45
+        }
+      ],
+      "sky": null,
+      "window": [
+        0.86,
+        0.0,
+        1.0,
+        0.42
+      ],
+      "float": null
+    }
   },
   {
     "key": "interstellaire",
@@ -111,7 +396,55 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Grande baie structurelle. Intérieur de la station."
+    "description": "Grande baie structurelle. Intérieur de la station.",
+    "place": {
+      "type": "interieur",
+      "focus": [
+        0.5,
+        0.5
+      ],
+      "drift": 0.03,
+      "supports": [
+        {
+          "kind": "rebord",
+          "surface": "métal",
+          "line": [
+            [
+              0.18,
+              0.72
+            ],
+            [
+              0.82,
+              0.72
+            ]
+          ],
+          "depth": 0.45
+        },
+        {
+          "kind": "sol",
+          "surface": "métal",
+          "line": [
+            [
+              0.2,
+              0.9
+            ],
+            [
+              0.8,
+              0.9
+            ]
+          ],
+          "depth": 0.15
+        }
+      ],
+      "sky": null,
+      "window": [
+        0.2,
+        0.05,
+        0.84,
+        0.66
+      ],
+      "float": null
+    }
   },
   {
     "key": "galaxie",
@@ -130,7 +463,30 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Galaxie inclinée. Vue cosmique sans architecture."
+    "description": "Galaxie inclinée. Vue cosmique sans architecture.",
+    "place": {
+      "type": "espace",
+      "focus": [
+        0.38,
+        0.45
+      ],
+      "drift": 0.07,
+      "supports": [],
+      "sky": {
+        "horizon": null,
+        "area": [
+          0.45,
+          0.3,
+          1.0,
+          0.9
+        ]
+      },
+      "window": null,
+      "float": [
+        0.62,
+        0.55
+      ]
+    }
   },
   {
     "key": "heaven",
@@ -149,7 +505,43 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Îles suspendues avec pavillons. Balcon sur le vide."
+    "description": "Îles suspendues avec pavillons. Balcon sur le vide.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.6,
+        0.5
+      ],
+      "drift": 0.06,
+      "supports": [
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.21,
+              0.8
+            ],
+            [
+              0.79,
+              0.8
+            ]
+          ],
+          "depth": 0.15
+        }
+      ],
+      "sky": {
+        "horizon": 0.5,
+        "area": [
+          0.2,
+          0.0,
+          0.8,
+          0.45
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "oasis",
@@ -168,7 +560,73 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Bassin ovale entouré de palmes. Bord du bassin."
+    "description": "Bassin ovale entouré de palmes. Bord du bassin.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.5,
+        0.6
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.22,
+              0.8
+            ],
+            [
+              0.4,
+              0.8
+            ]
+          ],
+          "depth": 0.15
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.0,
+              0.72
+            ],
+            [
+              0.21,
+              0.72
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.46,
+              0.92
+            ],
+            [
+              0.57,
+              0.91
+            ]
+          ],
+          "depth": 0.05
+        }
+      ],
+      "sky": {
+        "horizon": 0.5,
+        "area": [
+          0.2,
+          0.0,
+          1.0,
+          0.25
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "abysses",
@@ -187,7 +645,40 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Arche brisée sous l’eau. Fond marin, horizon noyé."
+    "description": "Arche brisée sous l’eau. Fond marin, horizon noyé.",
+    "place": {
+      "type": "sous-marin",
+      "focus": [
+        0.42,
+        0.55
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "sable",
+          "line": [
+            [
+              0.28,
+              0.86
+            ],
+            [
+              0.72,
+              0.86
+            ]
+          ],
+          "depth": 0.3
+        }
+      ],
+      "sky": null,
+      "window": [
+        0.38,
+        0.2,
+        0.62,
+        0.66
+      ],
+      "float": null
+    }
   },
   {
     "key": "refuge_pluie",
@@ -206,7 +697,55 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Véritable bureau intérieur. Assis devant la fenêtre."
+    "description": "Véritable bureau intérieur. Assis devant la fenêtre.",
+    "place": {
+      "type": "interieur",
+      "focus": [
+        0.55,
+        0.55
+      ],
+      "drift": 0.03,
+      "supports": [
+        {
+          "kind": "table",
+          "surface": "bois",
+          "line": [
+            [
+              0.3,
+              0.78
+            ],
+            [
+              0.95,
+              0.76
+            ]
+          ],
+          "depth": 0.25
+        },
+        {
+          "kind": "table",
+          "surface": "bois",
+          "line": [
+            [
+              0.15,
+              0.65
+            ],
+            [
+              0.95,
+              0.64
+            ]
+          ],
+          "depth": 0.5
+        }
+      ],
+      "sky": null,
+      "window": [
+        0.12,
+        0.0,
+        0.92,
+        0.58
+      ],
+      "float": null
+    }
   },
   {
     "key": "aurores",
@@ -225,7 +764,76 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Vallée encaissée. Bord du lac gelé."
+    "description": "Vallée encaissée. Bord du lac gelé.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.5,
+        0.5
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "rebord",
+          "surface": "neige",
+          "line": [
+            [
+              0.0,
+              0.81
+            ],
+            [
+              0.24,
+              0.84
+            ]
+          ],
+          "depth": 0.15
+        },
+        {
+          "kind": "rebord",
+          "surface": "neige",
+          "line": [
+            [
+              0.76,
+              0.72
+            ],
+            [
+              0.98,
+              0.66
+            ]
+          ],
+          "depth": [
+            0.25,
+            0.45
+          ]
+        },
+        {
+          "kind": "sol",
+          "surface": "neige",
+          "line": [
+            [
+              0.35,
+              0.96
+            ],
+            [
+              0.8,
+              0.95
+            ]
+          ],
+          "depth": 0.05
+        }
+      ],
+      "sky": {
+        "horizon": 0.6,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.5
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "printemps",
@@ -244,7 +852,76 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Verger en fleurs. Au bord du ruisseau."
+    "description": "Verger en fleurs. Au bord du ruisseau.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.55,
+        0.55
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "herbe",
+          "line": [
+            [
+              0.08,
+              0.8
+            ],
+            [
+              0.48,
+              0.78
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.1,
+              0.73
+            ],
+            [
+              0.27,
+              0.75
+            ]
+          ],
+          "depth": 0.25
+        },
+        {
+          "kind": "sol",
+          "surface": "herbe",
+          "line": [
+            [
+              0.58,
+              0.62
+            ],
+            [
+              0.95,
+              0.58
+            ]
+          ],
+          "depth": [
+            0.45,
+            0.55
+          ]
+        }
+      ],
+      "sky": {
+        "horizon": null,
+        "area": [
+          0.5,
+          0.0,
+          1.0,
+          0.3
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "ete",
@@ -263,7 +940,73 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Terrasse habitée. Sous la pergola."
+    "description": "Terrasse habitée. Sous la pergola.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.4,
+        0.5
+      ],
+      "drift": 0.04,
+      "supports": [
+        {
+          "kind": "table",
+          "surface": "bois",
+          "line": [
+            [
+              0.05,
+              0.72
+            ],
+            [
+              0.4,
+              0.71
+            ]
+          ],
+          "depth": 0.3
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.36,
+              0.64
+            ],
+            [
+              0.9,
+              0.69
+            ]
+          ],
+          "depth": 0.45
+        },
+        {
+          "kind": "sol",
+          "surface": "pierre",
+          "line": [
+            [
+              0.55,
+              0.9
+            ],
+            [
+              0.95,
+              0.9
+            ]
+          ],
+          "depth": 0.15
+        }
+      ],
+      "sky": {
+        "horizon": 0.45,
+        "area": [
+          0.18,
+          0.1,
+          0.95,
+          0.44
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "automne",
@@ -282,7 +1025,73 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Chemin de bois au bord de l’eau. Sur le ponton."
+    "description": "Chemin de bois au bord de l’eau. Sur le ponton.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.6,
+        0.55
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "bois",
+          "line": [
+            [
+              0.38,
+              0.93
+            ],
+            [
+              0.64,
+              0.93
+            ]
+          ],
+          "depth": 0.05
+        },
+        {
+          "kind": "sol",
+          "surface": "bois",
+          "line": [
+            [
+              0.42,
+              0.72
+            ],
+            [
+              0.59,
+              0.72
+            ]
+          ],
+          "depth": 0.45
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.0,
+              0.76
+            ],
+            [
+              0.12,
+              0.74
+            ]
+          ],
+          "depth": 0.2
+        }
+      ],
+      "sky": {
+        "horizon": 0.38,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.35
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "hiver",
@@ -301,7 +1110,76 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Chalet sous une toiture enneigée. Devant le refuge."
+    "description": "Chalet sous une toiture enneigée. Devant le refuge.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.55,
+        0.5
+      ],
+      "drift": 0.04,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "neige",
+          "line": [
+            [
+              0.38,
+              0.9
+            ],
+            [
+              0.72,
+              0.9
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "sol",
+          "surface": "neige",
+          "line": [
+            [
+              0.05,
+              0.88
+            ],
+            [
+              0.32,
+              0.85
+            ]
+          ],
+          "depth": 0.25
+        },
+        {
+          "kind": "rebord",
+          "surface": "bois",
+          "line": [
+            [
+              0.78,
+              0.66
+            ],
+            [
+              0.98,
+              0.74
+            ]
+          ],
+          "depth": [
+            0.5,
+            0.2
+          ]
+        }
+      ],
+      "sky": {
+        "horizon": null,
+        "area": [
+          0.1,
+          0.0,
+          0.85,
+          0.25
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "pluie",
@@ -320,7 +1198,61 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Rue entre façades proches. Piéton dans la rue."
+    "description": "Rue entre façades proches. Piéton dans la rue.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.55,
+        0.5
+      ],
+      "drift": 0.04,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "mouillé",
+          "line": [
+            [
+              0.25,
+              0.9
+            ],
+            [
+              0.7,
+              0.9
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.6,
+              0.66
+            ],
+            [
+              0.85,
+              0.9
+            ]
+          ],
+          "depth": [
+            0.5,
+            0.15
+          ]
+        }
+      ],
+      "sky": {
+        "horizon": null,
+        "area": [
+          0.4,
+          0.0,
+          0.56,
+          0.2
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "ocean",
@@ -339,7 +1271,58 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Falaise et océan ouvert. Promontoire élevé."
+    "description": "Falaise et océan ouvert. Promontoire élevé.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.35,
+        0.5
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "herbe",
+          "line": [
+            [
+              0.05,
+              0.92
+            ],
+            [
+              0.5,
+              0.92
+            ]
+          ],
+          "depth": 0.1
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.58,
+              0.82
+            ],
+            [
+              0.8,
+              0.8
+            ]
+          ],
+          "depth": 0.3
+        }
+      ],
+      "sky": {
+        "horizon": 0.3,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.28
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "sahara",
@@ -358,7 +1341,58 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Observatoire partiellement enfoui. Au pied des dunes."
+    "description": "Observatoire partiellement enfoui. Au pied des dunes.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.65,
+        0.55
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "sable",
+          "line": [
+            [
+              0.2,
+              0.85
+            ],
+            [
+              0.7,
+              0.85
+            ]
+          ],
+          "depth": 0.15
+        },
+        {
+          "kind": "sol",
+          "surface": "sable",
+          "line": [
+            [
+              0.1,
+              0.65
+            ],
+            [
+              0.9,
+              0.62
+            ]
+          ],
+          "depth": 0.45
+        }
+      ],
+      "sky": {
+        "horizon": 0.47,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.4
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "foret",
@@ -377,7 +1411,50 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Sous-bois fermé. Au ras du sous-bois."
+    "description": "Sous-bois fermé. Au ras du sous-bois.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.5,
+        0.58
+      ],
+      "drift": 0.06,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "herbe",
+          "line": [
+            [
+              0.08,
+              0.95
+            ],
+            [
+              0.42,
+              0.94
+            ]
+          ],
+          "depth": 0.15
+        },
+        {
+          "kind": "sol",
+          "surface": "herbe",
+          "line": [
+            [
+              0.66,
+              0.93
+            ],
+            [
+              0.95,
+              0.94
+            ]
+          ],
+          "depth": 0.2
+        }
+      ],
+      "sky": null,
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "orage",
@@ -396,7 +1473,73 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Météo dominant la mer. Face au front météorologique."
+    "description": "Météo dominant la mer. Face au front météorologique.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.5,
+        0.5
+      ],
+      "drift": 0.05,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "herbe",
+          "line": [
+            [
+              0.03,
+              0.93
+            ],
+            [
+              0.5,
+              0.95
+            ]
+          ],
+          "depth": 0.1
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.83,
+              0.9
+            ],
+            [
+              0.98,
+              0.89
+            ]
+          ],
+          "depth": 0.1
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.1,
+              0.84
+            ],
+            [
+              0.35,
+              0.85
+            ]
+          ],
+          "depth": 0.15
+        }
+      ],
+      "sky": {
+        "horizon": 0.5,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.45
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "braises",
@@ -415,7 +1558,35 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Braises dans un foyer de pierre. Proche du foyer."
+    "description": "Braises dans un foyer de pierre. Proche du foyer.",
+    "place": {
+      "type": "interieur",
+      "focus": [
+        0.4,
+        0.65
+      ],
+      "drift": 0.03,
+      "supports": [
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.12,
+              0.95
+            ],
+            [
+              0.88,
+              0.95
+            ]
+          ],
+          "depth": 0.1
+        }
+      ],
+      "sky": null,
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "aurore",
@@ -434,7 +1605,43 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Aurores sur une plaine ouverte. Plaine à horizon bas."
+    "description": "Aurores sur une plaine ouverte. Plaine à horizon bas.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.6,
+        0.5
+      ],
+      "drift": 0.06,
+      "supports": [
+        {
+          "kind": "sol",
+          "surface": "neige",
+          "line": [
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.9,
+              0.9
+            ]
+          ],
+          "depth": 0.3
+        }
+      ],
+      "sky": {
+        "horizon": 0.78,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.75
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   },
   {
     "key": "nuit",
@@ -453,6 +1660,72 @@
       "Caméra fixe"
     ],
     "progression": "Le lieu conserve sa composition pendant la session. Le décompte est porté par la visualisation choisie.",
-    "description": "Terrasse au-dessus de la ville. Sur un toit-terrasse."
+    "description": "Terrasse au-dessus de la ville. Sur un toit-terrasse.",
+    "place": {
+      "type": "exterieur",
+      "focus": [
+        0.5,
+        0.55
+      ],
+      "drift": 0.04,
+      "supports": [
+        {
+          "kind": "table",
+          "surface": "bois",
+          "line": [
+            [
+              0.15,
+              0.86
+            ],
+            [
+              0.36,
+              0.84
+            ]
+          ],
+          "depth": 0.2
+        },
+        {
+          "kind": "rebord",
+          "surface": "pierre",
+          "line": [
+            [
+              0.33,
+              0.745
+            ],
+            [
+              0.83,
+              0.745
+            ]
+          ],
+          "depth": 0.5
+        },
+        {
+          "kind": "sol",
+          "surface": "pierre",
+          "line": [
+            [
+              0.4,
+              0.93
+            ],
+            [
+              0.9,
+              0.93
+            ]
+          ],
+          "depth": 0.1
+        }
+      ],
+      "sky": {
+        "horizon": 0.5,
+        "area": [
+          0.0,
+          0.0,
+          1.0,
+          0.4
+        ]
+      },
+      "window": null,
+      "float": null
+    }
   }
 ]

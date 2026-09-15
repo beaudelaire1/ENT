@@ -69,6 +69,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let lastSecond = -1, warningCue=false, frame=0, visualTime=0, lastVisualTime=null;
   const canvas=$("#timer-canvas"),ctx=canvas.getContext("2d"),finishAudio=$("#finish-audio"),stage=$("#focus-stage");
   const decorNames=JSON.parse(document.querySelector("#decor-data").textContent);
+  // Ce que l'image de chaque lieu offre pour y poser un objet : lu par `placement.js`.
+  const places=JSON.parse(document.querySelector("#place-data")?.textContent||"{}");
+  let placed=null;
   const ambienceAliases=JSON.parse(document.querySelector("#ambience-alias-data")?.textContent||"{}");
   state.ambience=ambienceAliases[state.ambience]||state.ambience;
   if(!Object.prototype.hasOwnProperty.call(decorNames,state.ambience))state.ambience=app.dataset.ambience;
@@ -119,6 +122,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // trahit aussitôt le canvas. Sinon on retombe sur la proportion d'origine, qui reste
   // juste pour le décor peint.
   function horizonLine(ratio){
+    // L'horizon de l'image elle-même, quand la description du lieu en donne un : c'est sur
+    // lui que le soleil doit se coucher, et non sur celui d'une caméra 3D qui ne le voit pas.
+    if(placed?.horizon!=null)return placed.horizon-placed.box.top;
     const published=Number(app.dataset.worldHorizon);
     if(app.dataset.renderer3d==="three"&&Number.isFinite(published)){
       // L'horizon est compté depuis le haut de la scène ; on le ramène aux coordonnées du
@@ -1010,20 +1016,58 @@ document.addEventListener("DOMContentLoaded", () => {
     sessionSync.flush();
     const back=$("#return-after-session");if(back&&app.dataset.returnUrl)back.hidden=false;
   }
+  // L'ombre de contact au pied d'un objet posé, telle que la surface de son support la
+  // donne : nette sur le bois, large et douce sur la neige. La position ne se règle plus ici
+  // — l'objet n'est plus décalé vers un sol supposé —, c'est `placeObject()` qui la décide.
   function integratePhoto(mode) {
-    const h=extent.h,w=extent.w,unit=Math.min(w,h);
-    const feet={hourglass:h*.895,candle:h*.87,wave:h*.44+Math.min(w*.84,h*.8)*.889/2,ring:h*.42+unit*.36};
-    const foot=feet[mode],previous=Number(canvas.dataset.shift||0);
-    if(foot===undefined){canvas.style.transform="";canvas.dataset.shift="0";return;}
+    const object=window.SablierPlacement?.OBJECTS[mode];
+    if(!placed||placed.role!=="pose"||!placed.shadow||!object||object.role!=="pose")return;
+    const h=extent.h,w=extent.w,unit=Math.min(w,h),foot=object.foot*h,{opacity,spread,softness}=placed.shadow;
+    const radius=unit*(mode==="hourglass"?.23:mode==="candle"?.21:.34)*spread;
     ctx.save();ctx.globalCompositeOperation="destination-over";
-    const radius=unit*(mode==="hourglass"?.23:mode==="candle"?.21:.34);
-    const shade=ctx.createRadialGradient(w/2,foot,1,w/2,foot,radius);shade.addColorStop(0,"rgba(0,0,0,.48)");shade.addColorStop(1,"rgba(0,0,0,0)");
+    const shade=ctx.createRadialGradient(w/2,foot,radius*(.35-softness*.3),w/2,foot,radius);shade.addColorStop(0,`rgba(0,0,0,${opacity})`);shade.addColorStop(1,"rgba(0,0,0,0)");
     ctx.translate(w/2,foot);ctx.scale(1,.16);ctx.translate(-w/2,-foot);ctx.fillStyle=shade;ctx.fillRect(w/2-radius,foot-radius,radius*2,radius*2);ctx.restore();
-    const target=Number(app.dataset.worldFoot);
-    if(!Number.isFinite(target))return;
-    const baseTop=canvas.getBoundingClientRect().top-previous;
-    const shift=stage.getBoundingClientRect().top+target-baseTop-foot;
-    canvas.style.transform=`translateY(${shift}px)`;canvas.dataset.shift=String(shift);
+  }
+  // Les zones que l'objet ne doit pas couvrir, en pixels de scène : statut et intention en
+  // haut, temps et bouton de pause, disque de musique, commande d'immersion. Mesurées sur la
+  // page telle qu'elle est, et non supposées : elles changent avec l'immersion et la largeur.
+  function uiZones(stageRect){
+    const pad=12,zones=[];
+    for(const node of app.querySelectorAll(".stage-status,#stage-intention,#canvas-time,#immersion-pause,#stage-disc,#scene-button")){
+      const r=node.getBoundingClientRect();if(!r.width||!r.height)continue;
+      zones.push({l:r.left-stageRect.left-pad,t:r.top-stageRect.top-pad,r:r.right-stageRect.left+pad,b:r.bottom-stageRect.top+pad});
+    }
+    return zones;
+  }
+  // Où poser l'objet : les règles de `placement.js` appliquées à la description du lieu, dans
+  // la fenêtre d'image que la scène montre vraiment. Le canvas de l'objet prend le cadre
+  // résolu ; les peintres dessinent dans ses coordonnées et n'en savent rien. Le placement
+  // est publié pour les objets que la scène 3D construit elle-même.
+  function placeObject(mode){
+    const rules=window.SablierPlacement,object=rules?.OBJECTS[mode],stageRect=stage.getBoundingClientRect();
+    if(!rules||!object||!stageRect.width||!stageRect.height){
+      placed=null;window.SablierObjectPlacement=null;
+      for(const property of ["position","left","top","width","height"])canvas.style.removeProperty(property);
+      return;
+    }
+    const view={w:stageRect.width,h:stageRect.height},place=places[decorNames[state.ambience]];
+    const live=app.dataset.renderer3d==="three"?window.SablierWorld?.frame?.():null;
+    // Une photographie occupe l'écran rognée autour de son point focal ; un lieu en volume
+    // l'occupe entier. Les photos du Sablier sont toutes au format 16:9.
+    const frame=live||(place?.photo?rules.frame({imageAspect:16/9,view,focus:place.focus}):{ox:0,oy:0,sx:1,sy:1});
+    placed={...rules.resolve({place,mode,frame,view,ui:uiZones(stageRect)}),mode};
+    // Un objet qui flotte respire : une lente oscillation de quelques pixels.
+    if(placed.bob){
+      const lift=Math.sin(visualTime/1700)*Math.min(view.w,view.h)*.012;
+      placed.anchor={...placed.anchor,y:placed.anchor.y+lift};placed.box={...placed.box,top:placed.box.top+lift};
+    }
+    window.SablierObjectPlacement=placed;
+    const wrapRect=$("#visual-wrap").getBoundingClientRect(),size=Math.round(placed.box.size);
+    canvas.style.removeProperty("transform");
+    canvas.style.position="absolute";
+    canvas.style.left=`${Math.round(placed.box.left-(wrapRect.left-stageRect.left))}px`;
+    canvas.style.top=`${Math.round(placed.box.top-(wrapRect.top-stageRect.top))}px`;
+    canvas.style.width=`${size}px`;canvas.style.height=`${size}px`;
   }
   function ambienceLabel(){const select=$("#ambience-select"),option=[...select.options].find(item=>item.value===state.ambience);return option?.textContent||state.ambience;}
   function render(force=false){
@@ -1031,6 +1075,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const second=Math.ceil(state.remaining),progress=clamp(state.remaining/Math.max(1,state.total),0,1),warning=!state.finished&&state.remaining<=state.warning;
     if(force||second!==lastSecond){lastSecond=second;const text=format(state.remaining);$("#canvas-time").textContent=text;$("#digital-time").textContent=text;$("#zen-time").textContent=text;$("#duration-input").value=format(state.total);$("#digital-progress").style.setProperty("--progress",progress);$("#zen-progress").style.setProperty("--progress",progress);app.dataset.warning=String(warning);app.dataset.finished=String(state.finished);app.dataset.ambience=state.ambience;app.dataset.focusLevel=String(state.focusLevel);app.classList.toggle("hushed",state.focusLevel===2);app.classList.toggle("bare",state.focusLevel===3);$("#live-chip").textContent=state.running?"● EN DIRECT":state.finished?"● TERMINÉ":"● PRÊT";$("#session-status").textContent=state.running?"● SESSION EN COURS":state.finished?"● SESSION TERMINÉE":"● PRÊT";$("#stage-message").textContent=state.finished?"TEMPS ÉCOULÉ":state.running?"RESTEZ DANS VOTRE RYTHME":"ESPACE POUR DÉMARRER";$("#immersion-pause").textContent=state.running?"Ⅱ Pause":"▶ Démarrer";$("#main-control").textContent=state.finished?"↻ RECOMMENCER":state.running?"Ⅱ PAUSE":"▶ DÉMARRER";$("#stage-intention").textContent=(state.intention||"SESSION DE CONCENTRATION").toUpperCase();$("#ambience-status").textContent=`${ambienceLabel().toUpperCase()} · FOCUS ${state.focusLevel}`;if(warning&&!warningCue){warningCue=true;flash();}save();}
     const mode=state.mode;$("#visual-wrap").dataset.mode=mode;
+    placeObject(mode);
     const painters={ring:drawRingPhoto,hourglass:drawHourglassPhoto,wave:drawWavePhoto,candle:drawCandlePhoto,beads:drawBeads,moon:drawMoonPhoto,bars:drawBars,spiral:drawSpiral,sun:drawSunPhoto};
     if(painters[mode])painters[mode](progress);
     integratePhoto(mode);

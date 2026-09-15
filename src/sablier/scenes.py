@@ -30,6 +30,9 @@ class Scene:
     motion: tuple[str, ...]
     progression: str
     description: str
+    # La description de l'image du lieu — supports, ciel, fenêtre — sur laquelle
+    # `static/sablier/placement.js` décide où poser l'objet. Voir `test_places.py`.
+    place: dict | None = None
 
     @property
     def art_signature(self) -> tuple[str, tuple[str, ...], str]:

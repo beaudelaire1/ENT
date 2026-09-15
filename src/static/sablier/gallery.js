@@ -40,6 +40,7 @@
   // Seuls lieux encore bâtis en volume : tous les autres sont une image (`photo` dans
   // premium3d/worlds.js). Un test garde les deux listes d'accord.
   const WITHOUT_PHOTO=new Set(['time_river']);
+  const places=JSON.parse(document.querySelector('#place-data')?.textContent||'{}');
   fallback.fetchPriority='high';
   fallback.addEventListener('error',()=>{fallback.dataset.unavailable='true';});
   fallback.addEventListener('load',()=>{delete fallback.dataset.unavailable;});
@@ -55,10 +56,18 @@
       ? `${gallery.dataset.thumbnailBase.replace(/thumbnails\/$/,'photos/')}${decor}.webp`
       : `${gallery.dataset.thumbnailBase}${decor}${portrait.matches?'-mobile':'-wide'}.webp?v=${gallery.dataset.thumbnailVersion}`;
     if(fallback.getAttribute('src')!==url)fallback.src=url;
+    // La vue fixe cadre comme la scène — même point focal, même fenêtre visible —, sans quoi
+    // l'objet posé par les règles tomberait à côté de son support tant que la 3D n'a pas la main.
+    const place=places[decor],box=fallback.parentElement.getBoundingClientRect();
+    if(photo&&place&&window.SablierPlacement&&box.width&&box.height){
+      const fr=window.SablierPlacement.frame({imageAspect:16/9,view:{w:box.width,h:box.height},focus:place.focus});
+      fallback.style.objectPosition=`${fr.sx<1?fr.ox/(1-fr.sx)*100:50}% ${fr.sy<1?fr.oy/(1-fr.sy)*100:50}%`;
+    }else fallback.style.objectPosition='';
     status.textContent=status.hidden?'':'Vue fixe · rendu 3D indisponible';
     status.title=app.dataset.renderer3dReason||'';
   }
   new MutationObserver(rendererState).observe(app,{attributes:true,attributeFilter:['data-ambience','data-renderer3d','data-renderer3d-reason']});
   portrait.addEventListener('change',rendererState);
+  window.addEventListener('resize',rendererState);
   rendererState();
 })();

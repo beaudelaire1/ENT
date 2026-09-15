@@ -423,45 +423,46 @@ function createRuntime(THREE, nodes) {
     fallbackCanvas.style.visibility = handedOver ? "hidden" : "visible";
   }
 
-  // Place et dimensionne l'objet pour qu'il occupe exactement la zone `#visual-wrap`.
+  // Place et dimensionne l'objet. Quand les règles de placement ont parlé — sablier.js publie
+  // `window.SablierObjectPlacement` pour le mode affiché —, l'objet se pose au pied et à la
+  // hauteur qu'elles ont résolus sur le support visible du lieu. Sinon il occupe la zone
+  // `#visual-wrap`, comme avant les descriptions de lieux.
   function frameObject() {
     const stageRect = stage.getBoundingClientRect();
-    const wrapRect = visual.getBoundingClientRect();
     if (!stageRect.width || !stageRect.height) return;
+    const placed = window.SablierObjectPlacement;
+    const resolved = placed && placed.mode === state.mode ? placed : null;
     // Un astre est loin. Le placer à neuf unités comme un objet de table le faisait passer
     // *devant* les immeubles et les arbres du lieu — une lune qui éclipse une tour. La
     // distance ne change pourtant rien à sa taille apparente : l'échelle est calculée à
-    // partir d'elle, si bien qu'un même cadrage HTML donne le même disque à l'écran, mais
+    // partir d'elle, si bien qu'un même cadrage donne le même disque à l'écran, mais
     // derrière le paysage.
     const skyborne = SKYBORNE.has(state.mode);
-    const distance = skyborne ? 1500 : state.world === 'rain_refuge' ? 4.5 : 9;
-    const groundLevel = state.world === 'rain_refuge' ? .9 : 0;
+    const distance = skyborne ? 1500 : 9;
     const halfHeight = distance * Math.tan((camera.fov * Math.PI) / 360);
     const halfWidth = halfHeight * camera.aspect;
-    const ndcX = ((wrapRect.left + wrapRect.width / 2 - stageRect.left) / stageRect.width) * 2 - 1;
-    const ndcY = -(((wrapRect.top + wrapRect.height / 2 - stageRect.top) / stageRect.height) * 2 - 1);
-
-    // Un astre se lit de loin : il occupe un peu moins que le cadre réservé à un objet de
-    // premier plan, ce qui lui laisse la place de se détacher entier au-dessus du paysage.
-    const fill = skyborne ? 0.6 : (mobile ? 0.94 : 0.86);
-    const target = Math.min(wrapRect.width, wrapRect.height) * fill;
     const unitsPerPixel = (halfHeight * 2) / stageRect.height;
-    // La hauteur mesurée de l'objet, et non une constante : c'est elle qui fait qu'un
-    // cadrage HTML donne la même occupation à l'écran pour les neuf objets.
+    // La hauteur mesurée de l'objet, et non une constante : c'est elle qui fait qu'une même
+    // hauteur à l'écran donne la même occupation pour les neuf objets.
     const span = active?.footprint?.height || OBJECT_HEIGHT;
-    let scale = (target * unitsPerPixel) / span;
-
-    if (!skyborne) {
-      // Un objet posé ne dispose pas de toute la hauteur de la zone HTML. Le sol se
-      // projette aux deux tiers de l'image — l'horizon est à hauteur d'œil, et le point de
-      // contact un peu en dessous —, si bien que la place réellement disponible va de ce
-      // contact au haut du cadre. Cadré sur la zone entière, un sablier dépassait par le
-      // haut : sa moitié supérieure était coupée net.
-      const headroom = (camera.position.y + halfHeight) * 0.94;
-      scale = Math.min(scale, headroom / span);
+    let ndcX, ndcY, scale;
+    if (resolved) {
+      ndcX = (resolved.anchor.x / stageRect.width) * 2 - 1;
+      ndcY = -((resolved.anchor.y / stageRect.height) * 2 - 1);
+      scale = (resolved.objectHeight * unitsPerPixel) / span;
+    } else {
+      const wrapRect = visual.getBoundingClientRect();
+      ndcX = ((wrapRect.left + wrapRect.width / 2 - stageRect.left) / stageRect.width) * 2 - 1;
+      ndcY = -(((wrapRect.top + wrapRect.height / 2 - stageRect.top) / stageRect.height) * 2 - 1);
+      // Un astre se lit de loin : il occupe un peu moins que le cadre réservé à un objet de
+      // premier plan, ce qui lui laisse la place de se détacher entier au-dessus du paysage.
+      const fill = skyborne ? 0.6 : (mobile ? 0.94 : 0.86);
+      scale = (Math.min(wrapRect.width, wrapRect.height) * fill * unitsPerPixel) / span;
+      // Cadré sur la zone entière, un sablier dépassait par le haut : la place réellement
+      // disponible va du contact au haut du cadre.
+      if (!skyborne) scale = Math.min(scale, ((camera.position.y + halfHeight) * 0.94) / span);
     }
 
-    objectRoot.position.set(ndcX * halfWidth, camera.position.y + ndcY * halfHeight, -distance);
     objectRoot.scale.setScalar(scale);
     active?.object.traverse(node => {
       if (!node.isLight) return;
@@ -471,40 +472,40 @@ function createRuntime(THREE, nodes) {
 
     const half = (span / 2) * scale;
     // Chaque objet déclare le point le plus bas de sa silhouette. Les supposer tous
-    // centrés sur une hauteur de référence laissait la bougie — dont la cire s'arrête
-    // bien au-dessus de cette limite — flotter à un mètre de son ombre.
+    // centrés sur une hauteur de référence laissait la bougie flotter au-dessus de son ombre.
     const footing = (active?.footprint?.base ?? -OBJECT_HEIGHT / 2) * scale;
-    const base = objectRoot.position.y + footing;
+    const target = camera.position.y + ndcY * halfHeight;
+    let groundLevel = 0;
     if (skyborne) {
-      // L'astre se détache entier au-dessus de l'horizon — qui se trouve exactement à
-      // hauteur d'œil — sans jamais monter jusqu'à sortir du cadre. On contraint son
-      // centre : contraindre son bord inférieur le chassait hors de l'image, sa
-      // demi-hauteur croissant avec sa distance.
+      // L'astre se détache entier au-dessus de l'horizon, qui se trouve à hauteur d'œil.
+      objectRoot.position.set(ndcX * halfWidth, target, -distance);
       const horizon = camera.position.y + half * 1.15;
       if (objectRoot.position.y < horizon) objectRoot.position.y = horizon;
+    } else if (resolved) {
+      // Les règles donnent le point de contact : la base mesurée de l'objet s'y pose, et
+      // l'ombre s'étend à cette hauteur. Aucun sol supposé à zéro, aucune exception par
+      // univers — le support est celui que l'image montre, table, rebord ou sol.
+      groundLevel = target;
+      objectRoot.position.set(ndcX * halfWidth, target - footing, -distance);
     } else {
-      // Un objet posé est *assis* sur le sol, pas seulement empêché d'y descendre. Le
-      // rattrapage précédent ne relevait que ce qui s'enfonçait : une bougie dont la cire
-      // s'arrête haut restait donc suspendue au-dessus de son ombre, sans que rien ne la
-      // redescende. Le cadrage HTML garde la taille et la position latérale ; c'est le sol
-      // qui fixe la hauteur.
-      objectRoot.position.y += groundLevel + 0.02 - base;
+      // Un objet posé est *assis* sur le sol, pas seulement empêché d'y descendre.
+      objectRoot.position.set(ndcX * halfWidth, target, -distance);
+      objectRoot.position.y += 0.02 - (objectRoot.position.y + footing);
     }
 
-    contact.visible = !skyborne && Boolean(active);
+    contact.visible = !skyborne && Boolean(active) && (!resolved || resolved.role === "pose");
     if (contact.visible) {
-      const spread = (active?.footprint?.radius ?? 1.6) * scale * 2;
+      const spread = (active?.footprint?.radius ?? 1.6) * scale * 2 * (resolved?.shadow?.spread ?? 1);
       contact.position.set(objectRoot.position.x, groundLevel + 0.03, objectRoot.position.z);
       contact.scale.set(spread, spread, 1);
+      contact.material.opacity = 0.85 * ((resolved?.shadow?.opacity ?? 0.5) / 0.5);
     }
 
     // La lumière clé vise l'objet : c'est lui qui doit être défini, pas l'horizon.
     keyLight.target.position.copy(objectRoot.position);
     keyLight.target.updateMatrixWorld();
-    // Un soleil rasant — un couchant du Sahara à trois degrés — projetterait une ombre
-    // de soixante mètres, hors du champ de la carte d'ombre : l'objet paraîtrait flotter.
-    // On garde l'azimut du soleil, qui donne la direction de la lumière, mais on relève
-    // sa hauteur pour que l'ombre retombe au pied de l'objet.
+    // Un soleil rasant projetterait une ombre hors du champ de la carte d'ombre : on garde
+    // son azimut, mais on relève sa hauteur pour que l'ombre retombe au pied de l'objet.
     const direction = environment
       ? environment.sun.direction.clone()
       : new THREE.Vector3(0.4, 0.8, 0.45);
@@ -521,8 +522,7 @@ function createRuntime(THREE, nodes) {
     bounce.intensity = (currentWorld?.env.kind === 'day' ? 2 : 3) * scale * scale;
     const footingPoint = new THREE.Vector3(objectRoot.position.x,groundLevel,-distance).project(camera);
     app.dataset.worldFoot = String((1-footingPoint.y)*height/2);
-    // La mise au point suit l'objet : le paysage se défocalise autour de lui, qu'il soit à
-    // portée de main ou à l'horizon.
+    // La mise au point suit l'objet : le paysage se défocalise autour de lui.
     post?.focus(distance);
   }
 
@@ -624,7 +624,7 @@ function createRuntime(THREE, nodes) {
   const observer = new ResizeObserver(() => { width = 0; height = 0; });
   observer.observe(stage);
   const gl=renderer.getContext(), gpuExtension=gl.getExtension('WEBGL_debug_renderer_info');
-  window.SablierWorld = { inspect: () => ({world: state.world, mode: state.mode, progress: state.progress, motion: state.motion, worldTime,
+  window.SablierWorld = { frame: () => currentWorld?.frame?.() || null, inspect: () => ({world: state.world, mode: state.mode, progress: state.progress, motion: state.motion, worldTime,
     camera: [...camera.position.toArray(), ...camera.rotation.toArray()], renders,
     geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures,
     calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, hidden: document.hidden,
