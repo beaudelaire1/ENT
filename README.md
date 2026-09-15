@@ -83,4 +83,4 @@ python src/manage.py check_notifications --user <nom_utilisateur> --scan
 
 La commande distingue notamment l’absence de worker/beat, un backend email console, l’absence de `EMAIL_HOST`, les préférences désactivées et les dernières notifications du compte.
 
-Consulter [le déploiement Coolify](docs/DEPLOYMENT.md), [la migration de l’existant](docs/MIGRATION.md) et [la feuille de maturation](docs/ROADMAP.md). Les sources historiques se trouvent dans [oldVersion](oldVersion/README.md).
+Consulter [le déploiement Coolify](docs/DEPLOYMENT.md), [la migration de l’existant](docs/MIGRATION.md), [la feuille de maturation](docs/ROADMAP.md) et [le suivi des travaux](docs/SUIVI.md). Les sources historiques se trouvent dans [oldVersion](oldVersion/README.md).
