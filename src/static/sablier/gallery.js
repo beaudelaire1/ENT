@@ -37,17 +37,24 @@
   sync();
   const fallback=document.querySelector('#world-fallback'),status=document.querySelector('#renderer-status');
   const portrait=matchMedia('(max-width: 700px)');
+  // Seuls lieux encore bâtis en volume : tous les autres sont une image (`photo` dans
+  // premium3d/worlds.js). Un test garde les deux listes d'accord.
+  const WITHOUT_PHOTO=new Set(['time_river']);
+  fallback.fetchPriority='high';
   fallback.addEventListener('error',()=>{fallback.dataset.unavailable='true';});
   fallback.addEventListener('load',()=>{delete fallback.dataset.unavailable;});
   function rendererState(){
     const decor=JSON.parse(document.querySelector('#decor-data').textContent)[app.dataset.ambience];
     status.hidden=app.dataset.renderer3d!=='fallback';
-    if(!status.hidden){
-      // La vignette de la galerie ne ferait pas une vue plein cadre : le repli tire sur
-      // la version large, l'orientation décidant seule laquelle des deux est chargée.
-      const url=`${gallery.dataset.thumbnailBase}${decor}${portrait.matches?'-mobile':'-wide'}.webp?v=${gallery.dataset.thumbnailVersion}`;
-      if(fallback.getAttribute('src')!==url)fallback.src=url;
-    }
+    // La vue du lieu se charge dès l'ouverture, et plus seulement en repli : elle occupe la
+    // scène pendant que Three.js et ses modules arrivent. En paysage, un lieu photographié
+    // montre sa photographie elle-même, à l'adresse exacte que la scène demandera — un seul
+    // téléchargement, lancé avant tout le reste. En portrait, la vue recadrée sur le sujet.
+    const photo=!WITHOUT_PHOTO.has(decor)&&!portrait.matches;
+    const url=photo
+      ? `${gallery.dataset.thumbnailBase.replace(/thumbnails\/$/,'photos/')}${decor}.webp`
+      : `${gallery.dataset.thumbnailBase}${decor}${portrait.matches?'-mobile':'-wide'}.webp?v=${gallery.dataset.thumbnailVersion}`;
+    if(fallback.getAttribute('src')!==url)fallback.src=url;
     status.textContent=status.hidden?'':'Vue fixe · rendu 3D indisponible';
     status.title=app.dataset.renderer3dReason||'';
   }

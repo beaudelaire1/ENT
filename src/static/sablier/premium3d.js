@@ -306,11 +306,26 @@ function createRuntime(THREE, nodes) {
 
     applyEnvironment(buildEnvironment(THREE, renderer, currentWorld.env));
 
-    // Le ciel photographique arrive par le réseau : la scène s'affiche d'abord sous son
-    // ciel calculé, puis bascule sans transition visible dès que la capture est là. Le
-    // jeton garde l'univers en cours — changer d'ambiance pendant le chargement ne doit
-    // pas repeindre le nouveau lieu avec le ciel de l'ancien.
-    const token = ++environmentToken;
+    environmentToken += 1;
+    panoramaWorld = null;
+    requestPanorama();
+  }
+
+  // Le ciel photographique arrive par le réseau : la scène s'affiche d'abord sous son ciel
+  // calculé, puis bascule sans transition visible dès que la capture est là. Le jeton garde
+  // l'univers en cours — changer d'ambiance pendant le chargement ne doit pas repeindre le
+  // nouveau lieu avec le ciel de l'ancien.
+  //
+  // Sous un lieu photographié, ce ciel ne se voit pas : il ne sert qu'à éclairer un objet
+  // bâti en volume. Les six objets photographiés n'en ont pas l'usage, et ses deux fichiers
+  // — jusqu'à 2,8 Mo — disputaient la bande passante à la photo du lieu. Il n'est donc
+  // demandé qu'avec un objet en volume, et au plus tard quand on en choisit un.
+  let panoramaWorld = null;
+  function requestPanorama() {
+    if (!currentWorld || panoramaWorld === state.world) return;
+    if (currentWorld.photo && !SUPPORTED.has(state.mode)) return;
+    panoramaWorld = state.world;
+    const token = environmentToken;
     loadPanorama(THREE, renderer, currentWorld.env).then((photograph) => {
       if (!photograph) return;
       if (token !== environmentToken) { photograph.dispose(); return; }
@@ -395,6 +410,7 @@ function createRuntime(THREE, nodes) {
     active = factories[mode]();
     active.footprint = measure(active.object);
     objectRoot.add(active.object);
+    requestPanorama();
   }
 
   // Le canvas de l'objet reste en place pour les six objets photographiques : il *est*

@@ -308,3 +308,9 @@ html:not([data-theme="light"]) .decor-canvas { mix-blend-mode:screen; }
 @media(max-width:700px) { .focus-app.stage-mode .stage-status { padding-right:0;padding-top:48px; } }
 /* Tant que la matière n'est pas choisie, la liste des compétences attend. */
 .focus-sidebar select:disabled { opacity:.5;cursor:not-allowed; }
+/* La vue fixe du lieu est la même image que la scène : elle se montre dès l'ouverture, sous
+   le canvas, qui apparaît par-dessus en fondu. Elle ne la cachait qu'en repli, et la scène
+   restait vide tant que Three.js, ses modules et la photographie n'étaient pas arrivés —
+   parfois une minute sur une connexion lente. */
+.focus-app:not([data-renderer3d="fallback"]) .focus-stage .world-fallback[src] { display:block; z-index:0!important; }
+.focus-app:not([data-renderer3d="fallback"]) .focus-stage .world-fallback[data-unavailable="true"] { display:none; }
