@@ -29,6 +29,7 @@ from formations.models import Competency, UnitCompetency
 
 from . import scenes
 from .forms import AddTrackForm, AudioUploadForm, FocusPreferenceForm, FocusSessionForm, PlaylistForm
+from .importmap import premium_import_map, script_hash
 from .models import AudioTrack, FocusPreference, FocusSession, Playlist, PlaylistTrack
 from .services import format_duration, parse_duration, record_session, revise_session
 from .tasks import validate_audio_track
@@ -137,6 +138,12 @@ def home(request):
             pass
     contextual_launch = any(request.GET.get(key) for key in ("competency", "intention", "duration"))
     return_to = safe_next(request, "") if request.GET.get("next") else ""
+    asset_version = sablier_asset_version()
+    # Les modules de la scène sont importés par chemins relatifs, qui perdent `?v=` : la
+    # map les versionne tous ensemble, sans quoi un module neuf peut rencontrer un voisin
+    # ancien resté en cache et la scène entière retombe sur la vue fixe.
+    import_map = premium_import_map(asset_version)
+    request.csp_script_hashes = [script_hash(import_map)]
     return render(
         request,
         "sablier/home.html",
@@ -152,7 +159,8 @@ def home(request):
             "decors": {scene.key: scene.decor for scene in scenes.SCENES},
             # Les feuilles et scripts de Sablier changent souvent : sans cette empreinte,
             # le navigateur servirait l'ancienne version après chaque correction.
-            "asset_version": sablier_asset_version(),
+            "asset_version": asset_version,
+            "import_map": import_map,
             # À la seconde près, un enregistrement survenu dans la même seconde que
             # le chargement serait indétectable côté navigateur.
             "saved_at": f"{preference.updated_at.timestamp():.6f}",

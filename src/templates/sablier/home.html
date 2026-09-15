@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% load static %}
 {% block title %}Sablier · MyENT{% endblock %}
-{% block head %}<link rel="stylesheet" href="{% static 'sablier/sablier.css' %}?v={{ asset_version }}">
+{% block head %}<script type="importmap">{{ import_map|safe }}</script><link rel="stylesheet" href="{% static 'sablier/sablier.css' %}?v={{ asset_version }}">
 <style>{{ palette_css }}</style>{% endblock %}
 {% block content %}
 <div class="focus-app" id="focus-app"

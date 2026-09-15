@@ -1,11 +1,15 @@
 import json
+import posixpath
 import re
 from hashlib import sha256
 
 from django.conf import settings
-from django.test import SimpleTestCase
+from django.contrib.auth import get_user_model
+from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
 
 from sablier import scenes
+from sablier.importmap import premium_import_map, premium_modules, script_hash
 from sablier.models import FocusPreference
 
 
@@ -299,6 +303,46 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         views = (settings.BASE_DIR / "sablier" / "views.py").read_text(encoding="utf-8")
         self.assertIn('folder.rglob("*")', views)
 
+    # Tout ce qu'un module peut importer : `import … from`, `export … from`, `import "…"`
+    # et `import(new URL("…", …))`.
+    MODULE_SPECIFIERS = re.compile(
+        r"""\b(?:import|export)\b[^;]*?\bfrom\s*["']([^"']+)["']"""
+        r"""|\bimport\s*["']([^"']+)["']"""
+        r"""|\bimport\(\s*(?:new\s+URL\(\s*)?["']([^"']+)["']""",
+        re.DOTALL,
+    )
+
+    def test_no_premium_module_can_be_imported_without_its_version(self):
+        """Le 15 septembre 2026, un `worlds.js` neuf a importé un `photo-world.js` resté en
+        cache : l'export `particles` manquait et la scène est retombée sur la vue fixe.
+
+        Chaque import du graphe qui atteint un fichier du Sablier doit donc passer par
+        l'import map. Un module ajouté hors de `premium3d/`, ou importé autrement, échoue ici.
+        """
+        mapped = json.loads(premium_import_map("123"))["imports"]
+        for key, address in mapped.items():
+            self.assertTrue(address.endswith("?v=123"), key)
+        static_root = settings.BASE_DIR / "static"
+        importers = ["sablier/premium3d.js", *premium_modules()]
+        for importer in importers:
+            source = (static_root / importer).read_text(encoding="utf-8")
+            for match in self.MODULE_SPECIFIERS.finditer(source):
+                specifier = next(group for group in match.groups() if group)
+                target = posixpath.normpath(posixpath.join(posixpath.dirname(importer), specifier))
+                if not target.startswith("sablier/"):
+                    continue  # Three.js est épinglé et vendu tel quel : son contenu ne bouge pas.
+                with self.subTest(importer=importer, specifier=specifier):
+                    self.assertIn(f"{settings.STATIC_URL}{target}", mapped)
+        # La racine, elle, est importée hors map et doit porter la version elle-même.
+        self.assertIn('import(new URL("premium3d.js" + version, here)', self.read_static("decor.js"))
+
+    def test_every_premium_module_is_in_the_import_map(self):
+        folder = settings.BASE_DIR / "static" / "sablier" / "premium3d"
+        mapped = json.loads(premium_import_map("1"))["imports"]
+        for path in folder.rglob("*.js"):
+            with self.subTest(module=path.name):
+                self.assertIn(f"{settings.STATIC_URL}sablier/premium3d/{path.relative_to(folder).as_posix()}", mapped)
+
     def test_visual_runtime_never_controls_the_users_music(self):
         files = [
             "decor-core.js",
@@ -387,3 +431,24 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
         )
         self.assertLess(loader.index("SablierPremium3DReady"), loader.index("SablierDecorReady ="))
         self.assertNotIn('.then(() => import(new URL("premium3d.js" + version, here).href))', loader)
+
+
+class PremiumImportMapPageTests(TestCase):
+    """La map ne protège que si le navigateur la lit : avant tout module, et admise par la CSP."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("alice", password="secret"))
+
+    def test_the_page_declares_the_import_map_before_any_script_and_the_policy_admits_it(self):
+        response = self.client.get(reverse("sablier:home"))
+        html = response.content.decode()
+        match = re.search(r'<script type="importmap">(.*?)</script>', html, re.DOTALL)
+        self.assertIsNotNone(match)
+        # Une map rencontrée après le premier module est ignorée par le navigateur.
+        self.assertLess(match.start(), html.index("<script src="))
+        imports = json.loads(match.group(1))["imports"]
+        self.assertEqual(len(imports), len(premium_modules()))
+        self.assertTrue(all("?v=" in address for address in imports.values()))
+        # L'empreinte doit être celle du texte exact : un espace de plus et la map est bloquée.
+        self.assertIn(script_hash(match.group(1)), response["Content-Security-Policy"])
+        self.assertNotIn("'unsafe-inline'", response["Content-Security-Policy"].split("script-src")[1].split(";")[0])

@@ -42,10 +42,13 @@ class SecurityHeadersMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         media = self.external_sources()
+        # Une vue peut admettre un script inline précis par son empreinte — l'import map du
+        # Sablier. Jamais `'unsafe-inline'` : une injection resterait bloquée.
+        hashes = " ".join(getattr(request, "csp_script_hashes", ()))
         response["Content-Security-Policy"] = "; ".join(
             [
                 "default-src 'self'",
-                "script-src 'self'",
+                f"script-src 'self' {hashes}".strip(),
                 # Les palettes et barres de progression sont encore calculées en style
                 # inline ; les scripts, eux, restent strictement locaux.
                 "style-src 'self' 'unsafe-inline'",

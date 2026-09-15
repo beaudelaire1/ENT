@@ -70,6 +70,8 @@
   // n'est venue au bout de ce délai, le repli prend la main de lui-même.
   setTimeout(() => giveUp("slow-start"), 8000);
 
+  // La racine porte sa version ici ; ses modules relatifs la perdent à la résolution, et
+  // c'est l'import map écrite par `sablier/home.html` qui la leur rend.
   window.SablierPremium3DReady = import(new URL("premium3d.js" + version, here).href)
     .catch((error) => {
       giveUp("premium-module-load");
