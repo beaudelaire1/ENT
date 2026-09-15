@@ -163,8 +163,17 @@ class PremiumVisualRuntimeTests(SimpleTestCase):
             with self.subTest(photo=name):
                 path = root / "photos" / name
                 self.assertTrue(path.is_file())
-                self.assertEqual(provenance[name]["license"], "CC0-1.0")
-                self.assertEqual(provenance[name]["sha256"], sha256(path.read_bytes()).hexdigest())
+                entry = provenance[name]
+                # Photographie libre ou image générée : l'une a un auteur, l'autre un outil.
+                self.assertTrue(entry["license"] and entry["license_url"])
+                self.assertTrue(entry.get("author") or entry.get("generator"))
+                self.assertEqual(entry["sha256"], sha256(path.read_bytes()).hexdigest())
+
+    def test_every_place_but_the_time_river_is_an_image(self):
+        """Le Fleuve du Temps attend un écoulement qu'une image fixe ne sait pas encore rendre."""
+        recipes = self.read_static("premium3d/worlds.js")
+        imaged = {name.removesuffix(".webp") for name in re.findall(r'photo: \{src: "([a-z_]+\.webp)"', recipes)}
+        self.assertEqual({scene.decor for scene in scenes.SCENES} - imaged, {"time_river"})
 
     def test_a_photograph_is_shown_as_developed_and_only_once_it_has_arrived(self):
         """Repasser une photo par l'exposition, l'ACES et le halo la délavait."""

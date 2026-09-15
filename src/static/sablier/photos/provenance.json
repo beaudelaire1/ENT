@@ -1,17 +1,42 @@
 [
   {
-    "world": "ancient_forest",
-    "file": "ancient_forest.webp",
+    "world": "abyss",
+    "file": "abyss.webp",
+    "kind": "image générée",
+    "title": "Sanctuaire abyssal",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A deep underwater sanctuary: a broken ancient stone arch standing on the sea floor. Shafts of light fall from far above through teal water. Sand and a few sea plants; the horizon dissolves into blue haze.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "abyss.png",
+      "url": null,
+      "sha256": "4ec013bc2659fe401c0168a8a708944f5592b615709702af6bf23849ac2a4ef4",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
     "dimensions": [
       2560,
-      1439
+      1440
     ],
+    "quality": 86,
+    "sha256": "c4187f5651bfb9e6cc1ba61f54327dc0f77f11b0dcddf202208a41a2af4fc8cd",
+    "bytes": 289254
+  },
+  {
+    "world": "ancient_forest",
+    "file": "ancient_forest.webp",
+    "kind": "photographie",
     "title": "Sun's rays in a dense forest",
-    "source": "https://commons.wikimedia.org/wiki/File:Sun%27s_rays_in_a_dense_forest_(Unsplash).jpg",
     "author": "Filip Varga",
+    "source": "https://commons.wikimedia.org/wiki/File:Sun%27s_rays_in_a_dense_forest_(Unsplash).jpg",
     "license": "CC0-1.0",
     "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
     "original": {
+      "file": "ancient_forest.jpg",
       "url": "https://upload.wikimedia.org/wikipedia/commons/d/db/Sun%27s_rays_in_a_dense_forest_%28Unsplash%29.jpg",
       "sha256": "6b656e04f6cb3a499f0b0f2e38ca100a7b1216ce2be6934789d69d234a32af74",
       "dimensions": [
@@ -19,8 +44,579 @@
         2248
       ]
     },
-    "quality": 84,
-    "sha256": "6f11988cc8a77830b049aac3102ec276f03abf19679882c6e4058a1a99f5b4b6",
-    "bytes": 992986
+    "dimensions": [
+      2560,
+      1439
+    ],
+    "quality": 86,
+    "sha256": "86b380a20905d2cd1ca2066447ea1dbaca0046770661c18d743259ea5e3337b9",
+    "bytes": 1072676
+  },
+  {
+    "world": "aurora_valley",
+    "file": "aurora_valley.webp",
+    "kind": "image générée",
+    "title": "Vallée des aurores",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A narrow mountain valley at night. A frozen, snow-edged lake in the foreground reflects green and teal aurora borealis rippling above the peaks. Stars.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "aurora_valley.png",
+      "url": null,
+      "sha256": "d9becadb5a75d8456170efd1c60859b6a05d0594359d5d9bd2a48849ce54fb0e",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "30e6a33fa2111fc42e1e199308b3a542ae7d9b02b210180c6cfaae3d05da84af",
+    "bytes": 321762
+  },
+  {
+    "world": "autumn_lake",
+    "file": "autumn_lake.webp",
+    "kind": "image générée",
+    "title": "Automne",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "An autumn lake at sunset. A wooden boardwalk and a small pier lead to the calm water, which reflects red and orange trees. Low warm sun, soft mist on the water.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "autumn_lake.png",
+      "url": null,
+      "sha256": "5191760cefcc5762603d36997ad3ad6670a17b046fd8565b34398922ebff738b",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "094488fd8d027b4e253a41a8327af6e825c375b2e4ef478ef12feb1919cc1269",
+    "bytes": 479634
+  },
+  {
+    "world": "eden",
+    "file": "eden.webp",
+    "kind": "image générée",
+    "title": "Éden",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "Morning in a lush terraced garden with several levels of old stone terraces. A gentle stream winds through it under large leafy trees. Soft golden sunlight, dew, natural vivid greens. An open path in the foreground leads into the garden.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "eden.png",
+      "url": null,
+      "sha256": "4c482e216c06b766e1d1613ff9891fd438a430ce934843471273f589d778c9d0",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "a31811cf111151244b2fed7d5ea922b7bd4b0d4fbb75ba421cca2fd17da7b6be",
+    "bytes": 904546
+  },
+  {
+    "world": "ember_hearth",
+    "file": "ember_hearth.webp",
+    "kind": "image générée",
+    "title": "Braises",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "Close view of glowing embers and small flames in a rough stone fireplace. Warm orange light on the stones, a dark, quiet room around it.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "ember_hearth.png",
+      "url": null,
+      "sha256": "256d152e74184793f368955ed6cec72c6b9d0fec8424b7903d4d3434c9918865",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "91b4face2c0c72a5ed2115f2a9a5672d92d816f6d82416e5e9638c1eec5193bd",
+    "bytes": 314150
+  },
+  {
+    "world": "eternity_fountain",
+    "file": "eternity_fountain.webp",
+    "kind": "image générée",
+    "title": "Fontaine de l'éternité",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "At the foot of a tall cliff at night, cascading stone basins overflow gently into one another, their water softly lit turquoise. Old stone houses are stacked on the cliff face above, a few windows glowing warm. Light mist, teal and deep blue palette. Seen from a small stone forecourt.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "eternity_fountain.png",
+      "url": null,
+      "sha256": "dec59f63e9f9022557554938bbde0abaf751e697cceb7be21a12e6e1c95efe35",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "d9f441f076889781c4935f544b2c272c80e52d7a5d21f9b35e0de0f478d81889",
+    "bytes": 433150
+  },
+  {
+    "world": "galaxy",
+    "file": "galaxy.webp",
+    "kind": "image générée",
+    "title": "Odyssée stellaire",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "Deep space vista: a large tilted spiral galaxy dominates the sky over a dense star field, with purple and magenta nebula dust. No ground, no architecture. Astrophotography realism.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "galaxy.png",
+      "url": null,
+      "sha256": "8fd7f4c15e5dfa60216b17204d3fa12a4facc708267247b8b071896d64c5a5ee",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "13cac09ba06418814916a6d5e293c9d66980c0f42c2cd4aaf9a5dd62551a4e72",
+    "bytes": 488136
+  },
+  {
+    "world": "heaven",
+    "file": "heaven.webp",
+    "kind": "image générée",
+    "title": "Heaven · Hauts Cieux",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "Floating islands high above a sea of clouds in bright daylight, with small elegant white pavilions on them. Soft pastel sky. In the foreground, the stone railing of a balcony at the edge of the void.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "heaven.png",
+      "url": null,
+      "sha256": "27f80871c265ad8c53ee14e5e5dd7474d0868e3f05a68a59a3655de7e207c452",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "a715517fd646d9dec7b97acb2307e7ace9ae27fc7d9f96823a57a136485db5f3",
+    "bytes": 311948
+  },
+  {
+    "world": "interstellar",
+    "file": "interstellar.webp",
+    "kind": "image générée",
+    "title": "Interstellaire",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "Interior of a quiet space station observation deck. A large structural window with ribs and frames looks out on the curved horizon of the Earth and the stars beyond. Cool blue light on clean metallic surfaces. Seen from inside the station.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "interstellar.png",
+      "url": null,
+      "sha256": "72cf8a10e1ea1e5245218c85dc743837a10d0bb251c318668cac280e39a616a2",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "a598f3fa64ed02ea7aae4a8e89951d3c12b321c96141e89a531177f00265b17c",
+    "bytes": 296850
+  },
+  {
+    "world": "memories",
+    "file": "memories.webp",
+    "kind": "image générée",
+    "title": "Souvenirs",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "An intimate old room at night, lit by a warm table lamp. A wall covered with framed photographs, a wooden chest of drawers, a small table and an armchair. Lavender and warm amber tones.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "memories.png",
+      "url": null,
+      "sha256": "a68a9022cdb5101c412f6e751d375ef90be9ad0ccea519d213e7978971a2f151",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "6c8be8a8aed6b442e9b072dd044b6bfad4afe3b9f9564cc1da7aba912e4159b1",
+    "bytes": 232780
+  },
+  {
+    "world": "midnight_rooftop",
+    "file": "midnight_rooftop.webp",
+    "kind": "image générée",
+    "title": "Nuit",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A rooftop terrace at night above a large city. A metal railing in the foreground, the city lights and skyline spread out below. Clear dark blue sky, a thin crescent moon.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "midnight_rooftop.png",
+      "url": null,
+      "sha256": "dfd4c21f0c1d1630a7d81865c3d2abfc7fc8158500fe8b17dcd7f8e85cc05da8",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "261ce2b058507c3a79e7372ac173e0fe6824821c085517fda2aaef9c5287c86e",
+    "bytes": 269694
+  },
+  {
+    "world": "oasis",
+    "file": "oasis.webp",
+    "kind": "image générée",
+    "title": "Oasis des confins",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A remote desert oasis at golden hour: an oval pool of clear water surrounded by date palms, sand dunes behind it. Warm low sun, long shadows. Seen from the edge of the pool.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "oasis.png",
+      "url": null,
+      "sha256": "4461bc5de099f7473516270947ae901ba3f0889df8f6f1fbc37c00c3f6fd0059",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "35f7692135c2de492baf3172423d60a820ceaa0ed6613bde26966631cab70d5f",
+    "bytes": 462090
+  },
+  {
+    "world": "ocean_cliffs",
+    "file": "ocean_cliffs.webp",
+    "kind": "image générée",
+    "title": "Falaises de l'infini",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "High sea cliffs above a vast open ocean, seen from a grassy promontory. Clear daylight, gentle haze on the horizon, waves breaking far below.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "ocean_cliffs.png",
+      "url": null,
+      "sha256": "f4f00e18897af3082aac9ef4d180d5dc49c58b053973b8125ac7787723c793ab",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "93da33d58c30ed6bb3937740bd6675f500397cc6f86c04600c713075f3032540",
+    "bytes": 479482
+  },
+  {
+    "world": "polar_sky",
+    "file": "polar_sky.webp",
+    "kind": "image générée",
+    "title": "Aurore",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A wide open arctic plain at night under a vast green aurora. Very low, flat horizon, snow, stars; the sky fills most of the frame.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "polar_sky.png",
+      "url": null,
+      "sha256": "b0c40c0403380141b440f01f11d844602de8db562beb56c24cf7be8d4797478e",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "c2f6a1398bbce39a4dd50de42aea277adb4b1eba869549dff1947002f8d34de6",
+    "bytes": 183286
+  },
+  {
+    "world": "rain_city",
+    "file": "rain_city.webp",
+    "kind": "image générée",
+    "title": "Pluie",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A narrow, empty city street at night just after rainfall, between close old façades. Wet cobblestones reflect unlettered glowing shop windows and street lamps. Cool blue tones, pedestrian eye level.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "rain_city.png",
+      "url": null,
+      "sha256": "7c233089a3c20052edd86399f5b16a182ea3fdf57f4afca8a8d2bbcd57f0a6c7",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "1a8c2abb0fe72d4e6c5377b3a59c50f0e7177f1e01f16874790e596c104b446c",
+    "bytes": 421730
+  },
+  {
+    "world": "rain_refuge",
+    "file": "rain_refuge.webp",
+    "kind": "image générée",
+    "title": "Refuge sous la pluie",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A cosy study at night: a wooden desk in front of a large window with small stationary raindrops on the glass, without long rain trails, a warm desk lamp, an open notebook and a cup. Outside, blurred trees or city lights in blue darkness. Seen as if seated at the desk.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "rain_refuge.png",
+      "url": null,
+      "sha256": "55e044dc3cd1533b208462315f80a05147cf8279caa1a0a88c1ef0f4400ec5ce",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "2b9ff92b45cff78a5b3f6c31d491f8de534d40aee32fbf38f47e38043b0d4106",
+    "bytes": 271094
+  },
+  {
+    "world": "sahara_observatory",
+    "file": "sahara_observatory.webp",
+    "kind": "image générée",
+    "title": "Observatoire des sables",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A half-buried old astronomical observatory dome at the foot of tall Sahara sand dunes at sunset. Very low warm sun, long shadows, rippled sand.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "sahara_observatory.png",
+      "url": null,
+      "sha256": "9bb631eb9fd5b59744a08d1111ea809c7f63414487391b4b61e9a307d778b736",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "0e94b0da9e52c909ad47ba84bfe52a6d228a4c3b597f787089662442b15805e6",
+    "bytes": 164424
+  },
+  {
+    "world": "spring_meadow",
+    "file": "spring_meadow.webp",
+    "kind": "image générée",
+    "title": "Printemps",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "An orchard in full blossom beside a small clear stream. White and pink blossoms, fresh green grass, bright morning sunlight.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "spring_meadow.png",
+      "url": null,
+      "sha256": "8955d6a8b5396d53200c0a892dfd31fd3e8077696c4c3b345698452767e30305",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "791e31a13d5954ce7fd2e80037bc05e77018e4f29ba47c89ac2959305e7956d6",
+    "bytes": 827234
+  },
+  {
+    "world": "star_tree",
+    "file": "star_tree.webp",
+    "kind": "image générée",
+    "title": "Arbre des étoiles",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A single ancient solitary tree on the shore of a still lake at night, seen three-quarter from the side. Small warm paper lanterns hang from its branches and reflect on the water. Deep blue night, countless stars, a faint Milky Way, a soft cyan glow along the horizon.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "star_tree.png",
+      "url": null,
+      "sha256": "88c1f2f91373ecbf9a4ad236dcd38609dd0ab7cc60f31024e286e8c991ee6920",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "9dee970c6c7f810cb0ce5c5c55fcf5617d2267a44a7dbf87d8153e1812315dd1",
+    "bytes": 457634
+  },
+  {
+    "world": "storm_cliffs",
+    "file": "storm_cliffs.webp",
+    "kind": "image générée",
+    "title": "Orage",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A dramatic storm front over a dark sea, seen from coastal cliffs. Heavy clouds with a faint glow inside them, but no visible lightning bolt. Cold grey-blue light, wind in the grass.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "storm_cliffs.png",
+      "url": null,
+      "sha256": "1043e23faec4bbfe4d8d74ebcb2854a8c333a4b609ea57c200e072b7ca0ed93f",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "7961921d8ae9aca57b58ab73f55cd006b1506aacf5cdf73a30e361c310bbe549",
+    "bytes": 203204
+  },
+  {
+    "world": "summer_terrace",
+    "file": "summer_terrace.webp",
+    "kind": "image générée",
+    "title": "Été",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A sunny summer terrace under a wooden pergola covered with vines, a table and chairs in the shade, overlooking a warm Mediterranean landscape. Late afternoon light, dappled shadows.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "summer_terrace.png",
+      "url": null,
+      "sha256": "4ecde8d55d1cf30326c0f1377a6186a904cdbfa3aa3b3811933f70d56b44afb9",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "0bc65ebfb8df0242eeca2af2a3be544a7e10149321468baa4d9378c9bacd6d4f",
+    "bytes": 535250
+  },
+  {
+    "world": "winter_lodge",
+    "file": "winter_lodge.webp",
+    "kind": "image générée",
+    "title": "Hiver",
+    "generator": "OpenAI, générateur d'images intégré (imagegen)",
+    "generated_on": "2026-09-15",
+    "prompt": "A wooden mountain chalet with a thick snow-covered roof and warm light in its windows, among snowy fir trees. Cold, clear blue daylight. Seen from the snowy path in front of the lodge.",
+    "license": "Image générée : usage permis selon les conditions d'utilisation d'OpenAI et les droits des tiers",
+    "license_url": "https://openai.com/policies/eu-terms-of-use/",
+    "original": {
+      "file": "winter_lodge.png",
+      "url": null,
+      "sha256": "5497bd801682869cc4bfec07ed1643a7b80c54116365c2a1f7bddfa34056972f",
+      "dimensions": [
+        2560,
+        1440
+      ]
+    },
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "quality": 86,
+    "sha256": "40b6b67c1c375a070e22452d601d7f8d209c8e6d59c9049787f5679d70192781",
+    "bytes": 427396
   }
 ]

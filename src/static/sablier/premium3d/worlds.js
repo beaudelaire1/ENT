@@ -2,18 +2,21 @@
 // Les outils de fabrication vivent dans compositions.js ; aucun lieu de substitution.
 import {compose} from './compositions.js';
 import {aurora} from './sky-effects.js';
-import {motes, photoBackdrop} from './photo-world.js';
+import {particles, photoBackdrop} from './photo-world.js';
 
 export const RECIPES = {
   star_tree: {
+    photo: {src: "star_tree.webp", focus: [0.36, 0.5], drift: 0.05, particles: [{kind: "fireflies", box: [[-12, 2], [-1, 6], [-20, -6]]}]},
     env: {"panorama": "moonless_golf", "kind": "night", "zenith": "#020d19", "horizon": "#0c3d5d", "ground": "#061017", "light": "#ffe7a0", "glow": "#7ad8ff", "elevation": 8, "azimuth": 200, "intensity": 3.4, "size": 3, "haze": 0.5, "directIntensity": 0.9, "ambient": 1.4},
     fog: ["#0a2334", 0.0042],
   },
   eternity_fountain: {
+    photo: {src: "eternity_fountain.webp", focus: [0.42, 0.5], drift: 0.05, particles: [{kind: "marine", color: "#9ff3e8", velocity: [0.04, 0.06, 0], box: [[-8, 4], [-3, 6], [-18, -5]]}]},
     env: {"panorama": "kloppenheim_02_puresky", "kind": "night", "zenith": "#061724", "horizon": "#1f7180", "ground": "#07141a", "light": "#dffff7", "glow": "#57e3df", "elevation": 14, "azimuth": 150, "intensity": 4.2, "size": 2.6, "haze": 0.55, "directIntensity": 1.2},
     fog: ["#123c46", 0.0052],
   },
   eden: {
+    photo: {src: "eden.webp", focus: [0.55, 0.5], drift: 0.06, particles: [{kind: "dust", color: "#fff2b0", count: 120, box: [[-10, 10], [-2, 8], [-20, -4]]}]},
     env: {"panorama": "qwantani_mid_morning_puresky", "kind": "day", "turbidity": 4.5, "rayleigh": 1.4, "mie": 0.006, "mieG": 0.82, "elevation": 26, "azimuth": 44, "light": "#fff0a6", "directIntensity": 3.1, "exposure": 0.42, "ambient": 1.9},
     fog: ["#20402f", 0.0044],
   },
@@ -22,85 +25,104 @@ export const RECIPES = {
     fog: ["#243a5c", 0.0058],
   },
   memories: {
+    photo: {src: "memories.webp", focus: [0.25, 0.5], drift: 0.04, particles: [{kind: "dust", color: "#ffd9a0", count: 90, box: [[-9, 0], [-1, 5], [-12, -4]]}]},
     env: {"panorama": "belfast_sunset_puresky", "kind": "night", "zenith": "#15111d", "horizon": "#55445f", "ground": "#100d14", "light": "#f0cba2", "glow": "#d2b6ff", "elevation": 4, "azimuth": 170, "intensity": 2.6, "size": 4, "haze": 0.75, "directIntensity": 0.6},
     fog: ["#4a3e57", 0.0072],
   },
   interstellar: {
+    photo: {src: "interstellar.webp", focus: [0.5, 0.5], drift: 0.03, particles: []},
     env: {"panorama": "rogland_clear_night", "kind": "night", "zenith": "#01040d", "horizon": "#111d3c", "ground": "#03050a", "light": "#c8dbff", "glow": "#8eb8ff", "elevation": 18, "azimuth": 230, "intensity": 5, "size": 1.4, "haze": 0.3, "directIntensity": 1.4, "ambient": 1.4, "exposure": 1.8},
     fog: ["#050a16", 0.0016],
   },
   galaxy: {
+    photo: {src: "galaxy.webp", focus: [0.38, 0.45], drift: 0.07, particles: []},
     env: {"panorama": "satara_night_no_lamps", "kind": "night", "zenith": "#03020b", "horizon": "#25133d", "ground": "#05030b", "light": "#f2d6ff", "glow": "#d18aff", "elevation": 24, "azimuth": 210, "intensity": 4.4, "size": 2, "haze": 0.5, "directIntensity": 1.1, "exposure": 1.4},
     fog: ["#090718", 0],
   },
   heaven: {
+    photo: {src: "heaven.webp", focus: [0.6, 0.5], drift: 0.06, particles: [{kind: "dust", color: "#ffffff", count: 60, opacity: 0.35, box: [[-12, 12], [-2, 8], [-20, -4]]}]},
     env: {"panorama": "kloppenheim_06_puresky", "kind": "day", "turbidity": 2.6, "rayleigh": 0.9, "mie": 0.004, "mieG": 0.85, "elevation": 20, "azimuth": 330, "light": "#fff8d8", "directIntensity": 3.6, "exposure": 0.34, "ambient": 1.8},
     fog: ["#c7e4f0", 0.005],
   },
   oasis: {
+    photo: {src: "oasis.webp", focus: [0.5, 0.6], drift: 0.05, particles: [{kind: "dust", color: "#ffe2a8", count: 60}]},
     env: {"panorama": "syferfontein_0d_clear_puresky", "kind": "day", "turbidity": 9, "rayleigh": 2.6, "mie": 0.012, "mieG": 0.78, "elevation": 5, "azimuth": 206, "light": "#ffd89b", "directIntensity": 3.2, "exposure": 0.3},
     fog: ["#8a573f", 0.0048],
   },
   abyss: {
+    photo: {src: "abyss.webp", focus: [0.42, 0.55], drift: 0.05, particles: [{kind: "marine"}]},
     env: {"kind": "night", "zenith": "#021217", "horizon": "#0d4b55", "ground": "#031015", "light": "#9ff8ee", "glow": "#58d6d8", "elevation": 62, "azimuth": 180, "intensity": 3.6, "size": 6, "haze": 0.8, "directIntensity": 1.5, "backgroundColor": "#123e49", "ambient": 1.3, "exposure": 1.7},
     fog: ["#1d5660", 0.022],
   },
   rain_refuge: {
+    photo: {src: "rain_refuge.webp", focus: [0.55, 0.55], drift: 0.03, particles: []},
     env: {"panorama": "kloppenheim_07_puresky", "kind": "night", "zenith": "#111820", "horizon": "#344756", "ground": "#15130f", "light": "#ffd28a", "glow": "#8ba4ba", "elevation": 5, "azimuth": 200, "intensity": 2.2, "size": 3, "haze": 0.7, "directIntensity": 0.7},
     fog: ["#35485a", 0.0038],
   },
   aurora_valley: {
+    photo: {src: "aurora_valley.webp", focus: [0.5, 0.5], drift: 0.05, particles: []},
     env: {"panorama": "qwantani_night_puresky", "kind": "night", "zenith": "#06121e", "horizon": "#17445b", "ground": "#081018", "light": "#baffef", "glow": "#7defcf", "elevation": 10, "azimuth": 195, "intensity": 3, "size": 2.4, "haze": 0.55, "directIntensity": 0.9},
     fog: ["#12303f", 0.0055],
   },
   spring_meadow: {
+    photo: {src: "spring_meadow.webp", focus: [0.55, 0.55], drift: 0.05, particles: [{kind: "petals"}]},
     env: {"panorama": "qwantani_morning_puresky", "kind": "day", "turbidity": 3.4, "rayleigh": 1.6, "mie": 0.005, "mieG": 0.8, "elevation": 30, "azimuth": 46, "light": "#fff3c3", "directIntensity": 3.3, "exposure": 0.4, "ambient": 1.8},
     fog: ["#cfe3d3", 0.0034],
   },
   summer_terrace: {
+    photo: {src: "summer_terrace.webp", focus: [0.4, 0.5], drift: 0.04, particles: [{kind: "dust", color: "#fff0c0", count: 80, box: [[-10, 10], [-2, 7], [-18, -4]]}]},
     env: {"panorama": "kloofendal_48d_partly_cloudy_puresky", "kind": "day", "turbidity": 5.2, "rayleigh": 1.9, "mie": 0.007, "mieG": 0.79, "elevation": 40, "azimuth": 324, "light": "#fff0ae", "directIntensity": 4, "exposure": 0.36, "ambient": 1.7},
     fog: ["#d8bf94", 0.0028],
   },
   autumn_lake: {
+    photo: {src: "autumn_lake.webp", focus: [0.6, 0.55], drift: 0.05, particles: [{kind: "leaves"}]},
     env: {"panorama": "evening_road_01_puresky", "kind": "day", "turbidity": 7, "rayleigh": 2.8, "mie": 0.009, "mieG": 0.8, "elevation": 7, "azimuth": 218, "light": "#ffd39d", "directIntensity": 3, "exposure": 0.32},
     fog: ["#9c7a5c", 0.0062],
   },
   winter_lodge: {
+    photo: {src: "winter_lodge.webp", focus: [0.55, 0.5], drift: 0.04, particles: [{kind: "snow"}]},
     env: {"panorama": "snow_field_2_puresky", "kind": "day", "turbidity": 3, "rayleigh": 2.2, "mie": 0.004, "mieG": 0.82, "elevation": 14, "azimuth": 316, "light": "#eef8ff", "directIntensity": 2.6, "exposure": 0.3, "ambient": 1.7},
     fog: ["#b8ccd8", 0.0058],
   },
   rain_city: {
+    photo: {src: "rain_city.webp", focus: [0.55, 0.5], drift: 0.04, particles: [{kind: "rain"}]},
     env: {"panorama": "neuer_zollhof", "kind": "night", "zenith": "#101923", "horizon": "#263748", "ground": "#10151a", "light": "#b7d5ea", "glow": "#78b8e8", "elevation": 4, "azimuth": 210, "intensity": 2, "size": 3, "haze": 0.65, "directIntensity": 0.6, "ambient": 1.6},
     fog: ["#243544", 0.0026],
   },
   ocean_cliffs: {
+    photo: {src: "ocean_cliffs.webp", focus: [0.35, 0.5], drift: 0.05, particles: []},
     env: {"panorama": "table_mountain_2_puresky", "kind": "day", "turbidity": 4.2, "rayleigh": 1.7, "mie": 0.006, "mieG": 0.8, "elevation": 20, "azimuth": 334, "light": "#f6e5c7", "directIntensity": 3.4, "exposure": 0.36, "ambient": 1.8},
     fog: ["#9fb9c6", 0.0042],
   },
   sahara_observatory: {
+    photo: {src: "sahara_observatory.webp", focus: [0.65, 0.55], drift: 0.05, particles: [{kind: "sand"}]},
     env: {"panorama": "mpumalanga_veld_puresky", "kind": "day", "turbidity": 11, "rayleigh": 3.2, "mie": 0.014, "mieG": 0.76, "elevation": 3.4, "azimuth": 214, "light": "#ffd39b", "directIntensity": 3.6, "exposure": 0.34, "zenith": "#3f5e86", "horizon": "#e0a870", "ground": "#9a6234", "ambient": 1.5},
     fog: ["#b07747", 0.0034],
   },
   ancient_forest: {
     // Lieu photographié : aucune composition procédurale n'approchait un vrai sous-bois.
     // Le ciel de la recette n'éclaire plus que l'objet ; la photo est le lieu visible.
-    photo: {src: "ancient_forest.webp", focus: [0.5, 0.58], drift: 0.06, motes: {color: "#ffe9c4", box: [[-5, 9], [-2, 9], [-24, -4]]}},
+    photo: {src: "ancient_forest.webp", focus: [0.5, 0.58], drift: 0.06, particles: [{kind: "dust"}]},
     env: {"panorama": "kloofendal_misty_morning_puresky", "kind": "night", "turbidity": 6, "rayleigh": 2.4, "mie": 0.008, "mieG": 0.84, "elevation": 34, "azimuth": 42, "light": "#dff2bf", "directIntensity": 3.6, "exposure": 1.35, "ambient": 1.6, "zenith": "#152c22", "horizon": "#314c3a", "ground": "#172b1c", "glow": "#798b60", "intensity": 2},
     fog: ["#283d2e", 0.014],
   },
   storm_cliffs: {
+    photo: {src: "storm_cliffs.webp", focus: [0.5, 0.5], drift: 0.05, lightning: true, particles: [{kind: "rain", opacity: 0.22, velocity: [2.5, -10, 0]}]},
     env: {"panorama": "kloppenheim_01_puresky", "kind": "night", "zenith": "#11131b", "horizon": "#333846", "ground": "#15191d", "light": "#dce8ff", "glow": "#a8b9db", "elevation": 7, "azimuth": 200, "intensity": 2.4, "size": 3.4, "haze": 0.7, "directIntensity": 0.8},
     fog: ["#343c50", 0.0058],
   },
   ember_hearth: {
+    photo: {src: "ember_hearth.webp", focus: [0.4, 0.65], drift: 0.03, particles: [{kind: "sparks"}]},
     env: {"kind": "night", "zenith": "#120d0b", "horizon": "#271713", "ground": "#090706", "light": "#ffd083", "glow": "#ff9b4b", "elevation": -6, "azimuth": 180, "intensity": 1.2, "size": 5, "haze": 0.9, "directIntensity": 0.25, "exposure": 1.7, "ambient": 0.85},
     fog: ["#241511", 0.0125],
   },
   polar_sky: {
+    photo: {src: "polar_sky.webp", focus: [0.6, 0.5], drift: 0.06, particles: []},
     env: {"panorama": "qwantani_moon_noon_puresky", "kind": "night", "zenith": "#02111d", "horizon": "#0d3448", "ground": "#10222a", "light": "#d9fff0", "glow": "#77f0b0", "elevation": 8, "azimuth": 190, "intensity": 2.8, "size": 2.6, "haze": 0.5, "directIntensity": 0.8},
     fog: ["#0d2c38", 0.0044],
   },
   midnight_rooftop: {
+    photo: {src: "midnight_rooftop.webp", focus: [0.5, 0.55], drift: 0.04, particles: []},
     env: {"panorama": "rooftop_night", "kind": "night", "zenith": "#030710", "horizon": "#10192a", "ground": "#080a0d", "light": "#e8edff", "glow": "#9cb9f1", "elevation": 30, "azimuth": 220, "intensity": 4, "size": 1.6, "haze": 0.4, "directIntensity": 1, "ambient": 1.3},
     fog: ["#0c1220", 0.0022],
   },
@@ -153,22 +175,27 @@ export function buildWorld(THREE,key,{mobile=false}={}) {
     },
   };
 }
-// Lieu photographié : la photographie en fond, des poussières dans ses rayons, rien de bâti.
-// `ready` retient le premier affichage de la scène jusqu'à l'arrivée de la photo.
+// Lieu photographié : l'image en fond, ce qui traverse son air, rien de bâti.
+// `ready` retient le premier affichage de la scène jusqu'à l'arrivée de l'image.
 function photoWorld(THREE,key,recipe,mobile) {
   const backdrop=photoBackdrop(THREE,recipe.photo);
-  const dust=motes(THREE,recipe.photo.motes);
+  const layers=(recipe.photo.particles||[]).map(options=>particles(THREE,options));
   const object=new THREE.Group();
-  object.add(backdrop.mesh,dust.points);
+  object.add(backdrop.mesh,...layers.map(layer=>layer.points));
   const camera={height:1.72,pitch:0,fov:56,...CAMERAS[key]};
   if(mobile)camera.fov=Math.max(65,camera.fov);
   return {object,env:recipe.env,fog:recipe.fog,camera,photo:recipe.photo.src,
     get ready(){return backdrop.ready;},
     resize(width,height){backdrop.resize(width,height);},
-    update(time,motion){
+    update(time,motion,progress,lightningEnabled=false){
+      // Même cadence que l'orage bâti : un éclair toutes les cinquante-sept secondes. Il ne
+      // blanchit que l'image — un lieu photographié n'a pas de relief à frapper.
+      const cycle=time%57000;
+      const strike=recipe.photo.lightning&&lightningEnabled&&motion>0&&cycle>55000;
+      backdrop.setFlash(strike?Math.sin((cycle-55000)/2000*Math.PI)*(.7+.3*Math.sin(cycle*.05)):0);
       if(motion<=0)return;
       backdrop.update(time);
-      dust.update(time);
+      for(const layer of layers)layer.update(time);
     },
   };
 }
