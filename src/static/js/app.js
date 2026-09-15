@@ -132,9 +132,29 @@
     });
   }
 
+  /* ------------------------------------------------------ raccourci de recherche */
+  // « / » hors d'un champ de saisie, ou Ctrl/Cmd + K partout, place le curseur dans la
+  // recherche de l'en-tête : chercher ne demande plus d'aller viser le champ.
+  function setupSearchShortcut() {
+    var input = document.querySelector("[data-global-search]");
+    if (!input) return;
+    document.addEventListener("keydown", function (event) {
+      if (event.defaultPrevented || event.altKey) return;
+      var target = event.target;
+      var typing = target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName);
+      var slash = event.key === "/" && !event.ctrlKey && !event.metaKey && !typing;
+      var commandK = (event.ctrlKey || event.metaKey) && (event.key === "k" || event.key === "K");
+      if (!slash && !commandK) return;
+      event.preventDefault();
+      input.focus();
+      input.select();
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     setupSidebar();
     setupUnsavedGuard();
     describeErrors();
+    setupSearchShortcut();
   });
 })();

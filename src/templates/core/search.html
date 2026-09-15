@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% load search_tags %}
 {% block title %}Recherche · MyENT{% endblock %}
 {% block content %}
 <header class="page-header">
   <div>
     <p class="eyebrow">RECHERCHE GLOBALE</p>
     <h1>{% if query %}Résultats pour « {{ query }} »{% else %}Que cherchez-vous ?{% endif %}</h1>
-    {% if query %}<p class="muted">{{ total }} résultat{{ total|pluralize }} dans tout votre espace.</p>{% endif %}
+    {% if query %}<p class="muted">{{ total }} résultat{{ total|pluralize }} dans tout votre espace.</p>{% else %}<p class="muted search-help">Depuis n’importe quelle page, <kbd>/</kbd> ou <kbd>Ctrl</kbd> + <kbd>K</kbd> place le curseur dans la recherche.</p>{% endif %}
   </div>
 </header>
 
 {% if query %}
 <nav class="filter-chips" aria-label="Filtrer par type">
-  <a class="chip{% if not object_type %} active{% endif %}" href="?q={{ query|urlencode }}">Tout</a>
-  {% for key, label in types %}
-    <a class="chip{% if object_type == key %} active{% endif %}" href="?q={{ query|urlencode }}&amp;type={{ key }}">{{ label }}</a>
+  <a class="chip{% if not object_type %} active{% endif %}" href="?q={{ query|urlencode }}">Tout <span class="chip-count">{{ all_count }}</span></a>
+  {% for key, label, count in types %}
+    <a class="chip{% if object_type == key %} active{% endif %}" href="?q={{ query|urlencode }}&amp;type={{ key }}">{{ label }} <span class="chip-count">{{ count }}</span></a>
   {% endfor %}
 </nav>
 
@@ -23,7 +24,7 @@
       <article class="list-row search-result">
         <div>
           <a class="search-title" href="{{ entry.url }}">{{ entry.title }}</a>
-          {% if entry.body %}<p class="muted search-excerpt">{{ entry.body|truncatechars:220 }}</p>{% endif %}
+          {% if entry.body %}<p class="muted search-excerpt">{{ entry.body|highlight:query }}</p>{% endif %}
         </div>
         <span class="chip static">{{ entry.type_label }}</span>
       </article>

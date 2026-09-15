@@ -9,7 +9,7 @@ from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
-from core.search import SOURCES
+from core.search import SOURCES, count_by_type
 from core.search import search as search_entries
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,9 @@ def search(request):
         object_type = ""
     entries = search_entries(request.user, query, object_type or None)
     page = Paginator(entries, 25).get_page(request.GET.get("page"))
+    # Chaque filtre dit ce qu'il contient ; un type sans résultat n'est pas proposé, sauf
+    # celui qu'on regarde, pour pouvoir en sortir.
+    counts = count_by_type(request.user, query)
     return render(
         request,
         "core/search.html",
@@ -59,7 +62,12 @@ def search(request):
             "query": query,
             "page": page,
             "object_type": object_type,
-            "types": [(key, source.label) for key, source in SOURCES.items()],
+            "types": [
+                (key, source.label, counts.get(key, 0))
+                for key, source in SOURCES.items()
+                if counts.get(key) or key == object_type
+            ],
+            "all_count": sum(counts.values()),
             "total": page.paginator.count if query else 0,
         },
     )

@@ -383,3 +383,8 @@ ul.errorlist { margin:4px 0 0; padding-left:18px; color:var(--danger); font-size
 /* Ressources d'une tâche : la liste s'ouvre sur toute la largeur de la rangée d'actions. */
 .task-resources[open] { flex-basis:100%; }
 .task-resources-list { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:6px; }
+
+/* Recherche : les termes trouvés surlignés, le nombre de résultats sur chaque filtre. */
+.search-excerpt mark { background:color-mix(in srgb,var(--accent) 30%,transparent); color:var(--text); border-radius:4px; padding:0 2px; }
+.chip-count { margin-left:6px; font-variant-numeric:tabular-nums; opacity:.8; }
+.search-help kbd { display:inline-block; min-width:1.6em; padding:1px 6px; border:1px solid var(--border); border-radius:6px; background:var(--surface); font:inherit; font-size:12px; text-align:center; }

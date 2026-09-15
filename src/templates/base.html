@@ -73,7 +73,7 @@
     <header class="topbar">
       <button class="icon-button mobile-only" type="button" data-toggle-sidebar aria-label="Ouvrir le menu">☰</button>
       <form class="global-search" action="{% url 'search' %}" method="get">
-        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Rechercher partout…" aria-label="Rechercher">
+        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Rechercher partout…" aria-label="Rechercher" aria-keyshortcuts="/ Control+K Meta+K" title="Raccourci : / ou Ctrl + K" data-global-search>
       </form>
       <details class="quick-capture">
         <summary class="button primary" aria-label="Capturer une tâche, une note ou un lien">+ Capturer</summary>

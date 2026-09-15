@@ -10,13 +10,16 @@ Ajouter un modèle à la recherche globale consiste à ajouter une entrée à ``
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Callable
 
 from django.apps import apps
 from django.db import connections, router
-from django.db.models import F, Q, QuerySet
+from django.db.models import Count, F, Q, QuerySet
 from django.urls import reverse
+from django.utils.html import escape
+from django.utils.safestring import SafeString, mark_safe
 
 # Configuration textuelle de PostgreSQL : lemmatise et écarte les mots vides français,
 # afin que « révisions » trouve « révision ».
@@ -313,20 +316,105 @@ def search(user, query: str, object_type: str | None = None) -> QuerySet:
     query = (query or "").strip()
     if not query:
         return entries.none()
+    matches, search_query = _matching(entries, query)
+    if search_query is None:
+        return matches.order_by("-updated_at")
+    from django.contrib.postgres.search import SearchRank
+
+    # `F(...)` est indispensable : passé sous forme de chaîne, SearchRank ré-encoderait
+    # la colonne avec `to_tsvector()` et perdrait la pondération déjà stockée.
+    return matches.annotate(rank=SearchRank(F("search_vector"), search_query)).order_by("-rank", "-updated_at")
+
+
+def _matching(entries: QuerySet, query: str):
+    """Les entrées qui répondent à la requête, sans classement, et la requête plein texte
+    quand la base en dispose — le classement et le décompte partent du même filtre."""
+    from core.models import SearchEntry
+
     if supports_full_text(SearchEntry):
-        from django.contrib.postgres.search import SearchQuery, SearchRank
+        from django.contrib.postgres.search import SearchQuery
 
         # `websearch` accepte la syntaxe que les utilisateurs connaissent déjà :
         # guillemets pour une expression exacte, `-` pour exclure, `or` pour alterner.
         search_query = SearchQuery(query, config=SEARCH_CONFIG, search_type="websearch")
-        # `F(...)` est indispensable : passé sous forme de chaîne, SearchRank ré-encoderait
-        # la colonne avec `to_tsvector()` et perdrait la pondération déjà stockée.
-        return (
-            entries.filter(search_vector=search_query)
-            .annotate(rank=SearchRank(F("search_vector"), search_query))
-            .order_by("-rank", "-updated_at")
-        )
-    return entries.filter(Q(title__icontains=query) | Q(body__icontains=query)).order_by("-updated_at")
+        return entries.filter(search_vector=search_query), search_query
+    return entries.filter(Q(title__icontains=query) | Q(body__icontains=query)), None
+
+
+def count_by_type(user, query: str) -> dict[str, int]:
+    """Le nombre de résultats de chaque type, pour les filtres : une seule agrégation, sans
+    le calcul de pertinence, et indépendante du filtre de type en cours."""
+    from core.models import SearchEntry
+
+    query = (query or "").strip()
+    if not query:
+        return {}
+    matches, _ = _matching(SearchEntry.objects.filter(owner=user), query)
+    return dict(
+        matches.order_by().values("object_type").annotate(total=Count("pk")).values_list("object_type", "total")
+    )
+
+
+EXCERPT_WIDTH = 220
+# Un mot, ou une expression entre guillemets, éventuellement précédés du `-` qui exclut.
+_QUERY_TOKEN = re.compile(r'-?"[^"]*"?|\S+')
+
+
+def query_terms(query: str) -> list[str]:
+    """Les termes à surligner : ceux que la recherche cherche vraiment.
+
+    Une expression entre guillemets reste entière ; un terme exclu par `-` et l'opérateur
+    `or` ne sont jamais marqués, puisque les résultats ne les contiennent pas pour cela.
+    Les plus longs d'abord, pour qu'« espace compact » l'emporte sur « espace ».
+    """
+    seen: set[str] = set()
+    terms: list[str] = []
+    for token in _QUERY_TOKEN.findall(query or ""):
+        if token.startswith("-") or token.casefold() == "or":
+            continue
+        term = " ".join(token.strip('"').split()).strip(".,;:!?()[]{}«»'")
+        if len(term) >= 2 and term.casefold() not in seen:
+            seen.add(term.casefold())
+            terms.append(term)
+    return sorted(terms, key=len, reverse=True)
+
+
+def highlight_excerpt(text: str, query: str, width: int = EXCERPT_WIDTH) -> SafeString:
+    """Un extrait d'environ `width` caractères autour de la première occurrence, les termes
+    marqués en `<mark>`.
+
+    Le même rendu sous PostgreSQL et SQLite : on travaille sur le texte brut de l'index, on
+    cherche sur le texte non échappé puis on échappe chaque morceau — jamais l'inverse, qui
+    casserait les correspondances et laisserait passer du HTML. Les variantes trouvées par
+    la lemmatisation de PostgreSQL (« révisions » pour « révision ») ne sont pas marquées :
+    l'extrait les montre sans les surligner.
+    """
+    text = " ".join((text or "").split())
+    terms = query_terms(query)
+    pattern = re.compile("|".join(re.escape(term) for term in terms), re.IGNORECASE) if terms else None
+    first = pattern.search(text) if pattern else None
+
+    start = 0
+    if first and first.start() > width // 3:
+        cut = first.start() - width // 3
+        space = text.find(" ", cut, first.start())
+        start = space + 1 if space != -1 else cut
+    end = min(len(text), start + width)
+    if end < len(text):
+        space = text.rfind(" ", start, end)
+        if space > start and (first is None or space >= first.end()):
+            end = space
+
+    snippet = text[start:end]
+    parts: list[str] = []
+    position = 0
+    if pattern:
+        for match in pattern.finditer(snippet):
+            parts.append(escape(snippet[position : match.start()]))
+            parts.append(f"<mark>{escape(match.group())}</mark>")
+            position = match.end()
+    parts.append(escape(snippet[position:]))
+    return mark_safe(("…" if start else "") + "".join(parts) + ("…" if end < len(text) else ""))
 
 
 def reindex_all() -> dict[str, int]:
