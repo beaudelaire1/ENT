@@ -43,11 +43,12 @@ class PlacementPageTests(TestCase):
 class PlacementWiringTests(SimpleTestCase):
     def test_the_photo_and_the_object_frame_on_the_same_window(self):
         module = read_static("premium3d/photo-world.js")
-        self.assertIn("globalThis.SablierPlacement.frame({ imageAspect, view, focus, zoom, pan })", module)
+        self.assertIn("globalThis.SablierPlacement.frame({ imageAspect, view, focus })", module)
         recipes = read_static("premium3d/worlds.js")
         # Le cadrage est écrit une seule fois, dans la description du lieu.
         self.assertNotIn("focus: [", recipes)
-        self.assertIn("focus:place.focus,drift:place.drift", recipes)
+        self.assertIn("focus:place.focus", recipes)
+        self.assertNotIn("backdrop.update(time)", recipes)
 
     def test_the_engine_poses_volumetric_objects_where_the_rules_say(self):
         engine = read_static("premium3d.js")

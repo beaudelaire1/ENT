@@ -19,6 +19,25 @@ async function world(page,scene){
   await page.waitForTimeout(150);
 }
 
+test('un objet posé conserve son point d’appui pendant l’animation',async({page})=>{
+  await world(page,catalog.find(s=>s.key==='aurores'));
+  await page.locator('.mode-grid [data-mode="hourglass"]').click();
+  await page.locator('[data-decor="2"]').click();
+  const sample=()=>page.evaluate(()=>({
+    frame:window.SablierWorld.frame(),
+    placement:window.SablierObjectPlacement,
+    time:window.SablierWorld.inspect().worldTime,
+  }));
+  const before=await sample();
+  expect(before.placement.role).toBe('pose');
+  await expect.poll(async()=>(await sample()).time).toBeGreaterThan(before.time);
+  await page.waitForTimeout(1200);
+  const after=await sample();
+  expect(after.frame).toEqual(before.frame);
+  expect(after.placement.anchor).toEqual(before.placement.anchor);
+  expect(after.placement.support).toEqual(before.placement.support);
+});
+
 test('quatre lieux : pixels immobiles, horloge active et réduction dynamique',async({page})=>{
   for(const key of ['refuge_pluie','foret','ocean','interstellaire']) {
     await world(page,catalog.find(s=>s.key===key));

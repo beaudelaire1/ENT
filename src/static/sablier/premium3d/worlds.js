@@ -4,8 +4,8 @@ import {compose} from './compositions.js';
 import {aurora} from './sky-effects.js';
 import {particles, photoBackdrop} from './photo-world.js';
 
-// Le cadrage de chaque lieu photographié — point focal, respiration — vit dans la description
-// du lieu (`scenes_catalog.json`), transmise par la page : la photo et l'objet posé dessus
+// Le point focal de chaque lieu photographié vit dans sa description
+// (`scenes_catalog.json`), transmise par la page : la photo et l'objet posé dessus
 // cadrent sur la même donnée, écrite une seule fois.
 const PLACES = (() => {
   try { return JSON.parse(globalThis.document?.querySelector('#place-data')?.textContent || '{}'); }
@@ -187,7 +187,7 @@ export function buildWorld(THREE,key,{mobile=false}={}) {
 // `ready` retient le premier affichage de la scène jusqu'à l'arrivée de l'image.
 function photoWorld(THREE,key,recipe,mobile) {
   const place=PLACES[key]||{};
-  const backdrop=photoBackdrop(THREE,{...recipe.photo,focus:place.focus,drift:place.drift});
+  const backdrop=photoBackdrop(THREE,{...recipe.photo,focus:place.focus});
   const layers=(recipe.photo.particles||[]).map(options=>particles(THREE,options));
   const object=new THREE.Group();
   object.add(backdrop.mesh,...layers.map(layer=>layer.points));
@@ -204,7 +204,6 @@ function photoWorld(THREE,key,recipe,mobile) {
       const strike=recipe.photo.lightning&&lightningEnabled&&motion>0&&cycle>55000;
       backdrop.setFlash(strike?Math.sin((cycle-55000)/2000*Math.PI)*(.7+.3*Math.sin(cycle*.05)):0);
       if(motion<=0)return;
-      backdrop.update(time);
       for(const layer of layers)layer.update(time);
     },
   };

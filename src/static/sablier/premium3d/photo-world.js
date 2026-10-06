@@ -4,15 +4,15 @@
 // dessin, quel que soit l'éclairage posé dessus. Une image photographique porte d'emblée ce
 // qu'aucune composition procédurale n'a atteint : la matière, la profondeur de l'air, une
 // lumière crédible. Le lieu devient donc une image, et la scène ne garde que ce qu'une image
-// ne sait pas faire seule : le mouvement — une lente dérive du cadre, et ce qui traverse
-// l'air du lieu (poussière, neige, pluie, étincelles, pétales), voire l'éclair d'un orage.
+// ne sait pas faire seule : ce qui traverse l'air du lieu (poussière, neige, pluie,
+// étincelles, pétales), voire l'éclair d'un orage. Le cadre reste fixe pour que les objets
+// conservent leur point d'appui dans le lieu.
 //
 // L'image ne passe ni par le tonemapping ni par le halo : elle est déjà développée, et la
 // courbe du rendu la délavait. Elle est tracée en espace écran, avant tout le reste, sans
 // écrire la profondeur. Les fichiers sont préparés hors ligne par
 // `tools/sablier-photo-worlds.py`, qui en consigne la provenance.
 const BASE = new URL("../photos/", import.meta.url);
-const TAU = Math.PI * 2;
 
 function page() {
   return document.querySelector("#focus-app");
@@ -33,9 +33,9 @@ function revise() {
 
 /**
  * L'image plein cadre. `focus` est le point de l'image (x, y depuis le haut) gardé au centre
- * quand le cadre la rogne ; `drift` l'amplitude de la respiration du cadre.
+ * quand le cadre la rogne. Ce cadre ne change qu'au redimensionnement.
  */
-export function photoBackdrop(THREE, { src, focus = [0.5, 0.5], drift = 0.06 }) {
+export function photoBackdrop(THREE, { src, focus = [0.5, 0.5] }) {
   const uniforms = {
     map: { value: null },
     span: { value: new THREE.Vector2(1, 1) },
@@ -74,8 +74,6 @@ export function photoBackdrop(THREE, { src, focus = [0.5, 0.5], drift = 0.06 }) 
 
   let imageAspect = 16 / 9;
   let view = { w: 16, h: 9 };
-  let zoom = 1;
-  let pan = [0, 0];
   let current = null;
   let loaded = false;
 
@@ -83,7 +81,7 @@ export function photoBackdrop(THREE, { src, focus = [0.5, 0.5], drift = 0.06 }) 
   // règles de placement (`placement.js`) et non d'un calcul d'ici : la photo et l'objet posé
   // dessus doivent cadrer sur la même fenêtre, au pixel près.
   function frame() {
-    current = globalThis.SablierPlacement.frame({ imageAspect, view, focus, zoom, pan });
+    current = globalThis.SablierPlacement.frame({ imageAspect, view, focus });
     uniforms.span.value.set(current.sx, current.sy);
     // L'image est retournée au chargement : le haut de la photo est en v = 1.
     uniforms.origin.value.set(current.ox, 1 - current.oy - current.sy);
@@ -120,20 +118,12 @@ export function photoBackdrop(THREE, { src, focus = [0.5, 0.5], drift = 0.06 }) 
       view = { w: width, h: Math.max(1, height) };
       frame();
     },
-    // La fenêtre d'image visible à cet instant, dérive comprise : `sablier.js` y pose l'objet.
+    // La fenêtre d'image visible : `sablier.js` y pose l'objet.
     frame() {
       return current && { ...current, imageAspect };
     },
     setFlash(value) {
       uniforms.flash.value = value;
-    },
-    update(time) {
-      // Une respiration de cent secondes : trop lente pour qu'on la voie bouger, assez
-      // ample pour que l'image ne soit jamais une affiche figée.
-      const phase = (time * 0.001 * TAU) / 100;
-      zoom = 1 + drift * (0.5 - 0.5 * Math.cos(phase));
-      pan = [Math.sin(phase * 0.7) * 0.012, Math.sin(phase * 0.43) * 0.008];
-      frame();
     },
   };
 }

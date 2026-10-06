@@ -36,7 +36,7 @@ class PlaceCatalogTests(SimpleTestCase):
                 self.assertIn(scene.place["type"], TYPES)
                 self.assertEqual(len(scene.place["focus"]), 2)
                 self.assertTrue(all(in_image(value) for value in scene.place["focus"]))
-                self.assertTrue(0 <= scene.place["drift"] <= 0.1)
+                self.assertNotIn("drift", scene.place)
 
     def test_supports_are_segments_of_the_image_with_known_kinds_and_surfaces(self):
         surfaces = self.surfaces()

@@ -23,7 +23,6 @@
         0.36,
         0.5
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "rebord",
@@ -96,7 +95,6 @@
         0.42,
         0.5
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "rebord",
@@ -181,7 +179,6 @@
         0.55,
         0.5
       ],
-      "drift": 0.06,
       "supports": [
         {
           "kind": "sol",
@@ -266,7 +263,6 @@
         0.5,
         0.5
       ],
-      "drift": 0.0,
       "supports": [
         {
           "kind": "sol",
@@ -336,7 +332,6 @@
         0.25,
         0.5
       ],
-      "drift": 0.04,
       "supports": [
         {
           "kind": "table",
@@ -403,7 +398,6 @@
         0.5,
         0.5
       ],
-      "drift": 0.03,
       "supports": [
         {
           "kind": "rebord",
@@ -470,7 +464,6 @@
         0.38,
         0.45
       ],
-      "drift": 0.07,
       "supports": [],
       "sky": {
         "horizon": null,
@@ -512,7 +505,6 @@
         0.6,
         0.5
       ],
-      "drift": 0.06,
       "supports": [
         {
           "kind": "rebord",
@@ -567,7 +559,6 @@
         0.5,
         0.6
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "rebord",
@@ -652,7 +643,6 @@
         0.42,
         0.55
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "sol",
@@ -704,7 +694,6 @@
         0.55,
         0.55
       ],
-      "drift": 0.03,
       "supports": [
         {
           "kind": "table",
@@ -771,7 +760,6 @@
         0.5,
         0.5
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "rebord",
@@ -859,7 +847,6 @@
         0.55,
         0.55
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "sol",
@@ -947,7 +934,6 @@
         0.4,
         0.5
       ],
-      "drift": 0.04,
       "supports": [
         {
           "kind": "table",
@@ -1032,7 +1018,6 @@
         0.6,
         0.55
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "sol",
@@ -1117,7 +1102,6 @@
         0.55,
         0.5
       ],
-      "drift": 0.04,
       "supports": [
         {
           "kind": "sol",
@@ -1205,7 +1189,6 @@
         0.55,
         0.5
       ],
-      "drift": 0.04,
       "supports": [
         {
           "kind": "sol",
@@ -1278,7 +1261,6 @@
         0.35,
         0.5
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "sol",
@@ -1348,7 +1330,6 @@
         0.65,
         0.55
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "sol",
@@ -1418,7 +1399,6 @@
         0.5,
         0.58
       ],
-      "drift": 0.06,
       "supports": [
         {
           "kind": "sol",
@@ -1480,7 +1460,6 @@
         0.5,
         0.5
       ],
-      "drift": 0.05,
       "supports": [
         {
           "kind": "sol",
@@ -1565,7 +1544,6 @@
         0.4,
         0.65
       ],
-      "drift": 0.03,
       "supports": [
         {
           "kind": "rebord",
@@ -1612,7 +1590,6 @@
         0.6,
         0.5
       ],
-      "drift": 0.06,
       "supports": [
         {
           "kind": "sol",
@@ -1667,7 +1644,6 @@
         0.5,
         0.55
       ],
-      "drift": 0.04,
       "supports": [
         {
           "kind": "table",
